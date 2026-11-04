@@ -1,0 +1,94 @@
+/* Buzzard Code — Terminal User Interface Stylesheet (TCSS)
+ * Minimalist, information-dense, security-first terminal styling.
+ * Color Palette:
+ *   Deep Slate Black:  #0d0e15
+ *   Surface / Raised:  #13141f
+ *   Hairline Divider:  #1e1f2e / #262738
+ *   Violet Accent:     #8b5cf6 / #a78bfa / #7c3aed
+ *   Cool Neutral Text: #f1f5f9 (primary), #94a3b8 (muted), #64748b (dim)
+ *   Success:           #10b981
+ *   Warning / Amber:   #f59e0b
+ *   Error / Blocked:   #ef4444
+ *   Informational:     #06b6d4
+ */
+
+Screen {
+    background: #0d0e15;
+    color: #e2e8f0;
+}
+
+#main_layout {
+    height: 1fr;
+    width: 1fr;
+}
+
+#center_content {
+    width: 1fr;
+    height: 1fr;
+}
+
+#chat_container {
+    height: 1fr;
+    background: #0d0e15;
+    padding: 0 1;
+}
+
+#app_header {
+    dock: top;
+    height: 2;
+    background: #0d0e15;
+    border-bottom: solid #1e1f2e;
+    padding: 0 1;
+}
+
+#app_status_bar {
+    dock: bottom;
+    height: 1;
+    background: #0d0e15;
+    padding: 0 1;
+}
+
+#input_container {
+    dock: bottom;
+    height: 3;
+    background: #0d0e15;
+    padding: 0 1;
+}
+
+#user_input {
+    width: 1fr;
+    height: 3;
+    background: #0d0e15;
+    color: #f1f5f9;
+    border: round #3b3d54;
+    padding: 0 1;
+}
+
+#user_input:focus {
+    border: round #8b5cf6;
+    background: #0d0e15;
+}
+
+/* Modals */
+ApprovalModal, ModelSwitchModal, BuzzardHelpModal, CommandPaletteModal, CrashRecoveryModal {
+    align: center middle;
+    background: rgba(13, 14, 21, 0.88);
+}
+
+#approval_container, #model_container, #help_container, #palette_container, #recovery_container {
+    background: #13141f;
+    border: solid #8b5cf6;
+    padding: 1 2;
+}
+
+/* Legacy & backward compatibility elements */
+#left_sidebar {
+    width: 30;
+    height: 100%;
+    background: #10111a;
+    border-right: solid #1e1f2e;
+}
+
+.hidden {
+    display: none;
+}
