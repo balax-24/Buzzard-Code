@@ -11,6 +11,8 @@ from verification.coding_verifier import (
     check_code_syntax,
     CodingVerifier,
     CodingVerificationResult,
+    load_project_settings,
+    resolve_test_timeout,
 )
 
 
@@ -123,3 +125,51 @@ def test_coding_verifier_passes_on_successful_tests(tmp_path):
     finally:
         set_active_workspace(old_ws)
 
+
+
+def _edited_repo(tmp_path):
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
+    (tmp_path / "pyproject.toml").write_text("[project]\nname='x'\n", encoding="utf-8")
+    (tmp_path / "app.py").write_text("x = 1\n", encoding="utf-8")
+    return tmp_path
+
+
+def test_configured_test_command_and_timeout_are_used(tmp_path):
+    repo = _edited_repo(tmp_path)
+    (repo / ".buzzard").mkdir()
+    (repo / ".buzzard" / "project.json").write_text('{"test_command": "make check", "test_timeout": 900}', encoding="utf-8")
+    verifier = CodingVerifier(workspace=str(repo))
+    with patch.object(verifier.sandbox, "execute", return_value={"exit_code": 0, "stdout": "", "stderr": ""}) as run:
+        assert verifier.verify_task("Fix app.py").test_command == "make check"
+    assert run.call_args.args[0] == "make check"
+    assert run.call_args.kwargs["timeout"] == 900.0
+
+
+def test_configured_command_still_needs_approval(tmp_path):
+    repo = _edited_repo(tmp_path)
+    (repo / ".buzzard").mkdir()
+    (repo / ".buzzard" / "project.json").write_text('{"test_command": "evil --now"}', encoding="utf-8")
+    verifier = CodingVerifier(workspace=str(repo), command_approver=lambda command: False)
+    with patch.object(verifier.sandbox, "execute") as run:
+        assert verifier.verify_task("Fix app.py").passed is False
+    run.assert_not_called()
+
+
+def test_broken_settings_and_bad_timeouts_fall_back(tmp_path, monkeypatch):
+    repo = _edited_repo(tmp_path)
+    (repo / ".buzzard").mkdir()
+    (repo / ".buzzard" / "project.json").write_text("{broken", encoding="utf-8")
+    assert load_project_settings(repo) == {}
+    monkeypatch.setenv("BUZZARD_TEST_TIMEOUT", "soon")
+    assert resolve_test_timeout({"test_timeout": -5}) == 300.0
+    monkeypatch.setenv("BUZZARD_TEST_TIMEOUT", "120")
+    assert resolve_test_timeout({}) == 120.0
+
+
+def test_project_virtualenv_runs_the_tests(tmp_path):
+    repo = _edited_repo(tmp_path)
+    assert detect_project_test_runner(str(repo))["command"] == "python -m pytest -q"
+    relative = Path(".venv") / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+    (repo / relative).parent.mkdir(parents=True)
+    (repo / relative).write_text("", encoding="utf-8")
+    assert detect_project_test_runner(str(repo))["command"] == f"{relative} -m pytest -q"

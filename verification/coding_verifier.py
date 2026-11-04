@@ -14,6 +14,7 @@ from __future__ import annotations
 import os
 import ast
 import json
+import logging
 import re
 import shutil
 import subprocess
@@ -23,6 +24,9 @@ from typing import Callable, Dict, Any, List, Optional, Tuple
 
 from tools.filesystem import get_active_workspace
 from sandbox.container import ControlledHostSandbox
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -58,6 +62,44 @@ def task_requires_edits(task_goal: str) -> bool:
     if _EDITS_FORBIDDEN.search(task_goal):
         return False
     return bool(_EDIT_REQUEST.search(task_goal))
+
+
+DEFAULT_TEST_TIMEOUT_SECONDS = 300.0
+PROJECT_SETTINGS_FILE = Path(".buzzard") / "project.json"
+
+
+def load_project_settings(workspace: Path) -> Dict[str, Any]:
+    """Reads .buzzard/project.json. Any command it names still needs operator approval."""
+    path = workspace / PROJECT_SETTINGS_FILE
+    try:
+        settings = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return {}
+    except (OSError, ValueError) as e:
+        logger.warning("Ignoring unreadable %s: %s", path, e)
+        return {}
+    return settings if isinstance(settings, dict) else {}
+
+
+def resolve_test_timeout(settings: Dict[str, Any]) -> float:
+    """Project setting, then BUZZARD_TEST_TIMEOUT, then the default. Invalid values are ignored."""
+    for candidate in (settings.get("test_timeout"), os.environ.get("BUZZARD_TEST_TIMEOUT")):
+        try:
+            value = float(candidate)
+        except (TypeError, ValueError):
+            continue
+        if value > 0:
+            return value
+    return DEFAULT_TEST_TIMEOUT_SECONDS
+
+
+def project_python(workspace: Path) -> str:
+    """Prefers the project's own virtual environment, so tests see its dependencies."""
+    for folder in (".venv", "venv"):
+        relative = Path(folder) / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+        if (workspace / relative).is_file():
+            return str(relative)
+    return "python"
 
 
 def detect_project_test_runner(workspace: Optional[str] = None) -> Dict[str, Any]:
@@ -110,7 +152,7 @@ def detect_project_test_runner(workspace: Optional[str] = None) -> Dict[str, Any
         return {
             "detected": True,
             "runner": "pytest",
-            "command": "python -m pytest -q",
+            "command": f"{project_python(ws)} -m pytest -q",
             "description": "Python pytest test suite"
         }
 
@@ -291,7 +333,11 @@ class CodingVerifier:
             )
 
         # Gate 3: Test Runner Detection & Test Execution
+        settings = load_project_settings(workspace_path)
         test_info = detect_project_test_runner(self.workspace)
+        configured_command = settings.get("test_command")
+        if isinstance(configured_command, str) and configured_command.strip():
+            test_info = {"detected": True, "runner": "configured", "command": configured_command.strip()}
         if test_info["detected"] and auto_run_tests:
             runner = test_info["runner"]
             cmd = test_info["command"]
@@ -310,7 +356,7 @@ class CodingVerifier:
                 )
 
             # Execute test command in ControlledHostSandbox
-            res = self.sandbox.execute(cmd, timeout=60.0)
+            res = self.sandbox.execute(cmd, timeout=resolve_test_timeout(settings))
             if isinstance(res, dict):
                 exit_code = res.get("exit_code", 1)
                 stdout = res.get("stdout", "")
