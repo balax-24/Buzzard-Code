@@ -25,7 +25,10 @@ def usage_to_metrics(usage: Optional[Dict[str, Any]]) -> Dict[str, int]:
 
 def estimate_tokens(messages: List[Dict[str, Any]]) -> int:
     """Rough size of a message list, for providers that report no usage."""
-    return sum(len(str(message.get("content") or "")) for message in messages) // CHARS_PER_TOKEN_ESTIMATE
+    return sum(
+        len(str(message.get("content") or "")) + len(str(message.get("tool_calls") or ""))
+        for message in messages
+    ) // CHARS_PER_TOKEN_ESTIMATE
 
 
 def format_tokens(count: int) -> str:
