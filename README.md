@@ -286,9 +286,7 @@ Buzzard began as a security assessment agent, and that tooling remains in `tools
 - `@file` mentions, plan mode, `/undo`, session resume, multi-line input and the Evidence Report
 - The MCP client, new setup wizard and project settings
 - The end-to-end tests and acceptance harness
-
-**Starting point.** Buzzard began in August 2026 as an autonomous security assessment agent. That earlier work provided its agent loop, policy engine, approval gates and kill switch.
-
+  
 **The method.** The loop was simple: run the agent on a real model, read what actually happened, fix the cause, and add a regression test. Many of the most important defects appeared only this way:
 
 | What real runs and tests exposed | Fix |
