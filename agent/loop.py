@@ -2,6 +2,7 @@ import json
 import re
 import uuid
 import time
+import logging
 import threading
 import sys
 import os
@@ -91,6 +92,9 @@ from core.usage import estimate_tokens, usage_to_metrics
 
 
 MAX_REPEATED_TURNS = 3
+
+
+logger = logging.getLogger(__name__)
 
 
 class _NullLive:
@@ -212,6 +216,7 @@ class AgentLoop:
         self.planner_timeouts_count: int = 0
         self._is_coding_task: bool = False
         self.embedded_ui: bool = False
+        self.last_error: Optional[str] = None
         self.tool_call_counts: Dict[str, int] = {}
         self.assessment_context: Optional[AssessmentContext] = None
         # canonical_state already assigned on line 122; no duplicate needed
@@ -1949,8 +1954,8 @@ class AgentLoop:
             else:
                 self.ui_status = f"Error: {e}"
                 self.live.update(self.get_dashboard_layout())
-            import traceback
-            traceback.print_exc()
+            logger.exception("Agent loop failed")
+            self.last_error = str(e)
             status = TaskStatus.FAILED
             self.assessment_state.transition(AssessmentPhase.FAILED)
         finally:

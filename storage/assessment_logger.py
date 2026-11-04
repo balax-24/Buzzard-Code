@@ -77,6 +77,10 @@ class AssessmentLogger:
         
         self.session_dir.mkdir(parents=True, exist_ok=True)
         self.raw_dir.mkdir(parents=True, exist_ok=True)
+        # Audit logs must not appear as project changes, or the completion gate would count them
+        ignore_file = Path(base_dir) / ".gitignore"
+        if not ignore_file.exists():
+            ignore_file.write_text("*\n", encoding="utf-8")
         
         self.timeline_file = self.session_dir / "timeline.jsonl"
         self.tool_calls_file = self.session_dir / "tool_calls.jsonl"
