@@ -295,8 +295,9 @@ class DockerSandbox(SandboxProvider):
         Executes the command inside a temporary Docker container with resource constraints.
         Logs container metadata, duration, image, and exit code.
         """
-        host_workspace = os.path.abspath("data/workspace")
-        os.makedirs(host_workspace, exist_ok=True)
+        # The container must see the project the agent is working on
+        from tools.filesystem import get_active_workspace
+        host_workspace = get_active_workspace()
         container_id = f"sandbox-{uuid.uuid4().hex[:8]}"
 
         docker_cmd = [

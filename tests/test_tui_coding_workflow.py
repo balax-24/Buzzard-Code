@@ -782,3 +782,33 @@ def test_resume_flag_restores_the_saved_conversation(repo, tmp_path):
     save_conversation([{"role": "user", "content": "earlier"}])
     app = BuzzardTUIApp(resume=True, fake=True, storage=StorageManager(db_path=str(tmp_path / "a.db")))
     assert app.conversation[-1]["content"] == "earlier"
+
+
+def test_stray_data_workspace_folder_does_not_hide_the_project(tmp_path, monkeypatch):
+    """Found in a real recording: Docker created this folder and the agent lost the project."""
+    import tools.filesystem as filesystem
+
+    (tmp_path / "data" / "workspace").mkdir(parents=True)
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(filesystem, "_ACTIVE_WORKSPACE", None)
+    monkeypatch.delenv("BUZZARD_WORKSPACE", raising=False)
+    monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
+    assert filesystem.get_active_workspace() == str(tmp_path.resolve()) or filesystem.get_active_workspace() == str(tmp_path)
+
+
+def test_docker_mounts_the_active_project(repo, monkeypatch):
+    from sandbox import container
+
+    calls = []
+
+    class Done:
+        returncode = 0
+        stdout = ""
+        stderr = ""
+
+    monkeypatch.setattr(container.subprocess, "run", lambda command, **kwargs: calls.append(command) or Done())
+    sandbox = container.DockerSandbox.__new__(container.DockerSandbox)
+    sandbox.image, sandbox.memory_limit, sandbox.cpu_quota, sandbox.network_mode = "image", "1g", 1, "none"
+    sandbox.execute("ls", tool_name="terminal.execute")
+    assert f"{repo}:/workspace" in calls[0]
+    assert not (repo / "data").exists()
