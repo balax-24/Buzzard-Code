@@ -251,6 +251,7 @@ def _configure_provider(selected: str, config: Dict[str, Any]) -> None:
     else:
         credential, default_model, signup_url = CLOUD_PROVIDERS[selected]
         model["provider"] = selected
+        model.pop("endpoint", None)
         _ask_key(credential, selected.capitalize(), signup_url)
         model["name"] = _ask_model(default_model or None)
 

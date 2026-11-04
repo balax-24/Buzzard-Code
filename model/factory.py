@@ -179,6 +179,9 @@ def _build_provider(
     # would send that provider's API key to the wrong server.
     configured_provider = str(model_cfg.get("provider", "ollama")).lower().replace("_", "-")
     configured_endpoint = model_cfg.get("endpoint") if configured_provider == p_name else None
+    # Default config always carries Ollama's address. It must never reach a cloud provider.
+    if p_name != "ollama" and configured_endpoint and ":11434" in str(configured_endpoint):
+        configured_endpoint = None
 
     if p_name == "ollama":
         host = kwargs.get("host") or configured_endpoint
