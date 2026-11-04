@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
@@ -11,6 +12,16 @@ KNOWN_CONTEXT_WINDOWS: Dict[str, int] = {
     "muse-spark-1.3": 1_048_576,
 }
 CHARS_PER_TOKEN_ESTIMATE = 4
+# USD per million input and output tokens, as listed by OpenRouter on 2026-11-04. Prices change,
+# so costs are always shown as estimates, and models without a known price show none.
+KNOWN_PRICES_PER_MILLION: Dict[str, tuple] = {
+    "muse-glimmer-30b": (0.30, 1.20),
+    "muse-spark-1.1": (1.25, 4.25),
+    "muse-spark-1.2": (1.25, 4.25),
+    "muse-spark-1.3": (1.25, 4.25),
+    "muse-spark-open": (1.25, 4.25),
+    "muse-wonder": (4.00, 20.00),
+}
 
 
 def usage_to_metrics(usage: Optional[Dict[str, Any]]) -> Dict[str, int]:
@@ -29,6 +40,15 @@ def estimate_tokens(messages: List[Dict[str, Any]]) -> int:
         len(str(message.get("content") or "")) + len(str(message.get("tool_calls") or ""))
         for message in messages
     ) // CHARS_PER_TOKEN_ESTIMATE
+
+
+def budget_limit_usd() -> Optional[float]:
+    """Reads BUZZARD_BUDGET_USD. Invalid or non-positive values mean no limit."""
+    try:
+        limit = float(os.environ.get("BUZZARD_BUDGET_USD", ""))
+    except ValueError:
+        return None
+    return limit if limit > 0 else None
 
 
 def format_tokens(count: int) -> str:
@@ -52,8 +72,14 @@ class SessionUsage:
     last_prompt_tokens: int = 0
     requests: int = 0
     estimated: bool = False
+    cost_usd: float = 0.0
+    cost_known: bool = False
 
-    def record(self, prompt_tokens: int, output_tokens: int, estimated: bool = False) -> None:
+    def record(self, prompt_tokens: int, output_tokens: int, estimated: bool = False, model_name: str = "") -> None:
+        price = KNOWN_PRICES_PER_MILLION.get(model_name.split("/")[-1])
+        if price:
+            self.cost_usd += (prompt_tokens * price[0] + output_tokens * price[1]) / 1_000_000
+            self.cost_known = True
         self.input_tokens += prompt_tokens
         self.output_tokens += output_tokens
         self.last_prompt_tokens = prompt_tokens
@@ -71,4 +97,6 @@ class SessionUsage:
         percent = self.context_percent(context_window)
         if percent is not None:
             text += f" ctx {percent}%"
+        if self.cost_known:
+            text += f" ~${self.cost_usd:.4f}"
         return text

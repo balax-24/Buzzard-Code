@@ -13,7 +13,7 @@ import pytest
 
 from agent.loop import CODING_TOOL_NAMES, AgentLoop
 from cli.banner import banner_lines
-from core.usage import SessionUsage, context_window_for, usage_to_metrics
+from core.usage import SessionUsage, budget_limit_usd, context_window_for, usage_to_metrics
 from model.meta_muse import MetaMuseProvider
 from sandbox.container import ControlledHostSandbox
 from tools.filesystem import get_active_workspace, set_active_workspace
@@ -295,3 +295,18 @@ def test_unknown_context_window_shows_no_guessed_percentage():
 @pytest.mark.parametrize("width", [40, 60, 80, 100, 200])
 def test_banner_never_exceeds_terminal_width(width):
     assert all(len(line) <= width for line in banner_lines(width))
+
+
+def test_cost_is_estimated_only_for_known_prices(monkeypatch):
+    usage = SessionUsage()
+    usage.record(1000, 1000, model_name="unlisted-model")
+    assert usage.cost_known is False and "$" not in usage.status_text(None)
+    usage.record(1_000_000, 1_000_000, model_name="meta/muse-glimmer-30b")
+    assert round(usage.cost_usd, 2) == 1.50
+    assert "~$1.5000" in usage.status_text(None)
+
+
+@pytest.mark.parametrize("value,expected", [("2.5", 2.5), ("0", None), ("-1", None), ("lots", None), ("", None)])
+def test_budget_setting(monkeypatch, value, expected):
+    monkeypatch.setenv("BUZZARD_BUDGET_USD", value)
+    assert budget_limit_usd() == expected

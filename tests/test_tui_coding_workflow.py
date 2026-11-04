@@ -727,3 +727,31 @@ def test_s_key_does_nothing_when_a_session_rule_is_not_allowed(repo, tmp_path):
 
     run_async(run())
     assert app.session_rules == set()
+
+
+def test_budget_stops_a_running_task(repo, tmp_path, monkeypatch):
+    monkeypatch.setenv("BUZZARD_BUDGET_USD", "0.01")
+
+    class Costly(ScriptedProvider):
+        model_name = "meta/muse-wonder"
+
+        def chat(self, messages, tools=None, options=None):
+            response = super().chat(messages, tools, options)
+            response["metrics"] = {"prompt_eval_count": 100000, "eval_count": 100000}
+            return response
+
+    read = {"tool_calls": [call("file_read", path="calc.py")]}
+    other = {"tool_calls": [call("file_view", path="calc.py")]}
+    provider = Costly([read, other, read, other, read, other])
+    app = make_app(provider, tmp_path)
+
+    async def run() -> None:
+        async with app.run_test(size=(110, 36)) as pilot:
+            await submit(pilot, app, "Explain this repository")
+            await wait_for(pilot, lambda: provider.requests and not app.is_running_operation)
+            await pilot.pause(0.2)
+            notes = " ".join(b.message.content for b in app.chat_view.query(MessageBubble))
+            assert "Budget of $0.01 reached" in notes
+            assert len(provider.requests) < 6
+
+    run_async(run())
