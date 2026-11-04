@@ -395,6 +395,8 @@ class BuzzardTUIApp(App[None]):
         self.conversation: List[Dict[str, str]] = []
         self.usage = SessionUsage()
         self.plan_mode: bool = False
+        self.approvals_granted: int = 0
+        self.approvals_denied: int = 0
         self._interrupt_count: int = 0
         self._stop_event = threading.Event()
 
@@ -649,6 +651,7 @@ class BuzzardTUIApp(App[None]):
     def _handle_approval_callback(self, tool_name: str, arguments: Dict[str, Any], metadata: Any) -> bool:
         # Enforced here, not by the prompt, so a model cannot talk its way past plan mode
         if self.plan_mode:
+            self.approvals_denied += 1
             return False
         from sandbox.container import is_docker_active
 
@@ -677,6 +680,10 @@ class BuzzardTUIApp(App[None]):
         self.call_from_thread(open_modal)
         # Wait for operator decision (120s timeout before fail-closed)
         done_event.wait(timeout=120.0)
+        if decision_box[0]:
+            self.approvals_granted += 1
+        else:
+            self.approvals_denied += 1
         return decision_box[0]
 
     # -------------------------------------------------------------------------
@@ -1129,6 +1136,18 @@ class BuzzardTUIApp(App[None]):
         self._remember_turn(user_text, "".join(full_content))
         self.is_running_operation = False
 
+    def _show_evidence_report(self, loop: Any) -> None:
+        if loop.last_verification is None:
+            return
+        from tools.filesystem import get_active_workspace
+        from verification.evidence_report import build_evidence_report
+
+        report = build_evidence_report(
+            loop.last_verification, get_active_workspace(), self.approvals_granted, self.approvals_denied
+        )
+        if report:
+            self.app.call_from_thread(self._system_note, report)
+
     def _remember_turn(self, user_text: str, answer: str) -> None:
         self.conversation.append({"role": "user", "content": user_text})
         if answer.strip():
@@ -1142,6 +1161,8 @@ class BuzzardTUIApp(App[None]):
     def _run_security_task(self, task_goal: str) -> None:
         self.is_running_operation = True
         self._stop_event.clear()
+        self.approvals_granted = 0
+        self.approvals_denied = 0
 
         # Enforce KillSwitch
         ks = KillSwitch.get_instance()
@@ -1221,6 +1242,7 @@ class BuzzardTUIApp(App[None]):
             answers = [m.get("content") or "" for m in result.get("messages", []) if m.get("role") == "assistant"]
             final_answer = next((text for text in reversed(answers) if text.strip()), "")
             self._remember_turn(task_goal, final_answer)
+            self._show_evidence_report(loop)
             if final_answer and not self.chat_view.has_streamed_since_last_tool():
                 self.app.call_from_thread(
                     self.chat_view.add_message,

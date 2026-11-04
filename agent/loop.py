@@ -217,6 +217,7 @@ class AgentLoop:
         self._is_coding_task: bool = False
         self.embedded_ui: bool = False
         self.last_error: Optional[str] = None
+        self.last_verification: Optional[Any] = None
         self.tool_call_counts: Dict[str, int] = {}
         self.assessment_context: Optional[AssessmentContext] = None
         # canonical_state already assigned on line 122; no duplicate needed
@@ -408,7 +409,8 @@ class AgentLoop:
             return permitted
 
         verifier = CodingVerifier(workspace=self.config.get("workspace"), command_approver=approve_command)
-        return verifier.verify_task(task_goal=task_goal, auto_run_tests=True)
+        self.last_verification = verifier.verify_task(task_goal=task_goal, auto_run_tests=True)
+        return self.last_verification
 
     def _check_planner_timeout(self, elapsed: float, result_holder: Dict[str, Any]) -> bool:
         """
