@@ -517,3 +517,56 @@ def test_model_failure_reason_is_shown_in_the_transcript(repo, tmp_path):
             ), timeout=20)
 
     run_async(run())
+
+
+def _report(app):
+    return "\n".join(b.message.content for b in app.chat_view.query(MessageBubble) if "Evidence Report" in b.message.content)
+
+
+def test_evidence_report_uses_real_records_and_warns_about_missing_test(repo, tmp_path):
+    provider = ScriptedProvider([
+        {"tool_calls": [call("file_edit", path="calc.py", old_str="return a - b", new_str="return a + b")]},
+        {"content": "Everything is perfect, all 500 tests pass."},
+    ])
+    app = make_app(provider, tmp_path)
+
+    async def run() -> None:
+        async with app.run_test(size=(110, 36)) as pilot:
+            await submit(pilot, app, "Fix the bug in calc.py")
+            await approve_until_idle(pilot, app)
+            await wait_for(pilot, lambda: _report(app), timeout=10)
+            report = _report(app)
+            assert "exit 0, run by the gate" in report and "-m pytest" in report
+            assert "`calc.py` +1 -1" in report
+            assert "2 approved, 0 denied" in report
+            assert "No test changed" in report
+            assert "Lint: not configured" in report
+            assert "500" not in report
+
+    run_async(run())
+
+
+def test_report_marks_failed_tests_and_no_warning_when_test_changed(repo):
+    from verification.coding_verifier import CodingVerificationResult
+    from verification.evidence_report import build_evidence_report
+
+    (repo / "calc.py").write_text("def add(a, b):\n    return a + b\n", encoding="utf-8")
+    (repo / "test_calc.py").write_text("# changed\n", encoding="utf-8")
+    failed = CodingVerificationResult(passed=False, requires_action=True, message="", test_command="pytest", test_exit_code=1)
+    report = build_evidence_report(failed, str(repo), 1, 2)
+    assert "✕ Tests: `pytest` exit 1" in report and "1 approved, 2 denied" in report
+    assert "No test changed" not in report
+
+
+def test_read_only_task_shows_no_report(repo, tmp_path):
+    provider = ScriptedProvider([{"content": "It adds numbers."}])
+    app = make_app(provider, tmp_path)
+
+    async def run() -> None:
+        async with app.run_test(size=(110, 36)) as pilot:
+            await submit(pilot, app, "Explain this repository")
+            await wait_for(pilot, lambda: len(provider.requests) == 1 and not app.is_running_operation)
+            await pilot.pause(0.2)
+            assert not _report(app)
+
+    run_async(run())
