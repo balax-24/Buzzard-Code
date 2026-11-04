@@ -41,6 +41,8 @@ class CodingVerificationResult:
     test_output: Optional[str] = None
     diff_summary: Optional[str] = None
     syntax_errors: List[str] = field(default_factory=list)
+    lint_command: Optional[str] = None
+    lint_status: str = "not configured"
 
 
 _EDIT_REQUEST = re.compile(
@@ -271,6 +273,27 @@ def check_code_syntax(workspace: Optional[str] = None) -> List[str]:
     return errors
 
 
+LINT_SAFE_PATH = re.compile(r"^[\w./-]+$")
+ESLINT_CONFIGS = ("eslint.config.js", "eslint.config.mjs", ".eslintrc", ".eslintrc.js", ".eslintrc.json")
+
+
+def detect_lint_command(workspace: Path, changed: List[str]) -> Optional[str]:
+    """Returns a linter command for changed files when the project configures one."""
+    # Paths go into a shell command, so unusual names are left out rather than trusted
+    safe = [path for path in changed if LINT_SAFE_PATH.match(path) and (workspace / path).is_file()]
+    python_files = [path for path in safe if path.endswith(".py")]
+    pyproject = workspace / "pyproject.toml"
+    has_ruff = (workspace / "ruff.toml").is_file() or (
+        pyproject.is_file() and "[tool.ruff" in pyproject.read_text(encoding="utf-8", errors="replace")
+    )
+    if python_files and has_ruff:
+        return f"{project_python(workspace)} -m ruff check {' '.join(python_files)}"
+    script_files = [path for path in safe if path.endswith((".js", ".jsx", ".ts", ".tsx", ".mjs"))]
+    if script_files and any((workspace / name).is_file() for name in ESLINT_CONFIGS):
+        return f"npx --no-install eslint {' '.join(script_files)}"
+    return None
+
+
 class CodingVerifier:
     """
     Authoritative completion verification gate for Buzzard Code engineering tasks.
@@ -284,6 +307,22 @@ class CodingVerifier:
         self.workspace = workspace or get_active_workspace()
         self.command_approver = command_approver
         self.sandbox = ControlledHostSandbox(workspace=self.workspace)
+
+    def _run_lint(self, workspace: Path) -> Tuple[Optional[str], str]:
+        """Reports lint results without blocking, so existing lint debt cannot stop a good fix."""
+        command = detect_lint_command(workspace, list_changed_files(workspace))
+        if command is None:
+            return None, "not configured"
+        if self.command_approver is not None and not self.command_approver(command):
+            return command, "not approved"
+        result = self.sandbox.execute(command, timeout=120.0)
+        exit_code = result.get("exit_code", 1) if isinstance(result, dict) else getattr(result, "exit_code", 1)
+        output = str(result.get("stdout", "") if isinstance(result, dict) else "") + str(result.get("stderr", "") if isinstance(result, dict) else "")
+        if exit_code == 0:
+            return command, "passed"
+        if "No module named" in output or "not found" in output.lower() or exit_code in (126, 127):
+            return command, "could not run"
+        return command, "issues found"
 
     def verify_task(
         self,
@@ -386,7 +425,10 @@ class CodingVerifier:
                 )
 
             # Test suite passed!
+            lint_command, lint_status = self._run_lint(workspace_path)
             return CodingVerificationResult(
+                lint_command=lint_command,
+                lint_status=lint_status,
                 passed=True,
                 requires_action=False,
                 message=f"All verification gates passed: Test suite `{cmd}` passed with exit code 0.",

@@ -11,6 +11,7 @@ from verification.coding_verifier import (
     check_code_syntax,
     CodingVerifier,
     CodingVerificationResult,
+    detect_lint_command,
     load_project_settings,
     resolve_test_timeout,
 )
@@ -173,3 +174,31 @@ def test_project_virtualenv_runs_the_tests(tmp_path):
     (repo / relative).parent.mkdir(parents=True)
     (repo / relative).write_text("", encoding="utf-8")
     assert detect_project_test_runner(str(repo))["command"] == f"{relative} -m pytest -q"
+
+
+def test_lint_runs_only_when_configured_and_only_on_safe_changed_files(tmp_path):
+    repo = _edited_repo(tmp_path)
+    (repo / "bad name;rm.py").write_text("x = 1\n", encoding="utf-8")
+    assert detect_lint_command(repo, ["app.py"]) is None
+    (repo / "ruff.toml").write_text("", encoding="utf-8")
+    command = detect_lint_command(repo, ["app.py", "bad name;rm.py", "missing.py"])
+    assert command == "python -m ruff check app.py"
+
+
+@pytest.mark.parametrize("exit_code,output,expected", [
+    (0, "", "passed"),
+    (1, "E501 line too long", "issues found"),
+    (1, "No module named ruff", "could not run"),
+])
+def test_lint_result_is_reported_and_never_blocks(tmp_path, exit_code, output, expected):
+    repo = _edited_repo(tmp_path)
+    (repo / "ruff.toml").write_text("", encoding="utf-8")
+    verifier = CodingVerifier(workspace=str(repo))
+
+    def fake_run(command, timeout=0):
+        return {"exit_code": exit_code if "ruff" in command else 0, "stdout": output if "ruff" in command else "", "stderr": ""}
+
+    with patch.object(verifier.sandbox, "execute", side_effect=fake_run):
+        result = verifier.verify_task("Fix app.py")
+    assert result.passed is True
+    assert result.lint_status == expected
