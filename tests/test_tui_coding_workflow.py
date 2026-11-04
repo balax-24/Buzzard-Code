@@ -622,3 +622,36 @@ def test_failover_command_without_backups_explains_setup(repo, tmp_path):
             assert any("No backup models" in b.message.content for b in app.chat_view.query(MessageBubble))
 
     run_async(run())
+
+
+def test_multi_line_messages_by_backslash_and_paste(repo, tmp_path):
+    from textual.events import Paste
+
+    provider = ScriptedProvider([{"content": "ok"}, {"content": "ok"}])
+    app = make_app(provider, tmp_path)
+
+    async def run() -> None:
+        async with app.run_test(size=(110, 36)) as pilot:
+            app.chat_input.focus()
+            await submit(pilot, app, "Explain this repository\\")
+            await pilot.pause(0.05)
+            assert "1 line held" in app.chat_input.placeholder and provider.requests == []
+            await submit(pilot, app, "and its tests")
+            await wait_for(pilot, lambda: len(provider.requests) == 1 and not app.is_running_operation)
+            assert "Explain this repository\nand its tests" in provider.requests[0][1]["content"]
+            assert "held" not in app.chat_input.placeholder
+
+            app.chat_input.post_message(Paste("Explain line one\nline two\nline three"))
+            await pilot.pause(0.2)
+            assert app.chat_input.value == "line three" and provider.requests[1:] == []
+            await pilot.press("enter")
+            await wait_for(pilot, lambda: len(provider.requests) == 2 and not app.is_running_operation)
+            assert "Explain line one\nline two\nline three" in provider.requests[1][-1]["content"]
+
+            app.chat_input.hold_lines(["discard me"])
+            app.chat_input.focus()
+            await pilot.press("escape")
+            await pilot.pause(0.05)
+            assert not app.chat_input.pending_lines
+
+    run_async(run())
