@@ -146,3 +146,13 @@ def test_primary_is_not_repeated_as_its_own_fallback(monkeypatch):
     monkeypatch.delenv("BUZZARD_FALLBACK_MODELS", raising=False)
     config = {"model": {"provider": "openai", "name": "m", "fallbacks": ["openai/m"]}}
     assert isinstance(get_model_provider(config=config, api_key="k"), OpenAIProvider)
+
+
+@pytest.mark.parametrize("provider_name", ["gemini", "openai", "anthropic", "meta"])
+def test_default_ollama_address_never_reaches_a_cloud_provider(monkeypatch, provider_name):
+    """Found on camera: setup saved Gemini with the default endpoint still in the config."""
+    monkeypatch.delenv("BUZZARD_FALLBACK_MODELS", raising=False)
+    for name in ("GEMINI_BASE_URL", "OPENAI_BASE_URL", "ANTHROPIC_BASE_URL", "META_API_ENDPOINT", "META_BASE_URL"):
+        monkeypatch.delenv(name, raising=False)
+    config = {"model": {"provider": provider_name, "name": "m", "endpoint": "http://localhost:11434"}}
+    assert "11434" not in get_model_provider(config=config, api_key="k").base_url
