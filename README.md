@@ -277,7 +277,17 @@ Buzzard began as a security assessment agent, and that tooling remains in `tools
 
 ## How it was built
 
-**Starting point.** Buzzard began in August 2026 as an autonomous security assessment agent. That gave it a loop, a policy engine, approval gates and a kill switch. It was then rebuilt into a coding agent, including for the Meta Global AI Developer Hackathon.
+**Built during the Meta Global AI Developer Hackathon.** The final days of the event turned Buzzard into the coding agent you see here:
+
+- Live testing on Muse Glimmer, and the fixes that testing led to
+- A completion gate that cannot be bypassed, and approval for every edit and command
+- Native tool calling across providers, automatic failover and shared retries
+- The terminal UI: transcript, diffs, approval dialog, token and cost meter, and commands
+- `@file` mentions, plan mode, `/undo`, session resume, multi-line input and the Evidence Report
+- The MCP client, new setup wizard and project settings
+- The end-to-end tests and acceptance harness
+
+**Starting point.** Buzzard began in August 2026 as an autonomous security assessment agent. That earlier work provided its agent loop, policy engine, approval gates and kill switch.
 
 **The method.** The loop was simple: run the agent on a real model, read what actually happened, fix the cause, and add a regression test. Many of the most important defects appeared only this way:
 
