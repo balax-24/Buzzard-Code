@@ -125,6 +125,7 @@ BUZZARD_COMMANDS: List[tuple[str, str]] = [
     ("/test", "Ask the agent to run the tests and report"),
     ("/export", "Save this conversation to a file"),
     ("/undo", "Revert the agent's latest file edit"),
+    ("/failover", "Show backup models; /failover test rehearses an outage"),
     ("/plan", "Toggle plan mode: no edits or commands run"),
     ("/continue", "Restore the last conversation in this workspace"),
     ("/version", "Buzzard Code version"),
@@ -720,6 +721,20 @@ class BuzzardTUIApp(App[None]):
         else:
             self._run_security_task(text)
 
+    def _handle_failover_command(self, arguments: List[str]) -> None:
+        chain = getattr(self.provider, "providers", None)
+        if not chain:
+            self._system_note(
+                "No backup models are set. Run `buzzard setup` or set `BUZZARD_FALLBACK_MODELS`. "
+                "A backup model receives your code when it takes over."
+            )
+        elif arguments[:1] == ["test"]:
+            name = self.provider.simulate_outage()
+            self._system_note(f"⚠ {name} will fail its next request. Send a message to see the switch.")
+        else:
+            names = ", ".join(f"`{getattr(p, 'model_name', '?')}`" for p in chain)
+            self._system_note(f"Model order: {names}. Active: `{self.provider.model_name}`.")
+
     def _system_note(self, content: str) -> None:
         self.chat_view.add_message(ChatMessage(role=MessageRole.SYSTEM, content=content))
 
@@ -871,6 +886,10 @@ class BuzzardTUIApp(App[None]):
         elif command == "/continue":
             self.conversation = load_conversation()
             self._system_note(f"✓ Restored {len(self.conversation)} messages from the last conversation.")
+            return
+
+        elif command == "/failover":
+            self._handle_failover_command(tokens[1:])
             return
 
         elif command == "/undo":

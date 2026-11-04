@@ -32,6 +32,17 @@ class FailoverProvider(ModelProvider):
         self.cooldown_seconds = cooldown_seconds
         self._active = providers[0]
         self._failed_at: Dict[int, float] = {}
+        self._simulated_outage: Optional[ModelProvider] = None
+
+    def simulate_outage(self) -> str:
+        """Makes the active model fail its next request, to rehearse failover safely."""
+        self._simulated_outage = self._active
+        return getattr(self._active, "model_name", "model")
+
+    def _check_simulated_outage(self, provider: ModelProvider) -> None:
+        if provider is self._simulated_outage:
+            self._simulated_outage = None
+            raise RuntimeError("simulated outage from /failover test")
 
     @property
     def active(self) -> ModelProvider:
@@ -69,6 +80,7 @@ class FailoverProvider(ModelProvider):
         errors: List[str] = []
         for provider in self._candidates():
             try:
+                self._check_simulated_outage(provider)
                 response = provider.chat(messages, tools=tools, options=options)
             except Exception as e:  # Any failure, including a missing key, moves to the next model
                 self._mark_failed(provider, e)
@@ -83,6 +95,7 @@ class FailoverProvider(ModelProvider):
         for provider in self._candidates():
             started = False
             try:
+                self._check_simulated_outage(provider)
                 for chunk in provider.stream_chat(messages, tools=tools, options=options):
                     started = True
                     self._mark_used(provider)

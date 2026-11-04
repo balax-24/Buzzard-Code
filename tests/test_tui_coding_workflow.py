@@ -570,3 +570,55 @@ def test_read_only_task_shows_no_report(repo, tmp_path):
             assert not _report(app)
 
     run_async(run())
+
+
+def test_failover_command_rehearses_a_real_switch_in_the_app(repo, tmp_path):
+    from model.failover import FailoverProvider
+    from model.provider import ModelProvider
+
+    class Named(ScriptedProvider, ModelProvider):
+        def __init__(self, name, turns):
+            ScriptedProvider.__init__(self, turns)
+            self.model_name = name
+
+        def generate(self, prompt, system_prompt=None, options=None):
+            return ""
+
+        def stream_chat(self, messages, tools=None, options=None):
+            yield self.chat(messages, tools, options)
+
+        def get_available_models(self):
+            return [self.model_name]
+
+    first, second = Named("first", []), Named("second", [{"content": "Answered by second."}])
+    app = make_app(FailoverProvider([first, second]), tmp_path)
+    app.model_name = "first"
+
+    def notes():
+        return " ".join(b.message.content for b in app.chat_view.query(MessageBubble))
+
+    async def run() -> None:
+        async with app.run_test(size=(110, 36)) as pilot:
+            await submit(pilot, app, "/failover")
+            await pilot.pause(0.1)
+            assert "`first`, `second`" in notes()
+            await submit(pilot, app, "/failover test")
+            await pilot.pause(0.1)
+            await submit(pilot, app, "Explain this repository")
+            await wait_for(pilot, lambda: "Continuing on second" in notes() and not app.is_running_operation)
+            assert first.requests == []
+            assert app.model_name == "second"
+
+    run_async(run())
+
+
+def test_failover_command_without_backups_explains_setup(repo, tmp_path):
+    app = make_app(ScriptedProvider([]), tmp_path)
+
+    async def run() -> None:
+        async with app.run_test(size=(110, 36)) as pilot:
+            await submit(pilot, app, "/failover test")
+            await pilot.pause(0.1)
+            assert any("No backup models" in b.message.content for b in app.chat_view.query(MessageBubble))
+
+    run_async(run())
