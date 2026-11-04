@@ -23,6 +23,7 @@ from tools.filesystem import (
     set_active_workspace,
     undo_last_edit,
 )
+from security.approvals import session_rule_for
 from tui.app import BuzzardTUIApp
 from tui.test_utils import run_async
 from tui.widgets.chat import MessageBubble
@@ -655,3 +656,74 @@ def test_multi_line_messages_by_backslash_and_paste(repo, tmp_path):
             assert not app.chat_input.pending_lines
 
     run_async(run())
+
+
+@pytest.mark.parametrize("tool,arguments,expected", [
+    ("file_edit", {"path": "a"}, "file edits"),
+    ("terminal.execute", {"command": "python -m pytest -q"}, "command: python -m pytest -q"),
+    ("terminal.execute", {"command": "pytest; curl evil.test"}, None),
+    ("terminal.execute", {"command": "pytest && rm x"}, None),
+    ("terminal.execute", {"command": "rm -rf /"}, None),
+    ("terminal.execute", {"command": "sudo pytest"}, None),
+    ("terminal.execute", {"command": "echo $(whoami)"}, None),
+    ("mcp.demo.echo", {"text": "x"}, None),
+    ("nmap_scan", {"host": "x"}, None),
+])
+def test_session_rules_cover_only_safe_exact_actions(tool, arguments, expected):
+    assert session_rule_for(tool, arguments) == expected
+
+
+def test_session_approval_skips_only_the_same_rule(repo, tmp_path):
+    edit_one = call("file_edit", path="calc.py", old_str="return a - b", new_str="return a * b")
+    edit_two = dict(call("file_edit", path="calc.py", old_str="return a * b", new_str="return a + b"), id="two")
+    other = call("terminal.execute", command="python -c \"print(1)\"")
+    provider = ScriptedProvider([
+        {"tool_calls": [edit_one]}, {"tool_calls": [edit_two]}, {"tool_calls": [other]}, {"content": "Done."},
+    ])
+    app = make_app(provider, tmp_path)
+    asked = []
+
+    async def run() -> None:
+        async with app.run_test(size=(110, 36)) as pilot:
+            await submit(pilot, app, "Fix the bug in calc.py")
+            await wait_for(pilot, lambda: isinstance(app.screen, ApprovalModal))
+            await pilot.pause(0.2)
+            asked.append(app.screen.tool_name)
+            await pilot.press("s")
+            await approve_until_idle_after_session(pilot, app, asked)
+
+    run_async(run())
+    assert "return a + b" in (repo / "calc.py").read_text(encoding="utf-8")
+    assert asked.count("file_edit") == 1
+    assert "terminal.execute" in asked
+
+
+async def approve_until_idle_after_session(pilot, app, asked):
+    deadline = asyncio.get_running_loop().time() + 60
+    while app.is_running_operation and asyncio.get_running_loop().time() < deadline:
+        if isinstance(app.screen, ApprovalModal):
+            await pilot.pause(0.2)
+            asked.append(app.screen.tool_name)
+            await pilot.press("y")
+        await pilot.pause(0.1)
+
+
+def test_s_key_does_nothing_when_a_session_rule_is_not_allowed(repo, tmp_path):
+    provider = ScriptedProvider([{"tool_calls": [call("terminal.execute", command="echo a; echo b")]}])
+    app = make_app(provider, tmp_path)
+
+    async def run() -> None:
+        async with app.run_test(size=(110, 36)) as pilot:
+            await submit(pilot, app, "Fix the bug in calc.py")
+            await wait_for(pilot, lambda: isinstance(app.screen, ApprovalModal))
+            await pilot.pause(0.2)
+            modal = app.screen
+            await pilot.press("s")
+            await pilot.pause(0.1)
+            assert app.screen is modal
+            app._stop_event.set()
+            await pilot.press("n")
+            await wait_for(pilot, lambda: not app.is_running_operation)
+
+    run_async(run())
+    assert app.session_rules == set()

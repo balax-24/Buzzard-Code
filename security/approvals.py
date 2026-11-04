@@ -6,12 +6,34 @@ and manages interactive or programmatic approval requests.
 See plan sections 44, 45, 50.
 """
 
+import re
 import sys
 from typing import Dict, Any, Optional, Callable, Tuple
 from events.bus import EventBus
 from events.types import EventType, EventSeverity
 from security.autonomy import AutonomyLevel, EnvironmentProfile
 from security.risk import RiskClass, ToolRiskMetadata, get_tool_risk_metadata
+
+
+SESSION_APPROVABLE_EDIT_TOOLS = frozenset({"file_edit", "file.edit", "file_write", "file.write"})
+_PLAIN_COMMAND = re.compile(r"^[\w ./:=@%+-]+$")
+
+
+def session_rule_for(tool_name: str, arguments: Dict[str, Any]) -> Optional[str]:
+    """
+    Returns what "allow for this session" would cover, or None when it must always ask.
+    File edits share one rule. A command is covered only as that exact text, and never with
+    shell operators or a dangerous pattern. MCP and other tools always ask.
+    """
+    if tool_name in SESSION_APPROVABLE_EDIT_TOOLS:
+        return "file edits"
+    if tool_name == "terminal.execute":
+        from sandbox.container import DANGEROUS_COMMAND_PATTERNS
+
+        command = str((arguments or {}).get("command", "")).strip()
+        if command and _PLAIN_COMMAND.match(command) and not any(p.search(command) for p in DANGEROUS_COMMAND_PATTERNS):
+            return f"command: {command}"
+    return None
 
 
 class ApprovalGate:
