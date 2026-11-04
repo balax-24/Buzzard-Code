@@ -54,7 +54,7 @@ Buzzard separates those roles:
 
 These screenshots come from a real Muse Glimmer session in the real terminal app, on a small demo repository with a deliberate bug. The approvals were pressed by a test script rather than by hand.
 
-**Every edit and command shows exactly what will happen before it runs.** Only `y` approves.
+**Every edit and command shows exactly what will happen before it runs.** `y` approves once, and `s` allows file edits or that exact command for the session.
 
 <p align="center"><img src="docs/assets/approval.png" alt="Approval dialog showing the exact code change" width="760"></p>
 
@@ -129,6 +129,9 @@ The two highlighted boxes are deterministic code. The model cannot talk its way 
 **Verification and control**
 - Completion gate that the model cannot bypass, including by calling a `complete` tool
 - Approval for every edit and command, showing the exact change
+- Optional session approval, for file edits or one exact command. Commands with shell operators, dangerous patterns and MCP calls always ask
+- Evidence Report after each task: tests run, files changed, approvals given and what was not checked, plus a warning when no test changed
+- Lint results from the project's Ruff or ESLint setup, reported without blocking
 - `/plan` mode: edits and commands are refused in code
 - `/undo` for the agent's file edits, which refuses if you changed the file afterwards
 - Secret-named environment variables removed from agent-run commands
@@ -137,7 +140,10 @@ The two highlighted boxes are deterministic code. The model cannot talk its way 
 **Working in your terminal**
 - `@file` mentions with autocomplete, restricted to the workspace
 - Project instructions, follow-up context and `/continue`
-- Live task checklist, coloured diffs, and a token and context meter
+- Multi-line messages by pasting, or by ending a line with `\\`
+- Live task checklist, coloured diffs, and a token, context and estimated cost meter
+- Optional spending limit that stops a task when reached
+- Uses the project's own `.venv`, with a configurable test command and timeout
 - Esc to interrupt, and the abandoned reply is discarded
 
 **Models and tools**
@@ -229,6 +235,7 @@ Live-tested so far: Muse Glimmer through OpenRouter, Gemini and Ollama, with res
 | `/review` | Ask the agent to review uncommitted changes |
 | `/test` | Ask the agent to run the tests and report |
 | `/undo` | Revert the agent's latest file edit |
+| `/failover`, `/failover test` | Show backup models, or rehearse an outage |
 | `/diff`, `/git`, `/log`, `/files` | Inspect the workspace |
 | `/context`, `/usage` | Token and context usage |
 | `/compact`, `/continue`, `/export`, `/clear` | Manage the conversation |
@@ -237,7 +244,7 @@ Live-tested so far: Muse Glimmer through OpenRouter, Gemini and Ollama, with res
 | `/doctor`, `/status`, `/sandbox`, `/permissions` | Diagnostics |
 | `/kill`, `/resume` | Emergency kill switch |
 
-**Keys:** `@` for files, `/` for commands, `Esc` to interrupt, `y` or `n` at an approval.
+**Keys:** `@` for files, `/` for commands, `\\` at the end of a line for a new line, `Esc` to interrupt, and `y`, `s` or `n` at an approval.
 
 ## Configuration
 
@@ -245,6 +252,9 @@ Live-tested so far: Muse Glimmer through OpenRouter, Gemini and Ollama, with res
 |---|---|
 | `BUZZARD_MAX_OUTPUT_TOKENS` | Cap output per request on OpenAI-compatible hosts, useful with a small credit balance |
 | `BUZZARD_FALLBACK_MODELS` | Comma-separated backup models, tried in order |
+| `BUZZARD_TEST_TIMEOUT` | Seconds the gate waits for tests (default 300) |
+| `BUZZARD_BUDGET_USD` | Stop a task when estimated session cost reaches this amount |
+| `.buzzard/project.json` | Per-project `test_command` and `test_timeout`; the command still needs approval |
 | `BUZZARD_MCP_CONFIG` | Use a different MCP config path |
 | `BUZZARD_HOME` | Where sessions are stored (default `~/.buzzard`) |
 | `BUZZARD.md` in your project | Coding conventions for the agent; these cannot change approval or security rules |
@@ -289,21 +299,23 @@ Buzzard began as a security assessment agent, and that tooling remains in `tools
 
 **Failover limits:** a failing model may retry for 30 seconds or more before the switch. If a reply fails after output has started, you see the error rather than a silent retry. Failover has been tested against simulated failures, not a real outage.
 
-**Not yet built:** subagents, repository indexing or semantic search, multi-line input, IDE integration, and MCP resources, prompts or HTTP transport.
+**Not yet built:** subagents, repository indexing or semantic search, IDE integration, and MCP resources, prompts or HTTP transport.
 
 **Important limits:**
 - A passing gate proves only what the project's tests check. If the tests share a misunderstanding of the requirement, the gate will still pass.
 - With no test runner detected, the gate falls back to checking syntax and that changes exist.
-- The gate always runs tests on the host, even when Docker is available, and has a fixed 60-second test timeout.
+- The gate always runs tests on the host, even when Docker is available.
+- Cost figures are estimates from a small price list, so unlisted models show no cost and the budget does not apply to them.
+- Budget enforcement stops the task after the request that crossed the limit, so spending can slightly exceed it.
 - `/undo` covers the agent's file tools, not changes made by shell commands.
 - Terminal rendering has been tested mainly through Textual's test driver.
 
 ## Roadmap
 
-1. **Evidence report** at the end of each task: tests run, files changed, approvals given and what was not checked
-2. Configurable gate timeout, and running tests in Docker when available
+1. **Requirement-first verification:** the agent writes a failing test for your request, you approve it, and it must make that test pass
+2. Running gate tests in Docker when available
 3. Repository indexing and symbol navigation
-4. Multi-line input and a richer MCP client
+4. A richer MCP client
 5. Subagents with isolated permissions
 
 ## Tests
