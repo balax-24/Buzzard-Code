@@ -110,6 +110,8 @@ from tools.registry import create_authoritative_registry, ToolRegistry
 # -----------------------------------------------------------------------------
 # Slash Commands Definition
 # -----------------------------------------------------------------------------
+DEFAULT_INPUT_PLACEHOLDER = "> Build, fix or explain...  @ files  / commands  \\ new line"
+
 BUZZARD_COMMANDS: List[tuple[str, str]] = [
     ("/model", "Change active model"),
     ("/models", "List available models"),
@@ -273,6 +275,33 @@ class BuzzardInput(Input):
     def history_down(self) -> None:
         self.action_cursor_down()
 
+    pending_lines: Optional[List[str]] = None
+
+    def hold_lines(self, lines: List[str]) -> None:
+        """Keeps earlier lines of a multi-line message until it is sent."""
+        self.pending_lines = (self.pending_lines or []) + lines
+        count = len(self.pending_lines)
+        self.placeholder = f"{count} line{'s' if count != 1 else ''} held. Keep typing, Enter sends, Esc clears."
+
+    def take_lines(self, last_line: str) -> str:
+        """Returns the whole message and clears the held lines."""
+        text = "\n".join([*(self.pending_lines or []), last_line]).strip()
+        self.pending_lines = None
+        self.placeholder = DEFAULT_INPUT_PLACEHOLDER
+        return text
+
+    def _on_paste(self, event) -> Any:
+        """A single-line input would otherwise drop everything after the first pasted line."""
+        lines = event.text.splitlines()
+        if len(lines) < 2:
+            return super()._on_paste(event)
+        event.stop()
+        event.prevent_default()
+        self.hold_lines([self.value + lines[0], *lines[1:-1]])
+        self.value = lines[-1]
+        self.cursor_position = len(self.value)
+        return None
+
     def _apply_completion(self, chosen: str) -> None:
         """Completes a whole slash command, or only the @mention being typed."""
         prefix = self.value.rsplit(" ", 1)[0] + " " if chosen.startswith("@") and " " in self.value else ""
@@ -285,6 +314,11 @@ class BuzzardInput(Input):
 
         # The focused input receives Esc before any app binding
         menu_open = bool(cmd_box and cmd_box.display and cmd_box.matches)
+        if event.key == "escape" and not menu_open and self.pending_lines:
+            event.prevent_default()
+            event.stop()
+            self.take_lines("")
+            return
         if event.key == "escape" and not menu_open and getattr(app, "is_running_operation", False):
             event.prevent_default()
             event.stop()
@@ -456,7 +490,7 @@ class BuzzardTUIApp(App[None]):
 
             with Horizontal(id="input_container"):
                 self.chat_input = BuzzardInput(
-                    placeholder="> Ask Buzzard to build, fix or explain...   @ files  / commands",
+                    placeholder=DEFAULT_INPUT_PLACEHOLDER,
                     id="user_input",
                 )
                 yield self.chat_input
@@ -701,7 +735,12 @@ class BuzzardTUIApp(App[None]):
             return
 
         self.cmd_box.display = False
-        text = event.value.strip()
+        # A trailing backslash continues the message on a new line
+        if event.value.rstrip().endswith("\\") and not event.value.startswith("/"):
+            self.chat_input.hold_lines([event.value.rstrip()[:-1]])
+            self.chat_input.value = ""
+            return
+        text = self.chat_input.take_lines(event.value)
         if not text:
             return
 
