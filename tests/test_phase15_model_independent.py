@@ -4,11 +4,11 @@ Verifies that the engine deterministically ranks and selects the highest-quality
 without LLM invocation.
 """
 
-from security_agent.agent.assessment_state import AssessmentState, AssessmentContext
-from security_agent.intelligence.action_selection import ActionSelectionEngine
-from security_agent.intelligence.action_history import ActionHistoryStore, ActionOutcome
-from security_agent.intelligence.failure_memory import FailureAwareMemory
-from security_agent.intelligence.hypothesis_engine import HypothesisProposal, ProposalConfidence
+from agent.assessment_state import AssessmentState, AssessmentContext
+from intelligence.action_selection import ActionSelectionEngine
+from intelligence.action_history import ActionHistoryStore, ActionOutcome
+from intelligence.failure_memory import FailureAwareMemory
+from intelligence.hypothesis_engine import HypothesisProposal, ProposalConfidence
 
 
 def test_deterministic_candidate_ranking_fixture():

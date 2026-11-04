@@ -13,7 +13,7 @@ Verifies:
 """
 
 import pytest
-from security_agent.agent.assessment_state import (
+from agent.assessment_state import (
     AssessmentState,
     AssessmentContext,
     ObjectiveStatus,
@@ -22,14 +22,14 @@ from security_agent.agent.assessment_state import (
     HypothesisStatus,
     CapabilityType,
 )
-from security_agent.agent.completion_engine import (
+from agent.completion_engine import (
     CompletionEngine,
     AssessmentMode,
     CompletionAction,
     BudgetSnapshot,
 )
-from security_agent.intelligence.attack_graph import AttackGraph, NodeKind, NodeStatus
-from security_agent.intelligence.information_gain import InformationGainEngine
+from intelligence.attack_graph import AttackGraph, NodeKind, NodeStatus
+from intelligence.information_gain import InformationGainEngine
 
 
 def _make_state(target: str = "127.0.0.1") -> AssessmentState:

@@ -3,7 +3,7 @@ Phase 14 Tests: Failure Recovery Controller.
 Verifies failure classification, bounded retry logic, action pivoting, and terminal escalation.
 """
 
-from security_agent.agent.recovery import (
+from agent.recovery import (
     FailureRecoveryController,
     ToolFailureType,
     ModelFailureType,

@@ -11,9 +11,9 @@ import json
 import tempfile
 from pathlib import Path
 
-from security_agent.agent.assessment_state import AssessmentState, AssessmentContext
-from security_agent.intelligence.decision import DecisionRecord, DecisionSource
-from security_agent.persistence.checkpoint_manager import CheckpointManager
+from agent.assessment_state import AssessmentState, AssessmentContext
+from intelligence.decision import DecisionRecord, DecisionSource
+from persistence.checkpoint_manager import CheckpointManager
 
 
 def compute_action_key(tool: str, target: str, arguments: dict, capability_context: str = "") -> str:

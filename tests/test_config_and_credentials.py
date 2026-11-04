@@ -7,7 +7,7 @@ import json
 import tempfile
 import pytest
 from pathlib import Path
-from security_agent.core.config import (
+from core.config import (
     load_merged_config,
     save_global_config,
     save_project_config,
@@ -15,7 +15,7 @@ from security_agent.core.config import (
     redact_secrets,
     DEFAULT_CONFIG,
 )
-from security_agent.core.credentials import (
+from core.credentials import (
     get_credential,
     set_credential,
     delete_credential,
@@ -36,7 +36,7 @@ def test_config_precedence(tmp_path, monkeypatch):
     # Set fake global config dir
     fake_global_dir = tmp_path / "global"
     fake_global_dir.mkdir()
-    monkeypatch.setattr("security_agent.core.config.get_global_config_dir", lambda: fake_global_dir)
+    monkeypatch.setattr("core.config.get_global_config_dir", lambda: fake_global_dir)
     
     global_cfg = {
         "model": {"provider": "openai", "name": "gpt-4o"},
@@ -108,7 +108,7 @@ def test_config_validation():
 def test_credentials_management(tmp_path, monkeypatch):
     fake_creds_dir = tmp_path / "creds"
     fake_creds_dir.mkdir()
-    monkeypatch.setattr("security_agent.core.credentials.get_credentials_dir", lambda: fake_creds_dir)
+    monkeypatch.setattr("core.credentials.get_credentials_dir", lambda: fake_creds_dir)
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     
     # Test setting credential

@@ -4,7 +4,7 @@ Verifies all 7 core integrity rules and ensures loud failure on invariant violat
 """
 
 import pytest
-from security_agent.agent.assessment_state import (
+from agent.assessment_state import (
     AssessmentState,
     AssessmentContext,
     AssessmentPhase,
@@ -13,14 +13,14 @@ from security_agent.agent.assessment_state import (
     VulnerabilityHypothesis,
     HypothesisStatus,
 )
-from security_agent.model.schemas import Finding, Severity, Confidence
-from security_agent.intelligence.attack_graph import AttackGraph, NodeKind, EdgeKind, NodeStatus
-from security_agent.intelligence.branches import BranchManager, BranchPriority
-from security_agent.intelligence.invariants import (
+from model.schemas import Finding, Severity, Confidence
+from intelligence.attack_graph import AttackGraph, NodeKind, EdgeKind, NodeStatus
+from intelligence.branches import BranchManager, BranchPriority
+from intelligence.invariants import (
     StateInvariantValidator,
     InvariantViolationError,
 )
-from security_agent.persistence.checkpoint_manager import CheckpointManager
+from persistence.checkpoint_manager import CheckpointManager
 
 
 def test_valid_state_passes_all_invariants():
@@ -126,7 +126,7 @@ def test_graph_edge_with_missing_node_fails():
     graph = AttackGraph()
     n1 = graph.add_node(NodeKind.HOST, "127.0.0.1")
     # Manually add an edge pointing to a non-existent node
-    from security_agent.intelligence.attack_graph import GraphEdge
+    from intelligence.attack_graph import GraphEdge
     graph.edges.append(GraphEdge(
         edge_id="EDGE-GHOST",
         from_node_id=n1.node_id,

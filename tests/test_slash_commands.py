@@ -3,7 +3,7 @@ Unit tests for all Buzzard Code slash commands and security managers.
 """
 
 import pytest
-from security_agent.security.manager import (
+from security.manager import (
     render_policy_and_permissions,
     render_scope,
     modify_scope,
@@ -11,10 +11,10 @@ from security_agent.security.manager import (
     trigger_kill_switch,
     resume_kill_switch,
 )
-from security_agent.security.kill_switch import KillSwitch
-from security_agent.tools.inspector import get_tool_details, render_tools
-from security_agent.model.factory import list_supported_providers, resolve_provider_and_model
-from security_agent.core.config import load_merged_config, save_global_config
+from security.kill_switch import KillSwitch
+from tools.inspector import get_tool_details, render_tools
+from model.factory import list_supported_providers, resolve_provider_and_model
+from core.config import load_merged_config, save_global_config
 
 def test_scope_management():
     cfg = load_merged_config()

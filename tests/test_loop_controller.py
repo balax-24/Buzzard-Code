@@ -16,8 +16,8 @@ Verifies:
 
 import json
 import pytest
-from security_agent.agent.loop_controller import StuckLoopDetector, LoopRecoveryController
-from security_agent.agent.assessment_state import (
+from agent.loop_controller import StuckLoopDetector, LoopRecoveryController
+from agent.assessment_state import (
     AssessmentState,
     AssessmentContext,
     AssessmentPhase,
@@ -250,7 +250,7 @@ def test_premature_completion_guarded_when_verification_required():
 
 def test_exploit_candidate_preconditions_evaluation():
     """Explicitly tests ExploitCandidate precondition evaluation against AssessmentState."""
-    from security_agent.agent.assessment_state import ExploitCandidate, ExploitPrecondition
+    from agent.assessment_state import ExploitCandidate, ExploitPrecondition
 
     state = AssessmentState(context=AssessmentContext(target="127.0.0.1", scope=("127.0.0.1",)))
     srv = state.record_service(host="127.0.0.1", port=80, protocol="tcp", service="http", state=ServiceState.OPEN)

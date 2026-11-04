@@ -5,7 +5,7 @@ Tests for project initialization and dynamic custom commands.
 import pytest
 import json
 from pathlib import Path
-from security_agent.core.project import (
+from core.project import (
     init_project,
     load_custom_commands,
     parse_markdown_command,

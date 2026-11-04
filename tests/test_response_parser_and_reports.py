@@ -1,27 +1,27 @@
 """
 Unit tests for extracted components:
-- security_agent.model.response_parser
-- security_agent.reports (clean_report_content, parse_inline_findings)
-- security_agent.agent.completion_engine (evaluate_tool_completion, evaluate_verification_gate)
-- security_agent.cli.dashboard (build_dashboard_layout)
+- model.response_parser
+- reports (clean_report_content, parse_inline_findings)
+- agent.completion_engine (evaluate_tool_completion, evaluate_verification_gate)
+- cli.dashboard (build_dashboard_layout)
 """
 
 import pytest
-from security_agent.model.response_parser import extract_json_dict, parse_decision_summary
-from security_agent.reports.report_generator import clean_report_content, parse_inline_findings
-from security_agent.agent.completion_engine import (
+from model.response_parser import extract_json_dict, parse_decision_summary
+from reports.report_generator import clean_report_content, parse_inline_findings
+from agent.completion_engine import (
     CompletionEngine,
     GuardAction,
     GuardDecision,
 )
-from security_agent.agent.assessment_state import (
+from agent.assessment_state import (
     AssessmentState,
     AssessmentContext,
     ObjectiveStatus,
     ServiceRecord,
     ServiceState,
 )
-from security_agent.cli.dashboard import DashboardState, build_dashboard_layout, THEMES
+from cli.dashboard import DashboardState, build_dashboard_layout, THEMES
 
 
 def test_extract_json_dict():

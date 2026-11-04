@@ -9,7 +9,7 @@ import pytest
 import tempfile
 from pathlib import Path
 
-from security_agent.agent.assessment_state import (
+from agent.assessment_state import (
     AssessmentState,
     AssessmentContext,
     Capability,
@@ -17,11 +17,11 @@ from security_agent.agent.assessment_state import (
     AssessmentPhase,
     ObjectiveStatus,
 )
-from security_agent.intelligence.attack_graph import AttackGraph, NodeKind, EdgeKind
-from security_agent.intelligence.hypothesis_engine import HypothesisEngine
-from security_agent.intelligence.decision import DecisionRecord, DecisionSource
-from security_agent.persistence.models import BudgetSnapshot, InvestigationStatus
-from security_agent.persistence.checkpoint_manager import CheckpointManager
+from intelligence.attack_graph import AttackGraph, NodeKind, EdgeKind
+from intelligence.hypothesis_engine import HypothesisEngine
+from intelligence.decision import DecisionRecord, DecisionSource
+from persistence.models import BudgetSnapshot, InvestigationStatus
+from persistence.checkpoint_manager import CheckpointManager
 
 
 def test_atomic_checkpoint_and_resume():

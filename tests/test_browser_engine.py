@@ -3,7 +3,7 @@ Tests for BrowserEngine initialization, context creation, and graceful fallback.
 """
 
 import pytest
-from security_agent.browser import BrowserEngine, BrowserContext, BrowserPage
+from browser import BrowserEngine, BrowserContext, BrowserPage
 
 
 def test_browser_engine_launch_and_context_creation():

@@ -3,8 +3,8 @@ Phase 15 Tests: Failure-Aware Action Memory.
 Verifies failure recording, condition mapping, and capability-triggered unblocking.
 """
 
-from security_agent.intelligence.failure_memory import FailureAwareMemory, FailureConditionType
-from security_agent.intelligence.action_identity import ActionIdentity
+from intelligence.failure_memory import FailureAwareMemory, FailureConditionType
+from intelligence.action_identity import ActionIdentity
 
 
 def test_auth_failure_blocks_action_until_capability_acquired():

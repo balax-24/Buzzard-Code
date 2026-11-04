@@ -2,9 +2,9 @@
 Tests for evidence ingestion and state convergence loops with browser observations.
 """
 
-from security_agent.agent.assessment_state import AssessmentState, AssessmentContext
-from security_agent.agent.tool_executor import ToolExecutionResult
-from security_agent.intelligence.evidence_ingestor import EvidenceIngestor
+from agent.assessment_state import AssessmentState, AssessmentContext
+from agent.tool_executor import ToolExecutionResult
+from intelligence.evidence_ingestor import EvidenceIngestor
 
 
 def test_browser_evidence_ingestion_and_state_convergence():

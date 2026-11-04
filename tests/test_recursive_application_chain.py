@@ -9,7 +9,7 @@ OBJECTIVE_VERIFIED -> REPORT.
 """
 
 import pytest
-from security_agent.agent.assessment_state import (
+from agent.assessment_state import (
     AssessmentState,
     AssessmentContext,
     ServiceRecord,
@@ -17,12 +17,12 @@ from security_agent.agent.assessment_state import (
     CapabilityType,
     ObjectiveStatus,
 )
-from security_agent.state.session_store import Cookie
-from security_agent.browser import DOMReducer
-from security_agent.intelligence.attack_graph import AttackGraph, NodeKind
-from security_agent.intelligence.evidence_ingestor import EvidenceIngestor
-from security_agent.agent.tool_executor import ToolExecutionResult
-from security_agent.verification.finding_verifier import FindingVerifier
+from state.session_store import Cookie
+from browser import DOMReducer
+from intelligence.attack_graph import AttackGraph, NodeKind
+from intelligence.evidence_ingestor import EvidenceIngestor
+from agent.tool_executor import ToolExecutionResult
+from verification.finding_verifier import FindingVerifier
 
 
 def test_full_application_attack_chain_lifecycle():

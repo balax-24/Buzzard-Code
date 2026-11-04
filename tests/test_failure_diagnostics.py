@@ -10,7 +10,7 @@ Verifies:
 """
 
 import pytest
-from security_agent.intelligence.failure_diagnostics import (
+from intelligence.failure_diagnostics import (
     FailureDiagnosticsEngine,
     FailureCategory,
     StructuredFailureFeedback,

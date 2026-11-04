@@ -14,24 +14,24 @@ Validates that ActionSelectionEngine:
 """
 
 import pytest
-from security_agent.agent.assessment_state import (
+from agent.assessment_state import (
     AssessmentState,
     AssessmentContext,
     Capability,
     CapabilityType,
 )
-from security_agent.intelligence.action_selection import (
+from intelligence.action_selection import (
     ActionSelectionEngine,
     ActionCandidate,
     GainRecommendation,
 )
-from security_agent.intelligence.hypothesis_engine import (
+from intelligence.hypothesis_engine import (
     HypothesisProposal,
     ProposalConfidence,
 )
-from security_agent.intelligence.decision import DecisionRecord, DecisionSource
-from security_agent.intelligence.action_history import ActionHistoryStore, ActionHistoryRecord
-from security_agent.intelligence.attack_graph import AttackGraph, NodeStatus, NodeKind
+from intelligence.decision import DecisionRecord, DecisionSource
+from intelligence.action_history import ActionHistoryStore, ActionHistoryRecord
+from intelligence.attack_graph import AttackGraph, NodeStatus, NodeKind
 
 
 def test_ranking_deterministic_and_explainable():

@@ -3,8 +3,8 @@ Phase 15 Tests: Attack Graph Frontier Engine.
 Verifies node lifecycle stages and retrieval of reachable unexplored assets.
 """
 
-from security_agent.intelligence.attack_graph import AttackGraph, NodeKind, NodeStatus, EdgeKind
-from security_agent.intelligence.frontier import FrontierEngine, FrontierStage
+from intelligence.attack_graph import AttackGraph, NodeKind, NodeStatus, EdgeKind
+from intelligence.frontier import FrontierEngine, FrontierStage
 
 
 def test_frontier_stage_classification():

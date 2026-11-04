@@ -3,9 +3,9 @@ Phase 15 Tests: Context-Change Action Reconsideration.
 Verifies that acquiring a capability justifies re-evaluating previously failed actions.
 """
 
-from security_agent.intelligence.action_history import ActionHistoryStore, ActionOutcome
-from security_agent.intelligence.failure_memory import FailureAwareMemory
-from security_agent.intelligence.reconsideration import ReconsiderationEngine, ReconsiderationTrigger
+from intelligence.action_history import ActionHistoryStore, ActionOutcome
+from intelligence.failure_memory import FailureAwareMemory
+from intelligence.reconsideration import ReconsiderationEngine, ReconsiderationTrigger
 
 
 def test_context_change_reconsiders_auth_endpoint():

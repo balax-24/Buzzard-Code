@@ -2,11 +2,11 @@
 Tests for Verification Pipeline and Attack Path Analyzer.
 """
 
-from security_agent.storage.db import StorageManager
-from security_agent.intelligence.hypothesis import SecurityHypothesis, HypothesisStatus
-from security_agent.verification.pipeline import VerificationPipeline
-from security_agent.verification.attack_paths import AttackPathAnalyzer
-from security_agent.model.schemas import Finding, Severity, Confidence
+from storage.db import StorageManager
+from intelligence.hypothesis import SecurityHypothesis, HypothesisStatus
+from verification.pipeline import VerificationPipeline
+from verification.attack_paths import AttackPathAnalyzer
+from model.schemas import Finding, Severity, Confidence
 
 
 def test_verification_pipeline_confirmed_finding(tmp_path):

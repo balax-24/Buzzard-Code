@@ -1,5 +1,5 @@
 import pytest
-from security_agent.benchmark.phase18_bench import Phase18PersistenceBenchmark
+from benchmark.phase18_bench import Phase18PersistenceBenchmark
 
 def test_10_checkpoint_long_duration_benchmark(tmp_path):
     report, chk_count = Phase18PersistenceBenchmark.run_long_duration_10_checkpoint_benchmark(

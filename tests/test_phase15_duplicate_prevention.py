@@ -3,10 +3,10 @@ Phase 15 Tests: Duplicate Prevention & Decay.
 Verifies that redundant probes on already explored assets decay sharply while novel actions rank high.
 """
 
-from security_agent.agent.assessment_state import AssessmentState, AssessmentContext
-from security_agent.intelligence.action_selection import ActionSelectionEngine, GainRecommendation
-from security_agent.intelligence.action_history import ActionHistoryStore, ActionOutcome
-from security_agent.intelligence.hypothesis_engine import HypothesisProposal, ProposalConfidence
+from agent.assessment_state import AssessmentState, AssessmentContext
+from intelligence.action_selection import ActionSelectionEngine, GainRecommendation
+from intelligence.action_history import ActionHistoryStore, ActionOutcome
+from intelligence.hypothesis_engine import HypothesisProposal, ProposalConfidence
 
 
 def test_repeated_action_decay_in_candidate_selection():

@@ -8,21 +8,21 @@ Tests for P4 Residual Hardening:
 
 import pytest
 import uuid
-from security_agent.agent.assessment_state import (
+from agent.assessment_state import (
     AssessmentState,
     AssessmentContext,
     ObjectiveStatus,
     VerificationPredicates,
 )
-from security_agent.tools.evidence import log_finding
-from security_agent.tools.registry import ToolRegistry
-from security_agent.agent.tool_executor import ToolExecutor
-from security_agent.storage.db import StorageManager
-from security_agent.verification.pipeline import VerificationPipeline
-from security_agent.intelligence.hypothesis import SecurityHypothesis, HypothesisStatus
-from security_agent.model.schemas import Severity, Confidence
+from tools.evidence import log_finding
+from tools.registry import ToolRegistry
+from agent.tool_executor import ToolExecutor
+from storage.db import StorageManager
+from verification.pipeline import VerificationPipeline
+from intelligence.hypothesis import SecurityHypothesis, HypothesisStatus
+from model.schemas import Severity, Confidence
 from tests.test_agent_loop import MockModelProvider
-from security_agent.agent.loop import AgentLoop
+from agent.loop import AgentLoop
 
 
 # ==============================================================================
@@ -110,7 +110,7 @@ def test_log_finding_via_tool_executor(tmp_path):
 
     state = AssessmentState()
     registry = ToolRegistry()
-    from security_agent.tools.evidence import register_evidence_tools
+    from tools.evidence import register_evidence_tools
     register_evidence_tools(registry)
     executor = ToolExecutor(registry=registry, storage=storage)
 

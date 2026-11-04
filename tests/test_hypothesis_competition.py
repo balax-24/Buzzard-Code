@@ -7,8 +7,8 @@ Verifies:
 """
 
 import pytest
-from security_agent.agent.assessment_state import AssessmentState, AssessmentContext, ServiceRecord, VulnerabilityHypothesis, HypothesisStatus
-from security_agent.intelligence.hypothesis_engine import HypothesisEngine, ProposalConfidence
+from agent.assessment_state import AssessmentState, AssessmentContext, ServiceRecord, VulnerabilityHypothesis, HypothesisStatus
+from intelligence.hypothesis_engine import HypothesisEngine, ProposalConfidence
 
 
 def test_hypothesis_competition_and_state_machine():

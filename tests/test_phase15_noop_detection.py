@@ -3,7 +3,7 @@ Phase 15 Tests: No-Op Action & Stagnation Detection.
 Verifies identification of non-productive actions and automatic pivot triggers.
 """
 
-from security_agent.intelligence.noop_detector import NoOpDetector, ActionDelta
+from intelligence.noop_detector import NoOpDetector, ActionDelta
 
 
 def test_noop_stagnation_and_pivot_trigger():

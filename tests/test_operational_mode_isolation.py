@@ -14,13 +14,13 @@ Verifies:
 """
 
 import pytest
-from security_agent.agent.assessment_state import (
+from agent.assessment_state import (
     AssessmentState,
     AssessmentContext,
     AssessmentPhase,
     CapabilityType,
 )
-from security_agent.agent.mode_isolation import (
+from agent.mode_isolation import (
     OperationalMode,
     OperationalModeManager,
     ModeIsolationViolation,

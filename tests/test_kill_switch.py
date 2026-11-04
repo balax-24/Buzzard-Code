@@ -5,9 +5,9 @@ Tests for KillSwitch subsystem.
 import os
 from pathlib import Path
 import pytest
-from security_agent.events.bus import EventBus
-from security_agent.events.types import EventType
-from security_agent.security.kill_switch import KillSwitch, KILL_FILE_PATHS
+from events.bus import EventBus
+from events.types import EventType
+from security.kill_switch import KillSwitch, KILL_FILE_PATHS
 
 
 @pytest.fixture(autouse=True)

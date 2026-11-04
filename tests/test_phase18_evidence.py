@@ -1,6 +1,6 @@
 import pytest
-from security_agent.agent.assessment_state import AssessmentContext, AssessmentState
-from security_agent.persistence.engagement_store import EngagementStore
+from agent.assessment_state import AssessmentContext, AssessmentState
+from persistence.engagement_store import EngagementStore
 
 def test_evidence_immutability_and_relationships(tmp_path):
     store = EngagementStore(base_dir=tmp_path)

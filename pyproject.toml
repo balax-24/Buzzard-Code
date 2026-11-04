@@ -19,10 +19,10 @@ dependencies = [
 ]
 
 [project.scripts]
-buzzard = "security_agent.cli.main:main"
-buzzard-code = "security_agent.cli.main:main"
-security-agent = "security_agent.cli.main:main"
-qsecurity = "security_agent.tui.cli:main"
+buzzard = "cli.main:main"
+buzzard-code = "cli.main:main"
+security-agent = "cli.main:main"
+qsecurity = "tui.cli:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0.0"]
@@ -41,7 +41,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["security_agent"]
+packages = ["agent", "benchmark", "browser", "cli", "core", "events", "intelligence", "model", "persistence", "range", "remediation", "reports", "sandbox", "security", "state", "storage", "system", "toolchain", "tools", "training", "tui", "verification"]
 
 [dependency-groups]
 dev = [

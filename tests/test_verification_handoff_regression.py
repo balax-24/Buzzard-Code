@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import MagicMock
-from security_agent.agent.assessment_state import (
+from agent.assessment_state import (
     AssessmentState,
     AssessmentContext,
     AssessmentPhase,
@@ -10,8 +10,8 @@ from security_agent.agent.assessment_state import (
     HypothesisStatus,
     VulnerabilityHypothesis,
 )
-from security_agent.agent.tool_executor import ToolExecutor
-from security_agent.range.multi_service_lab import MultiServiceLab
+from agent.tool_executor import ToolExecutor
+from range.multi_service_lab import MultiServiceLab
 
 
 def test_verification_candidate_generation_and_planner_visibility():
@@ -96,7 +96,7 @@ def test_verification_execution_with_lab():
         candidates = state.generate_verification_candidates()
         top_cand = candidates[0]
 
-        from security_agent.toolchain.manager import ToolchainManager
+        from toolchain.manager import ToolchainManager
         registry = ToolchainManager._create_default_registry()
         executor = ToolExecutor(registry=registry)
         exec_res = executor.execute(

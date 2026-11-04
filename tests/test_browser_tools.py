@@ -2,9 +2,9 @@ import pytest
 import os
 import base64
 from unittest.mock import MagicMock
-from security_agent.tools.registry import ToolRegistry
-from security_agent.storage.db import StorageManager
-from security_agent.tools.browser import (
+from tools.registry import ToolRegistry
+from storage.db import StorageManager
+from tools.browser import (
     browser_open,
     browser_goto,
     browser_click,

@@ -1,10 +1,10 @@
 import pytest
 from typing import List, Dict, Any, Optional
-from security_agent.agent.loop import AgentLoop
-from security_agent.model.provider import ModelProvider
-from security_agent.tools.registry import ToolRegistry
-from security_agent.storage.db import StorageManager
-from security_agent.model.schemas import TaskStatus
+from agent.loop import AgentLoop
+from model.provider import ModelProvider
+from tools.registry import ToolRegistry
+from storage.db import StorageManager
+from model.schemas import TaskStatus
 
 class MockModelProvider(ModelProvider):
     """

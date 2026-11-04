@@ -5,7 +5,7 @@ without manual action injection, strictly from observed evidence.
 """
 
 import pytest
-from security_agent.agent.assessment_state import (
+from agent.assessment_state import (
     AssessmentState,
     AssessmentContext,
     ServiceRecord,
@@ -13,11 +13,11 @@ from security_agent.agent.assessment_state import (
     CapabilityType,
     ObjectiveStatus,
 )
-from security_agent.intelligence.attack_graph import AttackGraph
-from security_agent.intelligence.hypothesis_engine import HypothesisEngine
-from security_agent.intelligence.evidence_ingestor import EvidenceIngestor
-from security_agent.intelligence.decision import DecisionRecord, DecisionSource, AutonomyEvaluator, AutonomyMode
-from security_agent.agent.tool_executor import ToolExecutionResult
+from intelligence.attack_graph import AttackGraph
+from intelligence.hypothesis_engine import HypothesisEngine
+from intelligence.evidence_ingestor import EvidenceIngestor
+from intelligence.decision import DecisionRecord, DecisionSource, AutonomyEvaluator, AutonomyMode
+from agent.tool_executor import ToolExecutionResult
 
 
 def test_deterministic_model_free_autonomy_fixture():

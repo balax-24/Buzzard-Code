@@ -2,7 +2,7 @@
 Tests for static JavaScript route extraction: fetch(), axios(), $.ajax(), REST strings, and WebSockets.
 """
 
-from security_agent.browser.dom import JavaScriptSurfaceExtractor
+from browser.dom import JavaScriptSurfaceExtractor
 
 
 def test_javascript_endpoint_extraction():

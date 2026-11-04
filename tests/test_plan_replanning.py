@@ -6,7 +6,7 @@ Verifies:
 """
 
 import pytest
-from security_agent.intelligence.long_horizon import PlanReassessmentEngine, MultiStepPlan
+from intelligence.long_horizon import PlanReassessmentEngine, MultiStepPlan
 
 
 def test_plan_parsing_and_invalidation():

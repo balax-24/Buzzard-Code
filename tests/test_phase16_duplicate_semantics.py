@@ -3,8 +3,8 @@ Phase 16 Tests: Semantic Duplicate Detection & Decay.
 Verifies repeated action with no state change decays gain to 0.
 """
 
-from security_agent.intelligence.action_history import ActionHistoryStore, ActionOutcome
-from security_agent.intelligence.gain_predictor import GainPredictor
+from intelligence.action_history import ActionHistoryStore, ActionOutcome
+from intelligence.gain_predictor import GainPredictor
 
 
 def test_repeated_identical_action_decays_gain():

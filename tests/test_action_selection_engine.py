@@ -7,13 +7,13 @@ Verifies:
 """
 
 import pytest
-from security_agent.agent.assessment_state import AssessmentState, AssessmentContext
-from security_agent.intelligence.hypothesis_engine import HypothesisEngine
-from security_agent.intelligence.action_selection import (
+from agent.assessment_state import AssessmentState, AssessmentContext
+from intelligence.hypothesis_engine import HypothesisEngine
+from intelligence.action_selection import (
     ActionSelectionEngine,
     GainRecommendation,
 )
-from security_agent.intelligence.decision import DecisionRecord, DecisionSource
+from intelligence.decision import DecisionRecord, DecisionSource
 
 
 def test_action_selection_candidate_generation():

@@ -1,4 +1,4 @@
-from security_agent.tui.test_utils import run_async
+from tui.test_utils import run_async
 """
 Tests for Qwythos TUI Chat Mode.
 Verifies:
@@ -8,9 +8,9 @@ Verifies:
 
 import pytest
 from textual.widgets import Input
-from security_agent.tui.app import QwythosTUIApp
-from security_agent.tui.models import AppMode, MessageRole
-from security_agent.tui.config import TUIConfig
+from tui.app import QwythosTUIApp
+from tui.models import AppMode, MessageRole
+from tui.config import TUIConfig
 
 
 def test_chat_mode_conversational_turn():

@@ -15,11 +15,11 @@ Verifies:
 
 import pytest
 from typing import Any, Dict, List, Optional
-from security_agent.agent.loop import AgentLoop
-from security_agent.agent.assessment_state import AssessmentState, ObjectiveStatus
-from security_agent.model.provider import ModelProvider
-from security_agent.tools.registry import ToolRegistry, ToolCategory
-from security_agent.model.decision_contract import (
+from agent.loop import AgentLoop
+from agent.assessment_state import AssessmentState, ObjectiveStatus
+from model.provider import ModelProvider
+from tools.registry import ToolRegistry, ToolCategory
+from model.decision_contract import (
     ModelDecision,
     DecisionType,
     DecisionSource,

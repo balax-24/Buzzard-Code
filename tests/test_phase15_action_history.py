@@ -3,7 +3,7 @@ Phase 15 Tests: Action History & Empirical Outcome Store.
 Verifies queryable action auditing, outcome retrieval, and serialization.
 """
 
-from security_agent.intelligence.action_history import ActionHistoryStore, ActionOutcome
+from intelligence.action_history import ActionHistoryStore, ActionOutcome
 
 
 def test_record_action_and_repetition_count():

@@ -3,9 +3,9 @@ Phase 15 Tests: Evidence-Change Action Reconsideration.
 Verifies that newly discovered evidence unblocks and justifies re-evaluating targets.
 """
 
-from security_agent.intelligence.action_history import ActionHistoryStore, ActionOutcome
-from security_agent.intelligence.failure_memory import FailureAwareMemory
-from security_agent.intelligence.reconsideration import ReconsiderationEngine, ReconsiderationTrigger
+from intelligence.action_history import ActionHistoryStore, ActionOutcome
+from intelligence.failure_memory import FailureAwareMemory
+from intelligence.reconsideration import ReconsiderationEngine, ReconsiderationTrigger
 
 
 def test_new_evidence_unblocks_target_reconsideration():

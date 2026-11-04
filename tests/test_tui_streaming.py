@@ -1,4 +1,4 @@
-from security_agent.tui.test_utils import run_async
+from tui.test_utils import run_async
 """
 Tests for Qwythos TUI Streaming Output.
 Verifies:
@@ -7,9 +7,9 @@ Verifies:
 """
 
 import pytest
-from security_agent.tui.app import QwythosTUIApp
-from security_agent.tui.models import ChatMessage, MessageRole
-from security_agent.tui.widgets.chat import ChatView
+from tui.app import QwythosTUIApp
+from tui.models import ChatMessage, MessageRole
+from tui.widgets.chat import ChatView
 
 
 def test_chat_view_streaming():

@@ -1,8 +1,8 @@
 import pytest
 from unittest.mock import patch, MagicMock
 import urllib.error
-from security_agent.tools.http import http_request, register_http_tools
-from security_agent.tools.registry import ToolRegistry
+from tools.http import http_request, register_http_tools
+from tools.registry import ToolRegistry
 
 @patch("urllib.request.urlopen")
 def test_http_request_success(mock_urlopen):

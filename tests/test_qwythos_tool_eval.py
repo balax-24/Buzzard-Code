@@ -3,12 +3,12 @@ Unit tests for Qwythos Tool-Eval Regression Suite, Unified Tool Registry, and Qu
 """
 
 import pytest
-from security_agent.tools.registry import create_authoritative_registry, ToolCategory, ToolHealthState
-from security_agent.agent.assessment_state import (
+from tools.registry import create_authoritative_registry, ToolCategory, ToolHealthState
+from agent.assessment_state import (
     AssessmentState, ServiceRecord, ServiceState, VerificationStatus, FailureClassification,
     CandidateActionValidator
 )
-from security_agent.benchmark.qwythos_eval import QwythosEvaluator, QWYTHOS_TEST_SUITE, EvalCategory
+from benchmark.qwythos_eval import QwythosEvaluator, QWYTHOS_TEST_SUITE, EvalCategory
 
 
 def test_authoritative_registry_count_integrity():

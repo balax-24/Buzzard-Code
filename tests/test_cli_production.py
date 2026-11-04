@@ -4,10 +4,10 @@ Comprehensive end-to-end tests for Buzzard Code CLI and slash commands.
 
 import pytest
 from click.testing import CliRunner
-from security_agent.cli.main import main
-from security_agent.security.kill_switch import KillSwitch
-from security_agent.core.config import DEFAULT_CONFIG
-from security_agent.core.project import init_project
+from cli.main import main
+from security.kill_switch import KillSwitch
+from core.config import DEFAULT_CONFIG
+from core.project import init_project
 
 @pytest.fixture
 def runner():

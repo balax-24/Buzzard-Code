@@ -1,5 +1,5 @@
 import pytest
-from security_agent.benchmark.phase17_bench import Phase17LongHorizonBenchmark
+from benchmark.phase17_bench import Phase17LongHorizonBenchmark
 
 def test_branch_roi_measurement():
     report, _ = Phase17LongHorizonBenchmark.run_1000_action_benchmark()

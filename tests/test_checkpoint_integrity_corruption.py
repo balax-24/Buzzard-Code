@@ -11,8 +11,8 @@ import json
 import tempfile
 from pathlib import Path
 
-from security_agent.agent.assessment_state import AssessmentState, AssessmentContext
-from security_agent.persistence.checkpoint_manager import CheckpointManager, CheckpointCorruptionError
+from agent.assessment_state import AssessmentState, AssessmentContext
+from persistence.checkpoint_manager import CheckpointManager, CheckpointCorruptionError
 
 
 def test_corrupted_json_rejection():

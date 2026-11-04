@@ -3,9 +3,9 @@ Phase 16 Tests: Justified Reconsideration via Capability Context Change.
 Proves that GET /admin + UNAUTHENTICATED is different from GET /admin + AUTHENTICATED.
 """
 
-from security_agent.intelligence.action_history import ActionHistoryStore, ActionOutcome
-from security_agent.intelligence.action_identity import ActionIdentity
-from security_agent.intelligence.gain_predictor import GainPredictor
+from intelligence.action_history import ActionHistoryStore, ActionOutcome
+from intelligence.action_identity import ActionIdentity
+from intelligence.gain_predictor import GainPredictor
 
 
 def test_capability_context_change_rejuvenates_action():

@@ -1,4 +1,4 @@
-from security_agent.tui.test_utils import run_async
+from tui.test_utils import run_async
 """
 Tests for Qwythos TUI Slash Commands.
 Verifies:
@@ -8,8 +8,8 @@ Verifies:
 
 import pytest
 from textual.widgets import Input
-from security_agent.tui.app import QwythosTUIApp
-from security_agent.tui.models import AppMode, MessageRole
+from tui.app import QwythosTUIApp
+from tui.models import AppMode, MessageRole
 
 
 def test_tui_slash_commands():

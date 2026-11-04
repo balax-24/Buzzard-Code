@@ -19,17 +19,17 @@ from typing import Dict, Any
 from textual.widgets import Input
 from textual.geometry import Size
 
-from security_agent.tui.app import BuzzardTUIApp, BuzzardInput, CommandSuggestionsBox
-from security_agent.tui.widgets.header import BuzzardHeader
-from security_agent.tui.widgets.status_bar import BuzzardStatusBar
-from security_agent.tui.widgets.chat import ChatView, MessageBubble, EmptyStateWidget
-from security_agent.tui.widgets.tool_card import ToolActivityCard
-from security_agent.tui.widgets.modals import ApprovalModal, ModelSwitchModal
-from security_agent.tui.models import ChatMessage, MessageRole
-from security_agent.events.bus import EventBus
-from security_agent.events.types import Event, EventType
-from security_agent.security.kill_switch import KillSwitch
-from security_agent.tui.test_utils import run_async
+from tui.app import BuzzardTUIApp, BuzzardInput, CommandSuggestionsBox
+from tui.widgets.header import BuzzardHeader
+from tui.widgets.status_bar import BuzzardStatusBar
+from tui.widgets.chat import ChatView, MessageBubble, EmptyStateWidget
+from tui.widgets.tool_card import ToolActivityCard
+from tui.widgets.modals import ApprovalModal, ModelSwitchModal
+from tui.models import ChatMessage, MessageRole
+from events.bus import EventBus
+from events.types import Event, EventType
+from security.kill_switch import KillSwitch
+from tui.test_utils import run_async
 
 
 def test_buzzard_tui_startup_and_composition():

@@ -3,7 +3,7 @@ Phase 14 Tests: Operation & Entity Idempotency.
 Verifies deduplication of evidence, findings, capabilities, graph edges, and operations across turns and crash-restarts.
 """
 
-from security_agent.persistence.idempotency import IdempotencyManager
+from persistence.idempotency import IdempotencyManager
 
 
 def test_operation_idempotency():

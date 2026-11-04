@@ -3,7 +3,7 @@ Phase 14 Tests: Long-Horizon Deterministic Trajectory Execution.
 Evaluates agent state preservation across 128 turns with periodic checkpoints and crash recoveries.
 """
 
-from security_agent.benchmark.phase14_bench import Phase14DeterministicBenchmark
+from benchmark.phase14_bench import Phase14DeterministicBenchmark
 
 
 def test_128_turn_trajectory_with_crash_injection():

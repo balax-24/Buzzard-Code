@@ -2,7 +2,7 @@
 Tests for NetworkRecorder, telemetry capture, and secret redaction.
 """
 
-from security_agent.browser.network import NetworkRecorder, redact_sensitive_headers
+from browser.network import NetworkRecorder, redact_sensitive_headers
 
 
 def test_network_recorder_event_tracking_and_redaction():

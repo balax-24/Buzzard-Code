@@ -3,7 +3,7 @@ Phase 16 Tests: Synthetic Environment Integrity.
 Verifies that the synthetic environment is deterministic and does NOT cheat with artificial turn mutations.
 """
 
-from security_agent.benchmark.phase16_bench import SyntheticInvestigationEnvironment, UsefulnessClassification
+from benchmark.phase16_bench import SyntheticInvestigationEnvironment, UsefulnessClassification
 
 
 def test_synthetic_environment_is_deterministic_and_does_not_mutate_without_cause():

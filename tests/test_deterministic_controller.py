@@ -21,7 +21,7 @@ Validates:
 import pytest
 from typing import Dict, Any
 
-from security_agent.agent.assessment_state import (
+from agent.assessment_state import (
     AssessmentState,
     AssessmentContext,
     AssessmentPhase,
@@ -31,19 +31,19 @@ from security_agent.agent.assessment_state import (
     CapabilityType,
     VerificationStatus,
 )
-from security_agent.intelligence.attack_graph import (
+from intelligence.attack_graph import (
     AttackGraph,
     NodeKind,
     NodeStatus,
 )
-from security_agent.intelligence.decision import DecisionSource
-from security_agent.agent.completion_engine import (
+from intelligence.decision import DecisionSource
+from agent.completion_engine import (
     CompletionEngine,
     CompletionAction,
     AssessmentMode,
     BudgetSnapshot,
 )
-from security_agent.agent.deterministic_controller import (
+from agent.deterministic_controller import (
     DeterministicController,
     highest_priority_candidate,
 )

@@ -2,7 +2,7 @@
 
 import time
 import pytest
-from security_agent.agent.budget import BudgetConfig, BudgetTracker
+from agent.budget import BudgetConfig, BudgetTracker
 
 
 class TestBudgetTracker:

@@ -2,10 +2,10 @@
 Tests for Remediation and Retest Subsystems.
 """
 
-from security_agent.model.schemas import Finding, Severity, Confidence
-from security_agent.remediation.guidance import RemediationGenerator
-from security_agent.remediation.retest import RetestEngine
-from security_agent.range.lab_targets import CyberRangeServer
+from model.schemas import Finding, Severity, Confidence
+from remediation.guidance import RemediationGenerator
+from remediation.retest import RetestEngine
+from range.lab_targets import CyberRangeServer
 
 
 def test_remediation_generator_sqli():

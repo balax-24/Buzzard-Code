@@ -3,7 +3,7 @@ Phase 15 Tests: 100-Action Efficiency & 500-Action Long Horizon.
 Verifies decision quality, evolving action distribution, and metrics over long horizons.
 """
 
-from security_agent.benchmark.phase15_bench import Phase15InvestigationBenchmark
+from benchmark.phase15_bench import Phase15InvestigationBenchmark
 
 
 def test_100_action_efficiency_benchmark():

@@ -1,5 +1,5 @@
 import pytest
-from security_agent.agent.intent import (
+from agent.intent import (
     is_coding_task,
     is_security_task,
     is_actionable_task,

@@ -2,24 +2,24 @@ import json
 import pytest
 from unittest.mock import MagicMock
 
-from security_agent.agent.loop import AgentLoop, TaskStatus
-from security_agent.agent.assessment_state import (
+from agent.loop import AgentLoop, TaskStatus
+from agent.assessment_state import (
     AssessmentContext,
     AssessmentState,
     FailureClassification,
     classify_failure
 )
-from security_agent.intelligence.evidence_parser import (
+from intelligence.evidence_parser import (
     EvidenceParser,
     AttackSurfaceSnapshot,
     DiscoveredService,
     ActionRecommendation,
     StructuredScanResult
 )
-from security_agent.tools.knowledge import select_next
-from security_agent.intelligence.selector import ToolSelector
-from security_agent.tools.registry import ToolRegistry
-from security_agent.cli.renderer import render_performance_profile
+from tools.knowledge import select_next
+from intelligence.selector import ToolSelector
+from tools.registry import ToolRegistry
+from cli.renderer import render_performance_profile
 
 
 def test_priority_queue_and_actionable_recommendations():

@@ -2,8 +2,8 @@ import os
 import unittest
 import tempfile
 import shutil
-from security_agent.tools.filesystem import file_list, file_read, file_write, file_search, get_safe_path, set_active_workspace
-from security_agent.tools.registry import ToolRegistry
+from tools.filesystem import file_list, file_read, file_write, file_search, get_safe_path, set_active_workspace
+from tools.registry import ToolRegistry
 
 class TestFilesystemTools(unittest.TestCase):
     def setUp(self):
@@ -99,7 +99,7 @@ class TestFilesystemTools(unittest.TestCase):
 
     def test_registry_integration(self):
         registry = ToolRegistry()
-        from security_agent.tools.filesystem import register_filesystem_tools
+        from tools.filesystem import register_filesystem_tools
         register_filesystem_tools(registry)
         
         self.assertIn("file.list", registry.tools)

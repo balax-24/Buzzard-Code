@@ -15,7 +15,6 @@ tui/dist/
 # Runtime artifacts
 miscellaneous/
 install.log
-/reports/
 data/
 assessments/
 *.log

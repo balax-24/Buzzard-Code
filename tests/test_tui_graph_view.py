@@ -1,4 +1,4 @@
-from security_agent.tui.test_utils import run_async
+from tui.test_utils import run_async
 """
 Tests for Live Attack Graph Tree Panel.
 Verifies:
@@ -6,9 +6,9 @@ Verifies:
 """
 
 import pytest
-from security_agent.tui.app import QwythosTUIApp
-from security_agent.tui.widgets.graph_panel import AttackGraphTree
-from security_agent.intelligence.attack_graph import AttackGraph
+from tui.app import QwythosTUIApp
+from tui.widgets.graph_panel import AttackGraphTree
+from intelligence.attack_graph import AttackGraph
 
 
 def test_attack_graph_tree_widget():

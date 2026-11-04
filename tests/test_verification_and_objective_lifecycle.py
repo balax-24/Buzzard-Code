@@ -14,7 +14,7 @@ Covers the full 7-stage Buzzard assessment lifecycle:
 import pytest
 from typing import Dict, Any
 
-from security_agent.agent.assessment_state import (
+from agent.assessment_state import (
     AssessmentState,
     AssessmentPhase,
     AssessmentContext,
@@ -24,11 +24,11 @@ from security_agent.agent.assessment_state import (
     ExploitStatus,
     HypothesisStatus,
 )
-from security_agent.intelligence.evidence_ingestor import EvidenceIngestor
-from security_agent.agent.tool_executor import ToolExecutor
-from security_agent.agent.planner import Planner
-from security_agent.verification.finding_verifier import FindingVerifier
-from security_agent.reports.report_generator import ReportGenerator
+from intelligence.evidence_ingestor import EvidenceIngestor
+from agent.tool_executor import ToolExecutor
+from agent.planner import Planner
+from verification.finding_verifier import FindingVerifier
+from reports.report_generator import ReportGenerator
 
 
 class LifecycleMockRegistry:

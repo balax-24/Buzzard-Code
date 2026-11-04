@@ -1,5 +1,5 @@
 import pytest
-from security_agent.benchmark.phase18_bench import Phase18PersistenceBenchmark
+from benchmark.phase18_bench import Phase18PersistenceBenchmark
 
 def test_exact_resumption_equivalence(tmp_path):
     report, base_st, res_st = Phase18PersistenceBenchmark.run_exact_resumption_benchmark(

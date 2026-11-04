@@ -13,13 +13,13 @@ from typing import Any, Dict, List
 import httpx
 import pytest
 
-from security_agent.agent.loop import CODING_TOOL_NAMES, AgentLoop
-from security_agent.model.ollama import OllamaProvider
-from security_agent.model.openai_provider import OpenAIProvider
-from security_agent.sandbox.container import ApprovedHostSandbox, BlockedSandbox, ToolResult, ToolErrorType
-from security_agent.storage.db import StorageManager
-from security_agent.verification.coding_verifier import task_requires_edits
-from security_agent.tools.filesystem import get_active_workspace, set_active_workspace
+from agent.loop import CODING_TOOL_NAMES, AgentLoop
+from model.ollama import OllamaProvider
+from model.openai_provider import OpenAIProvider
+from sandbox.container import ApprovedHostSandbox, BlockedSandbox, ToolResult, ToolErrorType
+from storage.db import StorageManager
+from verification.coding_verifier import task_requires_edits
+from tools.filesystem import get_active_workspace, set_active_workspace
 
 
 def call(name: str, **arguments: Any) -> Dict[str, Any]:
@@ -67,7 +67,7 @@ def buggy_repo(tmp_path, monkeypatch):
     monkeypatch.setenv("PATH", str(Path(sys.executable).parent) + os.pathsep + os.environ["PATH"])
     monkeypatch.chdir(tmp_path)
     # Deterministic "no Docker" environment, whatever the machine has
-    monkeypatch.setattr("security_agent.agent.loop.get_sandbox", lambda: BlockedSandbox(reason="test"))
+    monkeypatch.setattr("agent.loop.get_sandbox", lambda: BlockedSandbox(reason="test"))
     previous = get_active_workspace()
     set_active_workspace(repo)
     yield repo
@@ -254,7 +254,7 @@ def test_security_tools_stay_blocked_on_host(tmp_path):
 
 def test_security_task_without_docker_stays_blocked(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr("security_agent.agent.loop.get_sandbox", lambda: BlockedSandbox(reason="test"))
+    monkeypatch.setattr("agent.loop.get_sandbox", lambda: BlockedSandbox(reason="test"))
     provider = ScriptedProvider([{"tool_calls": [call("terminal.execute", command="whoami")]}])
     run_loop(provider, "Run nmap port scan against the target", tmp_path)
     assert "SECURITY STOP" in tool_messages(provider, 1)
@@ -267,7 +267,7 @@ def test_blocked_execution_is_not_reported_as_connection_refused():
 
 
 def test_scope_check_allows_real_files_but_not_domains(buggy_repo):
-    from security_agent.security.policy import PolicyEngine
+    from security.policy import PolicyEngine
 
     engine = PolicyEngine(["localhost"])
     assert engine._check_scope("terminal.execute", {"command": "python -m pytest test_calc.py"})[0] is True

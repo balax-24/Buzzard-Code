@@ -1,5 +1,5 @@
 import pytest
-from security_agent.benchmark.phase17_bench import HypothesisLifecycleState, Phase17Hypothesis
+from benchmark.phase17_bench import HypothesisLifecycleState, Phase17Hypothesis
 
 def test_hypothesis_persistence_state():
     hyp = Phase17Hypothesis("HYP-PERSIST", "192.168.1.10", "AUTH_BYPASS", HypothesisLifecycleState.REFUTED)

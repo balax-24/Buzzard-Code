@@ -10,7 +10,7 @@ Verifies:
 
 import json
 import pytest
-from security_agent.benchmark.security_behavior_benchmark import (
+from benchmark.security_behavior_benchmark import (
     BenchmarkCategory,
     BenchmarkPrompt,
     BenchmarkSummaryMetrics,

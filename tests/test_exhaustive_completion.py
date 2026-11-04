@@ -5,10 +5,10 @@ Verifies:
 """
 
 import pytest
-from security_agent.agent.assessment_state import AssessmentState, AssessmentContext, ObjectiveStatus, ServiceRecord
-from security_agent.intelligence.attack_graph import AttackGraph
-from security_agent.intelligence.decision import CompletionMode
-from security_agent.agent.completion_engine import CompletionEngine, BudgetSnapshot
+from agent.assessment_state import AssessmentState, AssessmentContext, ObjectiveStatus, ServiceRecord
+from intelligence.attack_graph import AttackGraph
+from intelligence.decision import CompletionMode
+from agent.completion_engine import CompletionEngine, BudgetSnapshot
 
 
 def test_exhaustive_completion_persistence():

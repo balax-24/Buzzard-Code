@@ -11,14 +11,14 @@ from unittest.mock import MagicMock, patch
 import httpx
 import pytest
 
-from security_agent.agent.loop import CODING_TOOL_NAMES, AgentLoop
-from security_agent.cli.banner import banner_lines
-from security_agent.core.usage import SessionUsage, context_window_for, usage_to_metrics
-from security_agent.model.meta_muse import MetaMuseProvider
-from security_agent.sandbox.container import ControlledHostSandbox
-from security_agent.tools.filesystem import get_active_workspace, set_active_workspace
-from security_agent.tools.registry import create_authoritative_registry
-from security_agent.verification.coding_verifier import CodingVerifier
+from agent.loop import CODING_TOOL_NAMES, AgentLoop
+from cli.banner import banner_lines
+from core.usage import SessionUsage, context_window_for, usage_to_metrics
+from model.meta_muse import MetaMuseProvider
+from sandbox.container import ControlledHostSandbox
+from tools.filesystem import get_active_workspace, set_active_workspace
+from tools.registry import create_authoritative_registry
+from verification.coding_verifier import CodingVerifier
 
 CHAT_URL = "https://api.meta.ai/v1/chat/completions"
 
@@ -80,7 +80,7 @@ def test_sandbox_bounds_output(tmp_path):
 
 
 def test_sandbox_blocks_when_kill_switch_cannot_be_checked(tmp_path):
-    with patch("security_agent.security.kill_switch.KillSwitch.get_instance", side_effect=RuntimeError("broken")):
+    with patch("security.kill_switch.KillSwitch.get_instance", side_effect=RuntimeError("broken")):
         result = ControlledHostSandbox(workspace=str(tmp_path)).execute("echo should-not-run")
     assert result["exit_code"] == 126
     assert result["blocked"] is True

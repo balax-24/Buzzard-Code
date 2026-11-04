@@ -5,9 +5,9 @@ Verifies:
 """
 
 import pytest
-from security_agent.agent.assessment_state import AssessmentState, AssessmentContext, ObjectiveStatus
-from security_agent.intelligence.decision import CompletionMode
-from security_agent.agent.completion_engine import CompletionEngine, BudgetSnapshot
+from agent.assessment_state import AssessmentState, AssessmentContext, ObjectiveStatus
+from intelligence.decision import CompletionMode
+from agent.completion_engine import CompletionEngine, BudgetSnapshot
 
 
 def test_targeted_completion_evaluation():
@@ -26,7 +26,7 @@ def test_targeted_completion_evaluation():
         max_iterations=20
     )
 
-    from security_agent.intelligence.attack_graph import AttackGraph
+    from intelligence.attack_graph import AttackGraph
     decision = engine.evaluate(
         state=state,
         graph=AttackGraph(),

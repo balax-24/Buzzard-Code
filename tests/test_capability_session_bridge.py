@@ -3,14 +3,14 @@ Tests for Capability and SessionStore integration and AttackGraph bridging.
 """
 
 import pytest
-from security_agent.agent.assessment_state import (
+from agent.assessment_state import (
     AssessmentState,
     AssessmentContext,
     CapabilityType,
     VerificationStatus,
 )
-from security_agent.intelligence.attack_graph import AttackGraph, NodeKind, EdgeKind
-from security_agent.state.session_store import Cookie, SessionVerificationStatus
+from intelligence.attack_graph import AttackGraph, NodeKind, EdgeKind
+from state.session_store import Cookie, SessionVerificationStatus
 
 
 def test_session_creation_updates_capabilities():

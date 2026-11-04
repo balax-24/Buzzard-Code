@@ -18,10 +18,10 @@ import tempfile
 import pytest
 from pathlib import Path
 
-from security_agent.tools.filesystem import set_active_workspace, get_active_workspace, file_view, file_edit, file_read
-from security_agent.tools.git_tools import git_status, git_diff, git_log
-from security_agent.sandbox.container import ControlledHostSandbox
-from security_agent.verification.coding_verifier import CodingVerifier, detect_project_test_runner
+from tools.filesystem import set_active_workspace, get_active_workspace, file_view, file_edit, file_read
+from tools.git_tools import git_status, git_diff, git_log
+from sandbox.container import ControlledHostSandbox
+from verification.coding_verifier import CodingVerifier, detect_project_test_runner
 
 
 def test_e2e_autonomous_coding_workflow():

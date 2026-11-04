@@ -1,4 +1,4 @@
-from security_agent.tui.test_utils import run_async
+from tui.test_utils import run_async
 """
 Tests for TUI Responsive Layout and Sidebar Toggling.
 Verifies:
@@ -7,7 +7,7 @@ Verifies:
 """
 
 import pytest
-from security_agent.tui.app import QwythosTUIApp
+from tui.app import QwythosTUIApp
 
 
 def test_tui_responsive_sidebar_toggle():

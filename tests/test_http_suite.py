@@ -3,8 +3,8 @@ Tests for HTTP and API Security Testing Suite.
 """
 
 import json
-from security_agent.tools.http_suite import evaluate_security_headers, check_cors_configuration, probe_parameter_injection
-from security_agent.range.lab_targets import CyberRangeServer
+from tools.http_suite import evaluate_security_headers, check_cors_configuration, probe_parameter_injection
+from range.lab_targets import CyberRangeServer
 
 
 def test_evaluate_security_headers_lab():

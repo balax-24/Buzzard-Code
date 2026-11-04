@@ -4,10 +4,10 @@ Tests for HTTP session continuity and automatic credential attachment.
 
 import pytest
 from unittest.mock import MagicMock
-from security_agent.agent.assessment_state import AssessmentState, AssessmentContext
-from security_agent.agent.tool_executor import ToolExecutor
-from security_agent.tools.registry import ToolRegistry
-from security_agent.events.bus import EventBus
+from agent.assessment_state import AssessmentState, AssessmentContext
+from agent.tool_executor import ToolExecutor
+from tools.registry import ToolRegistry
+from events.bus import EventBus
 
 
 def test_tool_executor_injects_session_cookies():
@@ -64,7 +64,7 @@ def test_explicit_headers_override_session_store_defaults():
     ctx = AssessmentContext(target="http://127.0.0.1:8080", scope=["127.0.0.1"])
     state = AssessmentState(context=ctx)
     session = state.get_session_store().create_session("http://127.0.0.1:8080")
-    from security_agent.state.session_store import Cookie
+    from state.session_store import Cookie
     session.add_cookie(Cookie(name="session", value="default_cookie", domain="127.0.0.1"))
 
     executor = ToolExecutor(registry=registry, event_bus=EventBus(), config={"allow_all_targets": True})

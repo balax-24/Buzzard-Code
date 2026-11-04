@@ -1,6 +1,6 @@
 import pytest
 from pathlib import Path
-from security_agent.persistence.engagement_store import EngagementLock, EngagementLockError
+from persistence.engagement_store import EngagementLock, EngagementLockError
 
 def test_concurrent_writer_prevention(tmp_path):
     lock_file = tmp_path / "test.lock"

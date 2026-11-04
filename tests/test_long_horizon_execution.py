@@ -6,9 +6,9 @@ Verifies:
 """
 
 import pytest
-from security_agent.agent.assessment_state import AssessmentState, AssessmentContext, ServiceRecord
-from security_agent.intelligence.decision import DecisionRecord, DecisionSource, AutonomyMode, AutonomyEvaluator
-from security_agent.intelligence.long_horizon import LongHorizonContextCompactor
+from agent.assessment_state import AssessmentState, AssessmentContext, ServiceRecord
+from intelligence.decision import DecisionRecord, DecisionSource, AutonomyMode, AutonomyEvaluator
+from intelligence.long_horizon import LongHorizonContextCompactor
 
 
 def test_long_horizon_budget_scaling():

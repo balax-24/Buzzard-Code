@@ -7,13 +7,13 @@ Verifies:
 """
 
 import pytest
-from security_agent.agent.assessment_state import (
+from agent.assessment_state import (
     AssessmentState,
     AssessmentContext,
     Capability,
     CapabilityType,
 )
-from security_agent.intelligence.planner_prompt import PlannerPromptBuilder
+from intelligence.planner_prompt import PlannerPromptBuilder
 
 
 def test_system_prompt_structure():

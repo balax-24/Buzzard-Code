@@ -3,8 +3,8 @@ Phase 16 Tests: Information Gain Integrity & Delta-Based Evaluation.
 Verifies that gain is 0 when all deltas are 0, and that successful execution does not imply gain.
 """
 
-from security_agent.benchmark.phase16_bench import Phase16InvestigationBenchmark, UsefulnessClassification
-from security_agent.intelligence.noop_detector import ActionDelta
+from benchmark.phase16_bench import Phase16InvestigationBenchmark, UsefulnessClassification
+from intelligence.noop_detector import ActionDelta
 
 
 def test_zero_gain_when_no_delta():

@@ -12,9 +12,9 @@ Verifies all 23 specifications:
 
 import pytest
 from unittest.mock import MagicMock
-from security_agent.sandbox.container import ToolResult, ToolErrorType
-from security_agent.tools.manifest_suite import service_inventory
-from security_agent.agent.assessment_state import (
+from sandbox.container import ToolResult, ToolErrorType
+from tools.manifest_suite import service_inventory
+from agent.assessment_state import (
     AssessmentState,
     AssessmentContext,
     CandidateActionValidator,
@@ -25,13 +25,13 @@ from security_agent.agent.assessment_state import (
     VerificationStatus,
     FailureClassification
 )
-from security_agent.intelligence.evidence_parser import (
+from intelligence.evidence_parser import (
     EvidenceValidator,
     AttackSurfaceSnapshot,
     DiscoveredService
 )
-from security_agent.agent.loop import AgentLoop
-from security_agent.tools.registry import ToolRegistry
+from agent.loop import AgentLoop
+from tools.registry import ToolRegistry
 
 
 def test_tool_result_classification_connection_refused():

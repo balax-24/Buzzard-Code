@@ -8,12 +8,12 @@ from textual.widgets import Input, Static
 from rich.text import Text
 from rich.console import Console
 
-from security_agent.tui.app import BuzzardTUIApp
-from security_agent.tui.widgets.chat import ChatView, MessageBubble
-from security_agent.tui.models import ChatMessage, MessageRole
-from security_agent.tui.test_utils import run_async
-from security_agent.tools.registry import create_authoritative_registry, ToolRegistry
-from security_agent.tools.inspector import get_tool_details, get_standard_registry, build_tools_view
+from tui.app import BuzzardTUIApp
+from tui.widgets.chat import ChatView, MessageBubble
+from tui.models import ChatMessage, MessageRole
+from tui.test_utils import run_async
+from tools.registry import create_authoritative_registry, ToolRegistry
+from tools.inspector import get_tool_details, get_standard_registry, build_tools_view
 
 CANONICAL_TEST_TOOLS = [
     'ping_host', 'scan_ports', 'scan_common_ports', 'subnet_discovery',
@@ -238,8 +238,8 @@ def test_tui_slash_tools_alias_resolution_and_no_duplicate_counting():
 def test_tui_rejects_legacy_14_tool_registry():
     """Regression test ensuring explicit failure if any attempt is made to use the 14-tool registry."""
     reg = ToolRegistry()
-    from security_agent.tools.basic import register_basic_tools
-    from security_agent.tools.security import register_security_tools
+    from tools.basic import register_basic_tools
+    from tools.security import register_security_tools
     register_basic_tools(reg)
     register_security_tools(reg)
 

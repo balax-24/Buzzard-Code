@@ -1,5 +1,5 @@
 import pytest
-from security_agent.benchmark.phase17_bench import MultiHostSyntheticLab
+from benchmark.phase17_bench import MultiHostSyntheticLab
 
 def test_partial_success_requires_independent_verification():
     lab = MultiHostSyntheticLab()

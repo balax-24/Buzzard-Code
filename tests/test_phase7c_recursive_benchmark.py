@@ -6,15 +6,15 @@ and prompt mode configurations without requiring live Ollama execution.
 
 import pytest
 from unittest.mock import MagicMock
-from security_agent.agent.assessment_state import (
+from agent.assessment_state import (
     AssessmentState,
     AssessmentContext,
     AssessmentPhase,
     ObjectiveStatus,
     CapabilityType,
 )
-from security_agent.intelligence.attack_graph import AttackGraph
-from security_agent.benchmark.recursive_bench import (
+from intelligence.attack_graph import AttackGraph
+from benchmark.recursive_bench import (
     StopReason,
     ActionQuality,
     ModelAutonomyRunResult,
@@ -22,7 +22,7 @@ from security_agent.benchmark.recursive_bench import (
     RealModelRecursiveBenchmarkHarness,
     format_results_table,
 )
-from security_agent.cli.prompts import build_system_prompt, RECURSIVE_INVESTIGATION_PROMPT, BASE_PROMPT
+from cli.prompts import build_system_prompt, RECURSIVE_INVESTIGATION_PROMPT, BASE_PROMPT
 
 
 def _make_state(target: str = "http://127.0.0.1:8080") -> AssessmentState:

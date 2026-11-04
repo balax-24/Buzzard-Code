@@ -1,11 +1,11 @@
 import pytest
 import json
-from security_agent.agent.assessment_state import AssessmentContext, AssessmentState
-from security_agent.intelligence.attack_graph import AttackGraph, NodeKind
-from security_agent.intelligence.branches import BranchManager
-from security_agent.intelligence.failure_memory import FailureAwareMemory
-from security_agent.persistence.engagement_store import ResumeContextBuilder
-from security_agent.persistence.state_serializer import StateSerializer
+from agent.assessment_state import AssessmentContext, AssessmentState
+from intelligence.attack_graph import AttackGraph, NodeKind
+from intelligence.branches import BranchManager
+from intelligence.failure_memory import FailureAwareMemory
+from persistence.engagement_store import ResumeContextBuilder
+from persistence.state_serializer import StateSerializer
 
 def test_context_compression_ratio():
     state = AssessmentState(context=AssessmentContext(target="192.168.1.10", scope=["192.168.1.10"]))

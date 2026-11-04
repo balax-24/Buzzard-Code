@@ -4,7 +4,7 @@ Tests for session expiration, 401 handling, and invalidation.
 
 import time
 import pytest
-from security_agent.state.session_store import (
+from state.session_store import (
     SessionStore,
     Cookie,
     BearerToken,

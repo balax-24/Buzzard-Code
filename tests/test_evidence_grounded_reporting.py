@@ -13,8 +13,8 @@ Validates:
 
 import json
 import pytest
-from security_agent.reports.report_generator import ReportGenerator, redact_secrets
-from security_agent.agent.assessment_state import (
+from reports.report_generator import ReportGenerator, redact_secrets
+from agent.assessment_state import (
     AssessmentState,
     AssessmentContext,
     ServiceState,
@@ -22,7 +22,7 @@ from security_agent.agent.assessment_state import (
     HypothesisStatus,
     VulnerabilityHypothesis,
 )
-from security_agent.model.schemas import Finding, Severity, Confidence, Evidence, EvidenceType
+from model.schemas import Finding, Severity, Confidence, Evidence, EvidenceType
 
 
 @pytest.fixture

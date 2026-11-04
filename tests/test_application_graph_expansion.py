@@ -2,9 +2,9 @@
 Tests for AttackGraph application-surface nodes: PAGE, FORM, API_ENDPOINT, WEBSOCKET, and edges.
 """
 
-from security_agent.agent.assessment_state import AssessmentState, AssessmentContext, ServiceRecord
-from security_agent.intelligence.attack_graph import AttackGraph, NodeKind, EdgeKind
-from security_agent.browser.dom import DOMReducer
+from agent.assessment_state import AssessmentState, AssessmentContext, ServiceRecord
+from intelligence.attack_graph import AttackGraph, NodeKind, EdgeKind
+from browser.dom import DOMReducer
 
 
 def test_attack_graph_application_surface_expansion():

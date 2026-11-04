@@ -5,8 +5,8 @@ import pytest
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
-from security_agent.tools.filesystem import set_active_workspace, get_active_workspace
-from security_agent.verification.coding_verifier import (
+from tools.filesystem import set_active_workspace, get_active_workspace
+from verification.coding_verifier import (
     detect_project_test_runner,
     check_code_syntax,
     CodingVerifier,

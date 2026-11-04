@@ -25,6 +25,7 @@
 - [How it works](#how-it-works)
 - [Architecture](#architecture)
 - [Features](#features)
+- [Plug and play](#plug-and-play)
 - [Results on Meta models](#results-on-meta-models)
 - [Quick start](#quick-start)
 - [Commands](#commands)
@@ -86,7 +87,9 @@ flowchart TD
     UI --> L[AgentLoop]
     L --> CTX[Context<br/>instructions, @files, history]
     CTX --> P[Provider layer]
-    P --> M[(Model<br/>Muse, Gemini, Claude,<br/>GPT, Ollama)]
+    P --> F{Failover}
+    F --> M[(Model<br/>Muse, Gemini, Claude,<br/>GPT, Ollama)]
+    F -.->|if it fails| B[(Your backup models)]
     M -->|tool call or final answer| L
 
     L -->|tool call| POL{PolicyEngine}
@@ -109,15 +112,16 @@ The two highlighted boxes are deterministic code. The model cannot talk its way 
 
 | Component | Location | Responsibility |
 |---|---|---|
-| Terminal UI | `security_agent/tui/` | Textual app: transcript, approvals, diffs, commands, token meter |
-| Agent loop | `security_agent/agent/loop.py` | Runs model turns and dispatches tools; stops a model that repeats itself |
-| Project context | `security_agent/agent/project_context.py` | Instructions, `@file` mentions, saved conversations |
-| Providers | `security_agent/model/` | One interface over Meta, OpenAI-compatible hosts, Anthropic, Gemini and Ollama |
-| Tool-call conversion | `security_agent/model/tool_calls.py` | Translates each provider's wire format, and repairs history so calls and results stay paired |
-| Policy and approvals | `security_agent/security/` | Risk classes, scope, kill switch and approval gate |
-| Execution | `security_agent/sandbox/container.py` | Docker when available; otherwise approved host execution with secrets removed |
-| Completion gate | `security_agent/verification/coding_verifier.py` | Git state, syntax checks and the real test run |
-| MCP client | `security_agent/tools/mcp_client.py` | Stdio tools from external servers, treated as untrusted |
+| Terminal UI | `tui/` | Textual app: transcript, approvals, diffs, commands, token meter |
+| Agent loop | `agent/loop.py` | Runs model turns and dispatches tools; stops a model that repeats itself |
+| Project context | `agent/project_context.py` | Instructions, `@file` mentions, saved conversations |
+| Providers | `model/` | One interface over Meta, OpenAI-compatible hosts, Anthropic, Gemini and Ollama |
+| Failover | `model/failover.py` | Moves to your next configured model when one fails |
+| Tool-call conversion | `model/tool_calls.py` | Translates each provider's wire format, and repairs history so calls and results stay paired |
+| Policy and approvals | `security/` | Risk classes, scope, kill switch and approval gate |
+| Execution | `sandbox/container.py` | Docker when available; otherwise approved host execution with secrets removed |
+| Completion gate | `verification/coding_verifier.py` | Git state, syntax checks and the real test run |
+| MCP client | `tools/mcp_client.py` | Stdio tools from external servers, treated as untrusted |
 | Acceptance harness | `experiments/acceptance/` | Runs the live scenario and verifies results with git and pytest |
 
 ## Features
@@ -139,6 +143,7 @@ The two highlighted boxes are deterministic code. The model cannot talk its way 
 **Models and tools**
 - Meta models through the Meta Model API or any OpenAI-compatible host
 - OpenAI, Anthropic, Gemini and local Ollama
+- Automatic failover to backup models you choose, so one provider going down doesn't stop your work
 - Native tool calling, including streaming and parallel calls, with retries for rate limits and server errors
 - MCP client for stdio servers
 
@@ -159,6 +164,23 @@ This is a small scenario on a few runs, not a benchmark or a measure of reliabil
 uv run python experiments/acceptance/run_ollama_acceptance.py --provider openai-compatible --model meta/muse-glimmer-30b
 ```
 
+## Plug and play
+
+Every external part can be swapped or left out, and the core keeps working:
+
+| Part | Options | If it's missing or fails |
+|---|---|---|
+| Model | Muse, Gemini, Claude, GPT, Ollama, any OpenAI-compatible host | Moves to your next backup model |
+| Isolation | Docker, or approved host execution | Falls back to host execution, with every command approved |
+| External tools | Any MCP stdio server | That server is reported as failed; everything else continues |
+| Tests | Whatever the project uses | The gate reports that it fell back to syntax and change checks |
+
+Backups are your choice, because a backup model means your code goes to that provider. If every configured model is down, Buzzard stops and tells you why. A local Ollama backup keeps you working through a cloud outage.
+
+```bash
+export BUZZARD_FALLBACK_MODELS="gemini/gemini-3.5-flash-lite,ollama/llama3"
+```
+
 ## Quick start
 
 Requires Python 3.12+ and [uv](https://docs.astral.sh/uv/).
@@ -167,9 +189,17 @@ Requires Python 3.12+ and [uv](https://docs.astral.sh/uv/).
 git clone https://github.com/balax-24/Buzzard-Code.git
 cd Buzzard-Code
 uv sync
+uv run buzzard setup
 ```
 
-**Run on Muse Glimmer through OpenRouter:**
+Setup walks you through choosing a provider, saving your key outside any repository, choosing backup models and sending a test message. Then open any project:
+
+```bash
+cd your-project
+uv run --project /path/to/Buzzard-Code buzzard tui
+```
+
+**Or configure it with environment variables, for example Muse Glimmer through OpenRouter:**
 
 ```bash
 export OPENAI_COMPATIBLE_API_KEY="your-openrouter-key"
@@ -214,6 +244,7 @@ Live-tested so far: Muse Glimmer through OpenRouter, Gemini and Ollama, with res
 | Setting | Purpose |
 |---|---|
 | `BUZZARD_MAX_OUTPUT_TOKENS` | Cap output per request on OpenAI-compatible hosts, useful with a small credit balance |
+| `BUZZARD_FALLBACK_MODELS` | Comma-separated backup models, tried in order |
 | `BUZZARD_MCP_CONFIG` | Use a different MCP config path |
 | `BUZZARD_HOME` | Where sessions are stored (default `~/.buzzard`) |
 | `BUZZARD.md` in your project | Coding conventions for the agent; these cannot change approval or security rules |
@@ -232,7 +263,7 @@ Live-tested so far: Muse Glimmer through OpenRouter, Gemini and Ollama, with res
 - **Repositories are untrusted.** Opening one cannot start an MCP server, and instruction files cannot change approval rules. Prompt injection from repository content remains possible, which is why actions stay behind approval.
 - **Sessions are stored as plain text** in `~/.buzzard/sessions`, outside your repositories.
 
-Buzzard began as a security assessment agent, and that tooling remains in `security_agent/tools`, including tools for offensive testing. Those tools are not offered to the model on coding tasks. **Only use them on systems you own or are explicitly authorized to test.**
+Buzzard began as a security assessment agent, and that tooling remains in `tools/`, including tools for offensive testing. Those tools are not offered to the model on coding tasks. **Only use them on systems you own or are explicitly authorized to test.**
 
 ## How it was built
 
@@ -255,6 +286,8 @@ Buzzard began as a security assessment agent, and that tooling remains in `secur
 ## Scope and limitations
 
 **In scope:** working in one repository from the terminal: understanding code, making approved edits, running tests and verifying the result.
+
+**Failover limits:** a failing model may retry for 30 seconds or more before the switch. If a reply fails after output has started, you see the error rather than a silent retry. Failover has been tested against simulated failures, not a real outage.
 
 **Not yet built:** subagents, repository indexing or semantic search, multi-line input, IDE integration, and MCP resources, prompts or HTTP transport.
 

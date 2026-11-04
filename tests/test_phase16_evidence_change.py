@@ -1,6 +1,6 @@
-from security_agent.intelligence.action_history import ActionHistoryStore, ActionOutcome
-from security_agent.intelligence.failure_memory import FailureAwareMemory
-from security_agent.intelligence.reconsideration import ReconsiderationEngine, ReconsiderationTrigger
+from intelligence.action_history import ActionHistoryStore, ActionOutcome
+from intelligence.failure_memory import FailureAwareMemory
+from intelligence.reconsideration import ReconsiderationEngine, ReconsiderationTrigger
 
 
 def test_evidence_change_triggers_reconsideration():

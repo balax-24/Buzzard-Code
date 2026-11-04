@@ -6,7 +6,7 @@ Verifies:
 """
 
 import pytest
-from security_agent.intelligence.branches import (
+from intelligence.branches import (
     BranchManager,
     BranchPriority,
     BranchStatus,

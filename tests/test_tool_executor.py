@@ -1,5 +1,5 @@
 """
-Unit tests for the ToolExecutor module (security_agent/agent/tool_executor.py).
+Unit tests for the ToolExecutor module (agent/tool_executor.py).
 
 Verifies:
 1. Valid tool execution and structured ToolExecutionResult output
@@ -19,8 +19,8 @@ import pytest
 from unittest.mock import MagicMock
 from typing import Dict, Any
 
-from security_agent.agent.tool_executor import ToolExecutor, ToolExecutionResult
-from security_agent.agent.assessment_state import (
+from agent.tool_executor import ToolExecutor, ToolExecutionResult
+from agent.assessment_state import (
     AssessmentState,
     AssessmentPhase,
     AssessmentContext,

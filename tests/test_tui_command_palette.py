@@ -1,4 +1,4 @@
-from security_agent.tui.test_utils import run_async
+from tui.test_utils import run_async
 """
 Tests for Qwythos TUI Ctrl+P Command Palette.
 Verifies:
@@ -7,9 +7,9 @@ Verifies:
 """
 
 import pytest
-from security_agent.tui.app import QwythosTUIApp
-from security_agent.tui.models import AppMode
-from security_agent.tui.widgets.command_palette import CommandPaletteModal
+from tui.app import QwythosTUIApp
+from tui.models import AppMode
+from tui.widgets.command_palette import CommandPaletteModal
 
 
 def test_command_palette_modal():

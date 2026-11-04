@@ -6,8 +6,8 @@ Verifies:
 """
 
 import pytest
-from security_agent.intelligence.decision import DecisionRecord, DecisionSource, AutonomyMode, AutonomyEvaluator
-from security_agent.agent.assessment_state import AssessmentState, AssessmentContext
+from intelligence.decision import DecisionRecord, DecisionSource, AutonomyMode, AutonomyEvaluator
+from agent.assessment_state import AssessmentState, AssessmentContext
 
 
 def test_assisted_mode_attribution():

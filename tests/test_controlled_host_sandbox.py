@@ -3,9 +3,9 @@ import sys
 import tempfile
 import shutil
 import pytest
-from security_agent.sandbox.container import ControlledHostSandbox
-from security_agent.security.kill_switch import KillSwitch
-from security_agent.tools.filesystem import set_active_workspace
+from sandbox.container import ControlledHostSandbox
+from security.kill_switch import KillSwitch
+from tools.filesystem import set_active_workspace
 
 
 @pytest.fixture

@@ -1,4 +1,4 @@
-from security_agent.tui.test_utils import run_async
+from tui.test_utils import run_async
 """
 Tests for Capabilities Panel Widget.
 Verifies:
@@ -6,9 +6,9 @@ Verifies:
 """
 
 import pytest
-from security_agent.tui.app import QwythosTUIApp
-from security_agent.tui.widgets.capabilities_panel import CapabilitiesPanel
-from security_agent.agent.assessment_state import Capability, CapabilityType
+from tui.app import QwythosTUIApp
+from tui.widgets.capabilities_panel import CapabilitiesPanel
+from agent.assessment_state import Capability, CapabilityType
 
 
 def test_capabilities_panel():

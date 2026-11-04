@@ -11,11 +11,11 @@ Verifies:
 """
 
 import pytest
-from security_agent.intelligence.dynamic_tool_selector import (
+from intelligence.dynamic_tool_selector import (
     DynamicToolSelector,
     UNIVERSAL_CORE_TOOLS,
 )
-from security_agent.tools.registry import ToolRegistry, ToolDefinition, ToolCategory
+from tools.registry import ToolRegistry, ToolDefinition, ToolCategory
 
 
 @pytest.fixture

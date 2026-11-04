@@ -6,9 +6,9 @@ Verifies:
 """
 
 import pytest
-from security_agent.agent.assessment_state import AssessmentState, AssessmentContext, ServiceRecord
-from security_agent.agent.loop_controller import LoopRecoveryController
-from security_agent.intelligence.decision import DecisionRecord, DecisionSource
+from agent.assessment_state import AssessmentState, AssessmentContext, ServiceRecord
+from agent.loop_controller import LoopRecoveryController
+from intelligence.decision import DecisionRecord, DecisionSource
 
 
 def test_long_horizon_recovery_controller():

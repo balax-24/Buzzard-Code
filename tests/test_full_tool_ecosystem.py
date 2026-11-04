@@ -26,13 +26,13 @@ import tempfile
 import pytest
 from unittest.mock import patch, MagicMock
 
-from security_agent.tools.registry import create_authoritative_registry, ToolCategory, ToolRegistry
-from security_agent.security.policy import PolicyEngine
-from security_agent.security.scope import is_in_scope, ScopeEngine
-from security_agent.security.risk import get_tool_risk_metadata, RiskClass
-from security_agent.agent.tool_executor import ToolExecutor
-from security_agent.agent.assessment_state import AssessmentState, CandidateActionValidator
-from security_agent.storage.db import StorageManager
+from tools.registry import create_authoritative_registry, ToolCategory, ToolRegistry
+from security.policy import PolicyEngine
+from security.scope import is_in_scope, ScopeEngine
+from security.risk import get_tool_risk_metadata, RiskClass
+from agent.tool_executor import ToolExecutor
+from agent.assessment_state import AssessmentState, CandidateActionValidator
+from storage.db import StorageManager
 
 # ==============================================================================
 # FIXTURES
@@ -423,7 +423,7 @@ class TestSuite9SafeAutomation:
 
 class TestSecurityInvariants:
     def test_r1_sandbox_required_fails_closed_when_docker_inactive(self, registry):
-        with patch("security_agent.sandbox.container.is_docker_active", return_value=False):
+        with patch("sandbox.container.is_docker_active", return_value=False):
             res = registry.execute("terminal.execute", {"command": "whoami"})
             assert "SECURITY STOP: Sandbox unavailable" in res or "ACTION REJECTED" in res
             assert "Exit code: 126" in res or "blocked" in res.lower()

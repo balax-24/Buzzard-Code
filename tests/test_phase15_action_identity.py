@@ -3,7 +3,7 @@ Phase 15 Tests: Semantic Action Identity & Normalization.
 Verifies stable canonical identities across tools, parameter orderings, and command styles.
 """
 
-from security_agent.intelligence.action_identity import ActionIdentity, SemanticActionKey
+from intelligence.action_identity import ActionIdentity, SemanticActionKey
 
 
 def test_http_url_and_method_normalization():

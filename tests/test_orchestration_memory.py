@@ -2,14 +2,14 @@
 Tests for Assessment Memory and Multi-Agent Orchestrator.
 """
 
-from security_agent.agent.memory import AssessmentMemory
-from security_agent.agent.orchestrator import MultiAgentOrchestrator, WorkerRole
-from security_agent.tools.registry import ToolRegistry
-from security_agent.tools.basic import register_basic_tools
-from security_agent.tools.security import register_security_tools
-from security_agent.security.policy import PolicyEngine
-from security_agent.events.bus import EventBus
-from security_agent.events.types import EventType
+from agent.memory import AssessmentMemory
+from agent.orchestrator import MultiAgentOrchestrator, WorkerRole
+from tools.registry import ToolRegistry
+from tools.basic import register_basic_tools
+from tools.security import register_security_tools
+from security.policy import PolicyEngine
+from events.bus import EventBus
+from events.types import EventType
 
 
 def test_assessment_memory_store_and_recall(tmp_path):

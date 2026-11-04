@@ -1,5 +1,5 @@
 import pytest
-from security_agent.intelligence.evidence_parser import (
+from intelligence.evidence_parser import (
     EvidenceParser,
     DiscoveredService,
     AttackSurfaceSnapshot,
