@@ -23,7 +23,8 @@ OPERATING DOCTRINE:
        <param_name>value</param_name>
      </tool_call>
 6. TASK CHECKLIST:
-   - For work with several steps, show your plan with todo_write and update it as steps finish.
+   - For work with four or more steps, call todo_write once with your plan and once at the end.
+     Do not call it between steps. Each call uses up one of your limited turns.
 7. COMPLETION:
    - When changes are verified and tests pass, summarize your solution and conclude.
 """

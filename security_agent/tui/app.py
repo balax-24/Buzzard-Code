@@ -342,6 +342,7 @@ class BuzzardTUIApp(App[None]):
     TITLE = "Buzzard Code"
     MAX_CONVERSATION_MESSAGES = 20
     COMPACT_KEEP_MESSAGES = 4
+    MAX_AGENT_TURNS = 40
 
     BINDINGS = [
         Binding("ctrl+c", "handle_interrupt", "Cancel / Exit", show=True),
@@ -1183,6 +1184,7 @@ class BuzzardTUIApp(App[None]):
             provider=self.provider,
             storage_manager=self.storage,
             registry=self.registry,
+            max_iterations=self.MAX_AGENT_TURNS,
             config=self.buzzard_config,
             event_bus=self.event_bus,
             approval_callback=self._handle_approval_callback,
@@ -1213,7 +1215,7 @@ class BuzzardTUIApp(App[None]):
                 )
             self.app.call_from_thread(
                 self.chat_view.add_message,
-                ChatMessage(role=MessageRole.SYSTEM, content=f"✓ Task `{session_id}` concluded with status: {status_val}.")
+                ChatMessage(role=MessageRole.SYSTEM, content=f"{'✓' if status_val == 'completed' else '✕'} Task `{session_id}` concluded with status: {status_val}.")
             )
         except Exception as e:
             self.app.call_from_thread(

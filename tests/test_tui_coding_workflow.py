@@ -11,6 +11,7 @@ from typing import Any, Dict, List, Optional
 
 import pytest
 
+from security_agent.core.usage import estimate_tokens
 from security_agent.sandbox.container import BlockedSandbox
 from security_agent.storage.db import StorageManager
 from security_agent.agent.project_context import build_mention_context, load_conversation, save_conversation
@@ -479,3 +480,23 @@ def test_switching_provider_drops_the_old_endpoint(monkeypatch, tmp_path):
 
     run_async(run())
     assert "old-host" not in app.provider.base_url
+
+
+def test_failed_task_is_not_shown_with_a_success_mark(repo, tmp_path):
+    provider = ScriptedProvider([{"content": "All done, trust me."}])
+    app = make_app(provider, tmp_path)
+
+    async def run() -> None:
+        async with app.run_test(size=(110, 36)) as pilot:
+            app.MAX_AGENT_TURNS = 2
+            await submit(pilot, app, "Fix the bug in calc.py")
+            await approve_until_idle(pilot, app, key="n")
+            await pilot.pause(0.2)
+            notes = [b.message.content for b in app.chat_view.query(MessageBubble) if "concluded" in b.message.content]
+            assert notes and notes[-1].startswith("✕"), notes
+
+    run_async(run())
+
+
+def test_token_estimate_counts_tool_calls():
+    assert estimate_tokens([{"content": "", "tool_calls": [call("file_read", path="x" * 100)]}]) > 20

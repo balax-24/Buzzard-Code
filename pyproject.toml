@@ -6,6 +6,7 @@ readme = "README.md"
 authors = [
     { name = "balax-24", email = "balaharish0202@gmail.com" }
 ]
+license = "MIT"
 requires-python = ">=3.12"
 dependencies = [
     "click>=8.1.7",
