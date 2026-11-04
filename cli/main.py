@@ -27,7 +27,7 @@ from cli.renderer import console
 @click.pass_context
 def main(ctx, skip_toolchain, profile, no_tui):
     """
-    Buzzard Code v1.0 — autonomous AI offensive security agent.
+    Buzzard Code v1.0 — a terminal coding agent that must prove its work.
     If no command is provided, starts an interactive shell session.
     """
     if ctx.invoked_subcommand is None:

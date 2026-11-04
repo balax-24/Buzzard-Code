@@ -509,3 +509,17 @@ def test_protecting_tests_does_not_disable_the_completion_gate(buggy_repo, tmp_p
     result = run_loop(provider, "Fix calc.py so all tests pass. Do not modify the tests.", tmp_path)
     assert result["status"] != "completed"
     assert "COMPLETION GATE REJECTED" in str(provider.requests[-1]["messages"])
+
+
+def test_audit_logs_do_not_count_as_changes_for_the_gate(buggy_repo, tmp_path, monkeypatch):
+    """Found in an end-to-end audit: logs in the project let a no-edit task pass the gate."""
+    (buggy_repo / "calc.py").write_text("def add(a, b):\n    return a + b\n", encoding="utf-8")
+    subprocess.run(["git", "add", "."], cwd=buggy_repo, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "already fixed"], cwd=buggy_repo, check=True, capture_output=True)
+    monkeypatch.chdir(buggy_repo)
+    provider = ScriptedProvider([{"content": "I fixed it."}] * 3)
+    result = run_loop(provider, TASK, tmp_path)
+    assert result["status"] != "completed"
+    assert "No modifications were made" in str(provider.requests[-1]["messages"])
+    status = subprocess.run(["git", "status", "--porcelain"], cwd=buggy_repo, capture_output=True, text=True).stdout
+    assert status == "", status

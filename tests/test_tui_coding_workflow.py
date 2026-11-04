@@ -500,3 +500,20 @@ def test_failed_task_is_not_shown_with_a_success_mark(repo, tmp_path):
 
 def test_token_estimate_counts_tool_calls():
     assert estimate_tokens([{"content": "", "tool_calls": [call("file_read", path="x" * 100)]}]) > 20
+
+
+def test_model_failure_reason_is_shown_in_the_transcript(repo, tmp_path):
+    class DownProvider(ScriptedProvider):
+        def chat(self, messages, tools=None, options=None):
+            raise RuntimeError("All configured models failed. x: refused")
+
+    app = make_app(DownProvider([]), tmp_path)
+
+    async def run() -> None:
+        async with app.run_test(size=(110, 36)) as pilot:
+            await submit(pilot, app, "Explain this repository")
+            await wait_for(pilot, lambda: any(
+                "All configured models failed" in b.message.content for b in app.chat_view.query(MessageBubble)
+            ), timeout=20)
+
+    run_async(run())

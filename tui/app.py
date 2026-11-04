@@ -737,6 +737,7 @@ class BuzzardTUIApp(App[None]):
 
         export_dir = Path(get_active_workspace()) / ".buzzard" / "exports"
         export_dir.mkdir(parents=True, exist_ok=True)
+        (export_dir / ".gitignore").write_text("*\n", encoding="utf-8")
         path = export_dir / f"conversation-{time.strftime('%Y%m%d-%H%M%S')}.md"
         body = "\n\n".join(f"## {turn['role']}\n\n{turn['content']}" for turn in self.conversation)
         path.write_text(body, encoding="utf-8")
@@ -1212,6 +1213,11 @@ class BuzzardTUIApp(App[None]):
                 attached_context=build_mention_context(task_goal),
             )
             status_val = result.get("status", "completed") if isinstance(result, dict) else "completed"
+            if loop.last_error:
+                self.app.call_from_thread(
+                    self.chat_view.add_message,
+                    ChatMessage(role=MessageRole.ERROR, content=loop.last_error),
+                )
             answers = [m.get("content") or "" for m in result.get("messages", []) if m.get("role") == "assistant"]
             final_answer = next((text for text in reversed(answers) if text.strip()), "")
             self._remember_turn(task_goal, final_answer)
