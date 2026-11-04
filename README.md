@@ -189,7 +189,15 @@ export BUZZARD_FALLBACK_MODELS="gemini/gemini-3.5-flash-lite,ollama/llama3"
 
 ## Quick start
 
-Requires Python 3.12+ and [uv](https://docs.astral.sh/uv/).
+**Windows, one line** (requires Python 3.12+, no administrator rights):
+
+```powershell
+irm https://raw.githubusercontent.com/balax-24/Buzzard-Code/main/install.ps1 | iex
+```
+
+Then open a new terminal and run `buzzard setup`, followed by `buzzard tui` inside your project. This runs a script from the internet, so read [`install.ps1`](install.ps1) first if you prefer.
+
+**From source, on any platform** (requires Python 3.12+ and [uv](https://docs.astral.sh/uv/)):
 
 ```bash
 git clone https://github.com/balax-24/Buzzard-Code.git
@@ -286,7 +294,7 @@ Buzzard began as a security assessment agent, and that tooling remains in `tools
 - `@file` mentions, plan mode, `/undo`, session resume, multi-line input and the Evidence Report
 - The MCP client, new setup wizard and project settings
 - The end-to-end tests and acceptance harness
-  
+
 **The method.** The loop was simple: run the agent on a real model, read what actually happened, fix the cause, and add a regression test. Many of the most important defects appeared only this way:
 
 | What real runs and tests exposed | Fix |
