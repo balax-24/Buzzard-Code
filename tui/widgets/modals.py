@@ -65,6 +65,7 @@ class ApprovalModal(ModalScreen[bool]):
     BINDINGS = [
         Binding("y", "approve", "Allow", show=True),
         Binding("n", "deny", "Deny", show=True),
+        Binding("s", "allow_session", "Allow for session", show=False),
         Binding("d", "deny", "Deny", show=False),
         Binding("escape", "deny", "Deny", show=False),
     ]
@@ -79,8 +80,11 @@ class ApprovalModal(ModalScreen[bool]):
         sandbox_env: str = "Docker Sandbox",
         risk_class: str = "R2",
         id: str | None = None,
+        session_rule: str | None = None,
     ):
         super().__init__(id=id)
+        self.session_rule = session_rule
+        self.allow_for_session: bool = False
         self.tool_name = tool_name
         self.arguments = arguments
         self.target = target or str(arguments.get("target") or "localhost")
@@ -124,6 +128,8 @@ class ApprovalModal(ModalScreen[bool]):
                 details.append(f"  {label}\n", style="#94a3b8")
                 details.append(f"{value}\n\n", style="bold #f1f5f9")
 
+            if self.session_rule:
+                details.append(f"  [S] also allows {self.session_rule} until you exit\n\n", style="#94a3b8")
             details.append("  Allow this action?", style="bold #f1f5f9")
             yield Static(details)
 
@@ -131,6 +137,8 @@ class ApprovalModal(ModalScreen[bool]):
             with Horizontal(id="approval_buttons"):
                 yield Button("[Y] Allow", variant="success", id="btn_approve")
                 yield Button("[N] Deny", variant="error", id="btn_deny")
+                if self.session_rule:
+                    yield Button("[S] Session", variant="default", id="btn_session")
 
             footer_rule = Text("└" + "─" * 64, style="#3b3d54")
             yield Static(footer_rule)
@@ -155,6 +163,11 @@ class ApprovalModal(ModalScreen[bool]):
             preview.append(("Arguments", "    " + str(args)[:400]))
         return preview
 
+    def action_allow_session(self) -> None:
+        if self.session_rule:
+            self.allow_for_session = True
+            self.action_approve()
+
     def action_approve(self) -> None:
         self.decision = True
         self.dismiss(True)
@@ -164,7 +177,9 @@ class ApprovalModal(ModalScreen[bool]):
         self.dismiss(False)
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
-        if event.button.id == "btn_approve":
+        if event.button.id == "btn_session":
+            self.action_allow_session()
+        elif event.button.id == "btn_approve":
             self.action_approve()
         elif event.button.id == "btn_deny":
             self.action_deny()

@@ -74,6 +74,7 @@ from model.factory import (
 )
 from events.bus import EventBus
 from events.types import Event, EventType, EventSeverity
+from security.approvals import session_rule_for
 from security.kill_switch import KillSwitch
 from security.scope import is_in_scope, extract_host_and_port
 from storage.db import StorageManager
@@ -430,6 +431,7 @@ class BuzzardTUIApp(App[None]):
         self.conversation: List[Dict[str, str]] = []
         self.usage = SessionUsage()
         self.plan_mode: bool = False
+        self.session_rules: set = set()
         self.approvals_granted: int = 0
         self.approvals_denied: int = 0
         self._interrupt_count: int = 0
@@ -690,8 +692,14 @@ class BuzzardTUIApp(App[None]):
             return False
         from sandbox.container import is_docker_active
 
+        session_rule = session_rule_for(tool_name, arguments)
+        if session_rule and session_rule in self.session_rules:
+            self.approvals_granted += 1
+            return True
+
         done_event = threading.Event()
         decision_box = [False]
+        modal_box: List[Any] = []
 
         def on_decision(approved: bool | None) -> None:
             decision_box[0] = bool(approved)
@@ -709,7 +717,9 @@ class BuzzardTUIApp(App[None]):
                 scope_status="authorized network",
                 sandbox_env="Docker Sandbox" if is_docker_active() else "Host (no isolation)",
                 risk_class=risk_str,
+                session_rule=session_rule,
             )
+            modal_box.append(modal)
             self.push_screen(modal, on_decision)
 
         self.call_from_thread(open_modal)
@@ -717,6 +727,8 @@ class BuzzardTUIApp(App[None]):
         done_event.wait(timeout=120.0)
         if decision_box[0]:
             self.approvals_granted += 1
+            if modal_box and modal_box[0].allow_for_session and session_rule:
+                self.session_rules.add(session_rule)
         else:
             self.approvals_denied += 1
         return decision_box[0]
@@ -865,6 +877,7 @@ class BuzzardTUIApp(App[None]):
         elif command == "/clear":
             self.chat_view.clear_chat()
             self.conversation.clear()
+            self.session_rules.clear()
             return
 
         elif command == "/mcp":
