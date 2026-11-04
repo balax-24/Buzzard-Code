@@ -7,10 +7,11 @@ API keys are loaded securely from credentials store or environment variables.
 
 import os
 import json
+import time
 import httpx
 from typing import List, Dict, Any, Generator, Optional
 from model.provider import ModelProvider
-from model.retry import post_with_retries
+from model.retry import MAX_RETRIES, RETRYABLE_STATUS, post_with_retries, retry_delay
 from model.tool_calls import (
     finish_openai_tool_fragments,
     merge_openai_tool_fragments,
@@ -19,6 +20,14 @@ from model.tool_calls import (
     to_openai_tools,
 )
 from core.credentials import get_credential, mask_secret
+
+class _RetryableStreamError(Exception):
+    """A stream was refused before any output, so it is safe to try again."""
+
+    def __init__(self, message: str, delay: float):
+        super().__init__(message)
+        self.delay = delay
+
 
 class OpenAIProvider(ModelProvider):
     """
@@ -137,8 +146,29 @@ class OpenAIProvider(ModelProvider):
         options: Optional[Dict[str, Any]] = None
     ) -> Generator[Dict[str, Any], None, None]:
         """
-        Streams chat completion tokens from OpenAI API.
+        Streams chat completion tokens, retrying rate limits and server errors.
+        Retries happen only before any output, so nothing is ever duplicated.
         """
+        for attempt in range(MAX_RETRIES + 1):
+            try:
+                self._stream_attempt_count = attempt - 1
+                yield from self._stream_once(messages, tools, options)
+                return
+            except _RetryableStreamError as e:
+                if attempt == MAX_RETRIES:
+                    raise RuntimeError(f"OpenAI stream failed: {e}") from e
+                time.sleep(e.delay)
+
+    def _stream_attempts(self) -> int:
+        self._stream_attempt_count = getattr(self, "_stream_attempt_count", -1) + 1
+        return min(self._stream_attempt_count, 4)
+
+    def _stream_once(
+        self,
+        messages: List[Dict[str, Any]],
+        tools: Optional[List[Dict[str, Any]]] = None,
+        options: Optional[Dict[str, Any]] = None
+    ) -> Generator[Dict[str, Any], None, None]:
         headers = self._get_headers()
         payload: Dict[str, Any] = {
             "model": self.model_name,
@@ -161,7 +191,13 @@ class OpenAIProvider(ModelProvider):
                 json=payload
             ) as response:
                 if response.status_code != 200:
-                    body = response.read().decode("utf-8", errors="replace")[:300]
+                    full_body = response.read().decode("utf-8", errors="replace")
+                    body = full_body[:300]
+                    if response.status_code in RETRYABLE_STATUS:
+                        raise _RetryableStreamError(
+                            f"OpenAI stream error ({response.status_code}): {body}",
+                            retry_delay(response, self._stream_attempts()),
+                        )
                     raise RuntimeError(f"OpenAI stream error ({response.status_code}): {body}")
 
                 pending_tool_calls: Dict[int, Dict[str, Any]] = {}
@@ -186,6 +222,8 @@ class OpenAIProvider(ModelProvider):
                                 yield {"message": {"content": content_delta}, "done": False}
                         except Exception:
                             continue
+        except _RetryableStreamError:
+            raise
         except Exception as e:
             raise RuntimeError(f"OpenAI stream failed: {e}")
 

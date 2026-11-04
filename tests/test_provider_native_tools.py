@@ -280,3 +280,34 @@ def test_output_token_limit_is_configurable(monkeypatch):
         monkeypatch.setenv("BUZZARD_MAX_OUTPUT_TOKENS", "1024")
         provider.chat([{"role": "user", "content": "x"}])
         assert post.call_args.kwargs["json"]["max_tokens"] == 1024
+
+
+def _stream_response(status, lines=()):
+    response = MagicMock(status_code=status, text="", headers={})
+    response.read.return_value = b"busy"
+    response.iter_lines.return_value = list(lines)
+    return response
+
+
+def test_stream_retries_rate_limit_before_output():
+    provider = OpenAIProvider(model_name="m", api_key="k")
+    good = _stream_response(200, ["data: " + json.dumps({"choices": [{"delta": {"content": "hi"}}]}), "data: [DONE]"])
+    with patch.object(provider.client, "stream") as stream, patch("time.sleep") as sleep:
+        stream.return_value.__enter__.side_effect = [_stream_response(429), _stream_response(503), good]
+        chunks = list(provider.stream_chat([{"role": "user", "content": "x"}]))
+    assert chunks[0]["message"]["content"] == "hi"
+    assert sleep.call_count == 2
+
+
+def test_stream_gives_up_with_clear_error_and_does_not_retry_auth():
+    provider = OpenAIProvider(model_name="m", api_key="k")
+    with patch.object(provider.client, "stream") as stream, patch("time.sleep"):
+        stream.return_value.__enter__.side_effect = lambda: _stream_response(429)
+        with pytest.raises(RuntimeError, match="429"):
+            list(provider.stream_chat([{"role": "user", "content": "x"}]))
+        assert stream.call_count == 6
+        stream.reset_mock()
+        stream.return_value.__enter__.side_effect = lambda: _stream_response(401)
+        with pytest.raises(RuntimeError, match="401"):
+            list(provider.stream_chat([{"role": "user", "content": "x"}]))
+        assert stream.call_count == 1
