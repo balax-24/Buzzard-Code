@@ -401,6 +401,8 @@ class BuzzardTUIApp(App[None]):
         storage: Optional[StorageManager] = None,
         fake: bool = False,
         registry: Optional[ToolRegistry] = None,
+        resume: bool = False,
+        session_id: Optional[str] = None,
         **kwargs: Any,
     ):
         super().__init__(**kwargs)
@@ -428,7 +430,7 @@ class BuzzardTUIApp(App[None]):
         self.current_session_id: Optional[str] = None
         self.is_running_operation: bool = False
         # Earlier user and assistant turns, so follow-up requests have their context
-        self.conversation: List[Dict[str, str]] = []
+        self.conversation: List[Dict[str, str]] = load_conversation() if resume or session_id else []
         self.usage = SessionUsage()
         self.plan_mode: bool = False
         self.session_rules: set = set()

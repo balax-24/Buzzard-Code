@@ -755,3 +755,30 @@ def test_budget_stops_a_running_task(repo, tmp_path, monkeypatch):
             assert len(provider.requests) < 6
 
     run_async(run())
+
+
+@pytest.mark.parametrize("arguments", [
+    ["tui"],
+    ["tui", "--fake"],
+    ["tui", "--resume"],
+    ["tui", "--session", "abc"],
+    ["tui", "--model", "openai-compatible/meta/muse-glimmer-30b"],
+])
+def test_tui_command_starts_through_the_real_cli(repo, tmp_path, monkeypatch, arguments):
+    """The command once crashed on launch, because tests only built the app directly."""
+    from click.testing import CliRunner
+    from cli import main as cli_main
+
+    started = []
+    monkeypatch.setattr(BuzzardTUIApp, "run", lambda self, *a, **k: started.append(self))
+    monkeypatch.setattr(cli_main, "is_first_run", lambda: False)
+    result = CliRunner().invoke(cli_main.main, ["--skip-toolchain", *arguments])
+    assert result.exception is None, result.exception
+    assert result.exit_code == 0, result.output
+    assert len(started) == 1
+
+
+def test_resume_flag_restores_the_saved_conversation(repo, tmp_path):
+    save_conversation([{"role": "user", "content": "earlier"}])
+    app = BuzzardTUIApp(resume=True, fake=True, storage=StorageManager(db_path=str(tmp_path / "a.db")))
+    assert app.conversation[-1]["content"] == "earlier"
