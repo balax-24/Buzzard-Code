@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# Buzzard Code launcher — runs native CLI by default or React+Ink TUI on explicit 'tui' subcommand
+set -euo pipefail
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$DIR"
+
+# Locate runtime CLI binary
+if [ -x "$DIR/.venv/bin/buzzard" ]; then
+  CLI_BIN="$DIR/.venv/bin/buzzard"
+elif [ -x "$DIR/.venv/bin/buzzard-code" ]; then
+  CLI_BIN="$DIR/.venv/bin/buzzard-code"
+elif [ -x "$DIR/.venv/Scripts/buzzard.exe" ]; then
+  CLI_BIN="$DIR/.venv/Scripts/buzzard.exe"
+else
+  echo "Buzzard Code runtime is not installed yet." >&2
+  echo "Run ./install.sh (Linux/macOS) or ./install.ps1 (Windows) first." >&2
+  exit 1
+fi
+
+# If explicit TUI requested
+if [[ "${1:-}" == "tui" ]]; then
+  shift
+  if [ ! -f "$DIR/tui/dist/index.js" ]; then
+    echo "Building Buzzard Code React+Ink TUI..." >&2
+    (cd "$DIR/tui" && npm run build)
+  fi
+  export BUZZARD_PYTHON="$DIR/.venv/bin/python"
+  exec node "$DIR/tui/dist/index.js" "$@"
+fi
+
+# Run native Python CLI
+exec "$CLI_BIN" "$@"

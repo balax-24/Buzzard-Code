@@ -1,0 +1,47 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments & Node modules
+.venv
+node_modules/
+tui/node_modules/
+tui/dist/
+
+# Runtime artifacts
+miscellaneous/
+install.log
+/reports/
+data/
+assessments/
+*.log
+*.db
+*.sqlite
+*.sqlite3
+.pytest_cache/
+lab/vulnlab.db
+lab/server.log
+scratch/
+*.jsonl
+*results.json
+
+# Model weights & Large checkpoints
+*.safetensors
+*.bin
+*.pt
+*.pth
+checkpoint/
+checkpoints/
+
+# Wordlists & Capture files
+*rockyou*
+*.cap
+*.pcap
+*.wordlist
+
+training_runs/
+
