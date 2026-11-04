@@ -207,13 +207,30 @@ def _ask_key(credential_name: str, label: str, signup_url: str = "", optional: b
         console.print("[green]✓ Key saved to your user config, outside any repository.[/green]")
 
 
+def _looks_like_api_key(value: str) -> bool:
+    """Model names are short and readable; a pasted key would be saved and shown on screen."""
+    text = value.strip()
+    return text.lower().startswith(("sk-", "sk_", "ghp_", "aiza", "aq.", "hf_", "xai-")) or (
+        len(text) >= 40 and " " not in text and "/" not in text and any(c.isdigit() for c in text)
+    )
+
+
+def _ask_model(default: Optional[str]) -> str:
+    """Asks for a model name, refusing anything that looks like an API key."""
+    while True:
+        answer = Prompt.ask("Model name (press Enter for the default)", default=default)
+        if not _looks_like_api_key(answer or ""):
+            return answer
+        console.print("[yellow]! That looks like an API key, not a model name. It was not saved.[/yellow]")
+
+
 def _configure_provider(selected: str, config: Dict[str, Any]) -> None:
     model = config["model"]
     if selected == "openrouter":
         model["provider"] = "openai-compatible"
         model["endpoint"] = OPENROUTER_URL
         _ask_key("openai-compatible", "OpenRouter", "https://openrouter.ai/keys")
-        model["name"] = Prompt.ask("Model", default=OPENROUTER_DEFAULT_MODEL)
+        model["name"] = _ask_model(OPENROUTER_DEFAULT_MODEL)
     elif selected == "ollama":
         model["provider"] = "ollama"
         host = Prompt.ask("Ollama server URL", default="http://localhost:11434")
@@ -225,17 +242,17 @@ def _configure_provider(selected: str, config: Dict[str, Any]) -> None:
             model["name"] = Prompt.ask("Model", choices=models, default=models[0])
         else:
             console.print("[yellow]! No Ollama models found. Start it with 'ollama serve', then 'ollama pull <model>'.[/yellow]")
-            model["name"] = Prompt.ask("Model to use", default="qwen3:8b")
+            model["name"] = _ask_model("qwen3:8b")
     elif selected == "openai-compatible":
         model["provider"] = "openai-compatible"
         model["endpoint"] = Prompt.ask("Base URL", default="http://localhost:8000/v1")
-        model["name"] = Prompt.ask("Model", default="default")
+        model["name"] = _ask_model("default")
         _ask_key("openai-compatible", "Endpoint", optional=True)
     else:
         credential, default_model, signup_url = CLOUD_PROVIDERS[selected]
         model["provider"] = selected
         _ask_key(credential, selected.capitalize(), signup_url)
-        model["name"] = Prompt.ask("Model", default=default_model or None)
+        model["name"] = _ask_model(default_model or None)
 
 
 def _configure_fallbacks(config: Dict[str, Any]) -> None:

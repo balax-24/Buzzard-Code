@@ -73,3 +73,15 @@ def test_rerunning_setup_does_not_change_shared_defaults(wizard):
     wizard("2", "k", "muse-spark-1.1", "gemini/backup")
     assert setup_wizard.DEFAULT_CONFIG["model"].get("provider") != "meta"
     assert "fallbacks" not in setup_wizard.DEFAULT_CONFIG["model"]
+
+
+def test_key_pasted_as_model_name_is_refused_and_never_saved(wizard):
+    secret = "sk-or-v1-" + "a1" * 32
+    saved, _ = wizard("1", "real-key", secret, "meta/muse-glimmer-30b", "")
+    assert saved["model"]["name"] == "meta/muse-glimmer-30b"
+    assert secret not in str(saved)
+
+
+@pytest.mark.parametrize("name", ["meta/muse-glimmer-30b", "gpt-5", "muse-spark-1.1", "qwen3:8b", "default"])
+def test_real_model_names_are_accepted(name):
+    assert setup_wizard._looks_like_api_key(name) is False
