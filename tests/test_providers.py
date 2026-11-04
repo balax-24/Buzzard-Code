@@ -6,13 +6,13 @@ import pytest
 import json
 import httpx
 from unittest.mock import MagicMock, patch
-from security_agent.model.provider import ModelProvider
-from security_agent.model.ollama import OllamaProvider
-from security_agent.model.openai_provider import OpenAIProvider
-from security_agent.model.gemini_provider import GeminiProvider
-from security_agent.model.anthropic_provider import AnthropicProvider
-from security_agent.model.openai_compatible import OpenAICompatibleProvider
-from security_agent.model.factory import (
+from model.provider import ModelProvider
+from model.ollama import OllamaProvider
+from model.openai_provider import OpenAIProvider
+from model.gemini_provider import GeminiProvider
+from model.anthropic_provider import AnthropicProvider
+from model.openai_compatible import OpenAICompatibleProvider
+from model.factory import (
     resolve_provider_and_model,
     get_model_provider,
     list_supported_providers,

@@ -1,6 +1,6 @@
 import pytest
-from security_agent.intelligence.branches import BranchManager, BranchPriority
-from security_agent.benchmark.phase17_bench import Phase17LongHorizonBenchmark
+from intelligence.branches import BranchManager, BranchPriority
+from benchmark.phase17_bench import Phase17LongHorizonBenchmark
 
 def test_branching_graph_creation_and_roi():
     mgr = BranchManager()

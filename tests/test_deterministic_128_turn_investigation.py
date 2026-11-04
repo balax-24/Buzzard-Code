@@ -13,7 +13,7 @@ import pytest
 import tempfile
 from pathlib import Path
 
-from security_agent.agent.assessment_state import (
+from agent.assessment_state import (
     AssessmentState,
     AssessmentContext,
     Capability,
@@ -21,13 +21,13 @@ from security_agent.agent.assessment_state import (
     AssessmentPhase,
     ObjectiveStatus,
 )
-from security_agent.intelligence.attack_graph import AttackGraph, NodeStatus
-from security_agent.intelligence.hypothesis_engine import HypothesisEngine
-from security_agent.intelligence.branches import BranchManager, BranchPriority
-from security_agent.intelligence.memory import LayeredMemoryManager
-from security_agent.intelligence.decision import DecisionRecord, DecisionSource
-from security_agent.persistence.models import BudgetSnapshot, InvestigationStatus
-from security_agent.persistence.checkpoint_manager import CheckpointManager
+from intelligence.attack_graph import AttackGraph, NodeStatus
+from intelligence.hypothesis_engine import HypothesisEngine
+from intelligence.branches import BranchManager, BranchPriority
+from intelligence.memory import LayeredMemoryManager
+from intelligence.decision import DecisionRecord, DecisionSource
+from persistence.models import BudgetSnapshot, InvestigationStatus
+from persistence.checkpoint_manager import CheckpointManager
 
 
 def test_128_turn_deterministic_investigation_with_crashes_and_resumes():

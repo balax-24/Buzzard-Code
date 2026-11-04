@@ -6,8 +6,8 @@ Verifies:
 """
 
 import pytest
-from security_agent.agent.assessment_state import AssessmentState, AssessmentContext, ObjectiveStatus
-from security_agent.intelligence.decision import DecisionRecord, DecisionSource
+from agent.assessment_state import AssessmentState, AssessmentContext, ObjectiveStatus
+from intelligence.decision import DecisionRecord, DecisionSource
 
 
 def test_verification_attribution_and_enforcement():

@@ -6,11 +6,11 @@ from pathlib import Path
 
 import pytest
 
-from security_agent.agent.loop import AgentLoop
-from security_agent.security.approvals import ApprovalGate
-from security_agent.security.policy import PolicyEngine
-from security_agent.tools.mcp_client import McpError, McpManager, McpServerConnection
-from security_agent.tools.registry import ToolRegistry
+from agent.loop import AgentLoop
+from security.approvals import ApprovalGate
+from security.policy import PolicyEngine
+from tools.mcp_client import McpError, McpManager, McpServerConnection
+from tools.registry import ToolRegistry
 
 FAKE_SERVER = r'''
 import json, os, sys, time
@@ -117,7 +117,7 @@ def test_malformed_config_is_reported(tmp_path):
 def test_every_mcp_call_requires_approval(manager, monkeypatch):
     registry = ToolRegistry()
     manager.register_tools(registry)
-    monkeypatch.setattr("security_agent.security.risk._get_registry_definition", registry.definitions.get)
+    monkeypatch.setattr("security.risk._get_registry_definition", registry.definitions.get)
     requests = []
 
     def deny(tool_name, arguments, metadata):

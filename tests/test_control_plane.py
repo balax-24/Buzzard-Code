@@ -3,14 +3,14 @@ Tests for the Control Plane: PolicyEngine, Risk Management, Approval Gates, and 
 """
 
 import pytest
-from security_agent.events.bus import EventBus
-from security_agent.events.types import EventType
-from security_agent.security.autonomy import AutonomyLevel, EnvironmentProfile
-from security_agent.security.risk import RiskClass, get_tool_risk_metadata
-from security_agent.security.authorization import AssessmentAuthorization
-from security_agent.security.approvals import ApprovalGate
-from security_agent.security.policy import PolicyEngine, PolicyDecision
-from security_agent.security.kill_switch import KillSwitch
+from events.bus import EventBus
+from events.types import EventType
+from security.autonomy import AutonomyLevel, EnvironmentProfile
+from security.risk import RiskClass, get_tool_risk_metadata
+from security.authorization import AssessmentAuthorization
+from security.approvals import ApprovalGate
+from security.policy import PolicyEngine, PolicyDecision
+from security.kill_switch import KillSwitch
 
 
 @pytest.fixture(autouse=True)

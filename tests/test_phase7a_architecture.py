@@ -23,21 +23,21 @@ from __future__ import annotations
 
 import pytest
 
-from security_agent.agent.assessment_state import (
+from agent.assessment_state import (
     AssessmentState,
     AssessmentContext,
     HypothesisStatus,
     ServiceState,
 )
-from security_agent.intelligence.attack_graph import (
+from intelligence.attack_graph import (
     AttackGraph,
     NodeKind,
     NodeStatus,
     EdgeKind,
     GraphNode,
 )
-from security_agent.intelligence.hypothesis_engine import HypothesisEngine
-from security_agent.agent.completion_engine import (
+from intelligence.hypothesis_engine import HypothesisEngine
+from agent.completion_engine import (
     CompletionEngine,
     CompletionAction,
     AssessmentMode,
@@ -115,7 +115,7 @@ class TestAttackGraphEvidence:
 
     def test_discovered_endpoint_creates_pending_endpoint_node(self):
         """A new HTTP endpoint in state must produce a PENDING ENDPOINT node."""
-        from security_agent.agent.assessment_state import HTTPEndpointRecord, HTTPState
+        from agent.assessment_state import HTTPEndpointRecord, HTTPState
         state = _make_state()
         state.record_service(host="10.10.10.10", port=80, service="http", evidence_id="E1")
         ep = HTTPEndpointRecord(
@@ -636,7 +636,7 @@ class TestCapabilityPivot:
         3. Graph gains PENDING /admin node.
         4. Engine proposes work on /admin without manual injection.
         """
-        from security_agent.agent.assessment_state import HTTPEndpointRecord, HTTPState
+        from agent.assessment_state import HTTPEndpointRecord, HTTPState
 
         state = _make_state()
         state.record_service(host="10.10.10.10", port=80, service="http", evidence_id="NMAP-001")
@@ -707,8 +707,8 @@ class TestLoopRecoveryCooperation:
 
     def test_loop_recovery_and_completion_engine_separate_imports(self):
         """Both components must import cleanly and have distinct interfaces."""
-        from security_agent.agent.completion_engine import CompletionEngine
-        from security_agent.agent.loop_controller import LoopRecoveryController
+        from agent.completion_engine import CompletionEngine
+        from agent.loop_controller import LoopRecoveryController
 
         ce = CompletionEngine(mode=AssessmentMode.TARGETED)
         lrc = LoopRecoveryController()

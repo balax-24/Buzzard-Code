@@ -9,15 +9,15 @@ import pytest
 import tempfile
 from pathlib import Path
 
-from security_agent.agent.assessment_state import AssessmentState, AssessmentContext
-from security_agent.state.session_store import Cookie
-from security_agent.persistence.checkpoint_manager import CheckpointManager
-from security_agent.intelligence.memory import LayeredMemoryManager
+from agent.assessment_state import AssessmentState, AssessmentContext
+from state.session_store import Cookie
+from persistence.checkpoint_manager import CheckpointManager
+from intelligence.memory import LayeredMemoryManager
 
 
 def test_session_expiration_across_checkpoint_resume():
     with tempfile.TemporaryDirectory() as tmpdir:
-        from security_agent.state.session_store import AuthenticationState
+        from state.session_store import AuthenticationState
         manager = CheckpointManager(storage_dir=tmpdir)
         state = AssessmentState(context=AssessmentContext(target="app.local"))
         store = state.get_session_store()

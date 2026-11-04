@@ -1,8 +1,8 @@
 import pytest
-from security_agent.security.scope import is_in_scope, extract_host_and_port
-from security_agent.security.policy import PolicyEngine
-from security_agent.security.approvals import ApprovalGate
-from security_agent.security.autonomy import EnvironmentProfile
+from security.scope import is_in_scope, extract_host_and_port
+from security.policy import PolicyEngine
+from security.approvals import ApprovalGate
+from security.autonomy import EnvironmentProfile
 
 def test_extract_host_and_port():
     assert extract_host_and_port("localhost:8080") == ("localhost", 8080)

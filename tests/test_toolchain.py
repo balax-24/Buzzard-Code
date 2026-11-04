@@ -1,16 +1,16 @@
 import pytest
 from unittest.mock import MagicMock, patch
-from security_agent.toolchain.manifest import (
+from toolchain.manifest import (
     ToolCategory,
     ToolDependency,
     ToolchainManifest,
     STANDARD_DEPENDENCIES,
 )
-from security_agent.toolchain.checker import CheckStatus, ToolCheckResult, ToolchainChecker
-from security_agent.toolchain.installer import ToolchainInstaller
-from security_agent.toolchain.manager import ToolchainManager
-from security_agent.sandbox.container import SandboxProvider
-from security_agent.cli.renderer import render_execution_metrics, console
+from toolchain.checker import CheckStatus, ToolCheckResult, ToolchainChecker
+from toolchain.installer import ToolchainInstaller
+from toolchain.manager import ToolchainManager
+from sandbox.container import SandboxProvider
+from cli.renderer import render_execution_metrics, console
 
 
 class MockSandbox(SandboxProvider):
@@ -59,7 +59,7 @@ def test_toolchain_checker_installed():
     Checks that ToolchainChecker correctly identifies installed tools in sandbox.
     """
     sandbox = MockSandbox(installed_commands=["nmap", "curl", "bash", "sh"])
-    with patch("security_agent.toolchain.checker.is_docker_active", return_value=True):
+    with patch("toolchain.checker.is_docker_active", return_value=True):
         checker = ToolchainChecker(sandbox=sandbox)
         dep = ToolDependency(
             name="nmap",
@@ -78,7 +78,7 @@ def test_toolchain_checker_missing():
     Checks that ToolchainChecker flags missing tools in sandbox.
     """
     sandbox = MockSandbox(installed_commands=["sh"])
-    with patch("security_agent.toolchain.checker.is_docker_active", return_value=True):
+    with patch("toolchain.checker.is_docker_active", return_value=True):
         checker = ToolchainChecker(sandbox=sandbox)
         dep = ToolDependency(
             name="non_existent_tool",
@@ -97,7 +97,7 @@ def test_toolchain_checker_docker_unavailable():
     Checks that ToolchainChecker fails closed when Docker is not active.
     """
     sandbox = MockSandbox()
-    with patch("security_agent.toolchain.checker.is_docker_active", return_value=False):
+    with patch("toolchain.checker.is_docker_active", return_value=False):
         checker = ToolchainChecker(sandbox=sandbox)
         dep = ToolDependency(
             name="nmap",
@@ -118,9 +118,9 @@ def test_toolchain_manager_bootstrap_success():
     all_cmds = ["sh", "bash", "curl", "python3", "hostname", "nmap", "ping", "dig", "nikto", "sqlmap", "gobuster", "ffuf", "git", "jq", "openssl", "grep"]
     sandbox = MockSandbox(installed_commands=all_cmds)
     
-    with patch("security_agent.toolchain.manager.is_docker_active", return_value=True), \
-         patch("security_agent.toolchain.checker.is_docker_active", return_value=True), \
-         patch("security_agent.toolchain.installer.ToolchainInstaller.is_image_available", return_value=True):
+    with patch("toolchain.manager.is_docker_active", return_value=True), \
+         patch("toolchain.checker.is_docker_active", return_value=True), \
+         patch("toolchain.installer.ToolchainInstaller.is_image_available", return_value=True):
         manager = ToolchainManager()
         manager.sandbox = sandbox
         manager.checker = ToolchainChecker(sandbox=sandbox)
@@ -136,10 +136,10 @@ def test_toolchain_manager_bootstrap_failure_blocks():
     # Only 'sh' is installed; required 'nmap' and 'bash' will fail
     sandbox = MockSandbox(installed_commands=["sh"])
     
-    with patch("security_agent.toolchain.manager.is_docker_active", return_value=True), \
-         patch("security_agent.toolchain.checker.is_docker_active", return_value=True), \
-         patch("security_agent.toolchain.installer.ToolchainInstaller.is_image_available", return_value=True), \
-         patch("security_agent.toolchain.installer.ToolchainInstaller.install_missing", return_value=(False, "Build failed")):
+    with patch("toolchain.manager.is_docker_active", return_value=True), \
+         patch("toolchain.checker.is_docker_active", return_value=True), \
+         patch("toolchain.installer.ToolchainInstaller.is_image_available", return_value=True), \
+         patch("toolchain.installer.ToolchainInstaller.install_missing", return_value=(False, "Build failed")):
         manager = ToolchainManager()
         manager.sandbox = sandbox
         manager.checker = ToolchainChecker(sandbox=sandbox)

@@ -1,5 +1,5 @@
 import pytest
-from security_agent.benchmark.phase17_bench import Phase17Credential, PrivilegeLevel
+from benchmark.phase17_bench import Phase17Credential, PrivilegeLevel
 
 def test_credential_lifecycle_and_scope():
     cred = Phase17Credential(

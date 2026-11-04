@@ -2,8 +2,8 @@
 Tests for independent verification lifecycle of findings discovered via browser automation.
 """
 
-from security_agent.agent.assessment_state import AssessmentState, AssessmentContext, ServiceRecord, ServiceState
-from security_agent.verification.finding_verifier import FindingVerifier
+from agent.assessment_state import AssessmentState, AssessmentContext, ServiceRecord, ServiceState
+from verification.finding_verifier import FindingVerifier
 
 
 def test_browser_finding_verification_lifecycle():

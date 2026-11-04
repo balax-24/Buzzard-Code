@@ -6,7 +6,7 @@ Verifies:
 """
 
 import pytest
-from security_agent.intelligence.long_horizon import StrategyType, MultiStepPlan, PlanStep, PlanReassessmentEngine
+from intelligence.long_horizon import StrategyType, MultiStepPlan, PlanStep, PlanReassessmentEngine
 
 
 def test_adaptive_strategy_enum_and_plan():

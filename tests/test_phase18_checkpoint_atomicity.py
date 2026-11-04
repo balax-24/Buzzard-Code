@@ -1,6 +1,6 @@
 import pytest
 from pathlib import Path
-from security_agent.persistence.checkpoint import AtomicCheckpoint, CheckpointError
+from persistence.checkpoint import AtomicCheckpoint, CheckpointError
 
 def test_atomic_checkpoint_write_and_read(tmp_path):
     target = tmp_path / "checkpoints" / "chk_001.json"

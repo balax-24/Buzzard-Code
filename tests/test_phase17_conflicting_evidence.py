@@ -1,5 +1,5 @@
 import pytest
-from security_agent.benchmark.phase17_bench import EvidenceConfidence, Phase17Evidence
+from benchmark.phase17_bench import EvidenceConfidence, Phase17Evidence
 
 def test_conflicting_evidence_tracking():
     evi1 = Phase17Evidence("EVI-1", "192.168.1.10", "http", "http_headers", "WAF: ENABLED", 100.0, EvidenceConfidence.PROBABLE)

@@ -4,7 +4,7 @@ Unit and integration tests for SessionStore and session management.
 
 import time
 import pytest
-from security_agent.state.session_store import (
+from state.session_store import (
     SessionStore,
     Session,
     Cookie,

@@ -16,7 +16,7 @@ Verifies:
 
 import json
 import pytest
-from security_agent.agent.assessment_state import (
+from agent.assessment_state import (
     AssessmentState,
     AssessmentContext,
     AssessmentPhase,
@@ -26,15 +26,15 @@ from security_agent.agent.assessment_state import (
     CapabilityType,
     FailureClassification,
 )
-from security_agent.agent.context_manager import (
+from agent.context_manager import (
     ContextManager,
     ContextBudget,
     DerivedContextView,
     wrap_tool_output_as_data,
     sanitize_untrusted_data,
 )
-from security_agent.intelligence.attack_graph import AttackGraph, NodeKind, NodeStatus
-from security_agent.intelligence.hypothesis_engine import HypothesisProposal, ProposalConfidence
+from intelligence.attack_graph import AttackGraph, NodeKind, NodeStatus
+from intelligence.hypothesis_engine import HypothesisProposal, ProposalConfidence
 
 
 # ---------------------------------------------------------------------------

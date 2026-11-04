@@ -1,7 +1,7 @@
 import pytest
-from security_agent.remediation.guidance import RemediationGenerator
-from security_agent.model.schemas import Finding, Severity, Confidence
-from security_agent.intelligence.evidence_parser import (
+from remediation.guidance import RemediationGenerator
+from model.schemas import Finding, Severity, Confidence
+from intelligence.evidence_parser import (
     AttackSurfaceSnapshot,
     DiscoveredService
 )

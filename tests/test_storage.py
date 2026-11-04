@@ -2,8 +2,8 @@ import pytest
 import os
 import tempfile
 from pathlib import Path
-from security_agent.storage.db import StorageManager
-from security_agent.model.schemas import Finding, Evidence, Severity, Confidence, EvidenceType, TaskStatus
+from storage.db import StorageManager
+from model.schemas import Finding, Evidence, Severity, Confidence, EvidenceType, TaskStatus
 
 
 def test_db_initialization(temp_db):

@@ -3,10 +3,10 @@ Phase 14 Tests: Deterministic Session Replay & Canonical Golden Trace.
 Verifies full offline state reconstruction from event streams without executing live tools.
 """
 
-from security_agent.benchmark.golden_trace import generate_golden_trace_events
-from security_agent.persistence.replay import SessionReplayEngine
-from security_agent.agent.assessment_state import ObjectiveStatus, CapabilityType
-from security_agent.intelligence.invariants import StateInvariantValidator
+from benchmark.golden_trace import generate_golden_trace_events
+from persistence.replay import SessionReplayEngine
+from agent.assessment_state import ObjectiveStatus, CapabilityType
+from intelligence.invariants import StateInvariantValidator
 
 
 def test_golden_trace_replay_deterministic_reconstruction():

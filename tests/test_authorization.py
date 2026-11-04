@@ -5,9 +5,9 @@ Tests for Assessment Authorization and AuthorizationEngine.
 from datetime import datetime, timezone, timedelta
 import pytest
 
-from security_agent.security.autonomy import AutonomyLevel, EnvironmentProfile
-from security_agent.security.risk import RiskClass
-from security_agent.security.authorization import (
+from security.autonomy import AutonomyLevel, EnvironmentProfile
+from security.risk import RiskClass
+from security.authorization import (
     AssessmentAuthorization,
     AuthorizationEngine,
     create_default_authorization,

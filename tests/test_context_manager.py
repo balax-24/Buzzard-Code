@@ -10,8 +10,8 @@ Verifies:
 """
 
 import pytest
-from security_agent.agent.context_manager import ContextManager
-from security_agent.agent.assessment_state import AssessmentState, ServiceRecord, ServiceState, VerificationStatus
+from agent.context_manager import ContextManager
+from agent.assessment_state import AssessmentState, ServiceRecord, ServiceState, VerificationStatus
 
 
 def test_compress_tool_output_nmap():

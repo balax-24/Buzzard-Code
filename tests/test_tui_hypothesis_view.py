@@ -1,4 +1,4 @@
-from security_agent.tui.test_utils import run_async
+from tui.test_utils import run_async
 """
 Tests for Hypotheses Panel Widget.
 Verifies:
@@ -6,9 +6,9 @@ Verifies:
 """
 
 import pytest
-from security_agent.tui.app import QwythosTUIApp
-from security_agent.tui.widgets.hypotheses_panel import HypothesesPanel
-from security_agent.agent.assessment_state import VulnerabilityHypothesis, HypothesisStatus
+from tui.app import QwythosTUIApp
+from tui.widgets.hypotheses_panel import HypothesesPanel
+from agent.assessment_state import VulnerabilityHypothesis, HypothesisStatus
 
 
 def test_hypotheses_panel():

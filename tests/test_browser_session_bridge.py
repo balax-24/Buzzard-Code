@@ -2,8 +2,8 @@
 Tests for BrowserContext <-> SessionStore bi-directional synchronization.
 """
 
-from security_agent.state.session_store import SessionStore, Cookie, BearerToken
-from security_agent.browser import BrowserContext
+from state.session_store import SessionStore, Cookie, BearerToken
+from browser import BrowserContext
 
 
 def test_browser_session_injection_and_export():

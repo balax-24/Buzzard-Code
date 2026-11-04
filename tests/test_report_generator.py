@@ -1,5 +1,5 @@
 """
-Unit tests for ReportGenerator (security_agent/reports/report_generator.py).
+Unit tests for ReportGenerator (reports/report_generator.py).
 
 Tests:
 1. Report generation includes verified attack surface with Evidence IDs.
@@ -10,14 +10,14 @@ Tests:
 
 import json
 import pytest
-from security_agent.reports.report_generator import ReportGenerator
-from security_agent.agent.assessment_state import (
+from reports.report_generator import ReportGenerator
+from agent.assessment_state import (
     AssessmentState,
     AssessmentContext,
     ServiceState,
     VerificationStatus
 )
-from security_agent.model.schemas import Finding, Severity, Confidence, Evidence, EvidenceType
+from model.schemas import Finding, Severity, Confidence, Evidence, EvidenceType
 
 
 @pytest.fixture

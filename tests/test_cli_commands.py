@@ -2,26 +2,26 @@ import pytest
 import os
 from pathlib import Path
 from unittest.mock import patch, MagicMock
-import security_agent.storage.db
-from security_agent.storage.db import StorageManager
-from security_agent.model.schemas import Finding, Evidence, Severity, Confidence, EvidenceType, TaskStatus
-from security_agent.cli.commands import list_tasks, get_task_status, resume_task, generate_report
+import storage.db
+from storage.db import StorageManager
+from model.schemas import Finding, Evidence, Severity, Confidence, EvidenceType, TaskStatus
+from cli.commands import list_tasks, get_task_status, resume_task, generate_report
 
 @pytest.fixture(autouse=True)
 def setup_test_db(temp_db):
     """
     Redirects the default database file to a temporary one for testing.
     """
-    old_default = security_agent.storage.db.DEFAULT_DB_FILE
-    security_agent.storage.db.DEFAULT_DB_FILE = Path(temp_db)
+    old_default = storage.db.DEFAULT_DB_FILE
+    storage.db.DEFAULT_DB_FILE = Path(temp_db)
     yield
-    security_agent.storage.db.DEFAULT_DB_FILE = old_default
+    storage.db.DEFAULT_DB_FILE = old_default
 
 def test_list_tasks_empty():
     """
     Verifies list_tasks prints message when no tasks exist.
     """
-    with patch("security_agent.cli.renderer.console.print") as mock_print:
+    with patch("cli.renderer.console.print") as mock_print:
         list_tasks()
         mock_print.assert_any_call("[bold cyan]No tasks recorded yet.[/bold cyan]")
 
@@ -33,7 +33,7 @@ def test_list_tasks_with_data():
     session_id = "test-session-list"
     storage.create_session(session_id, "localhost", ["localhost"], "Test Goal")
     
-    with patch("security_agent.cli.renderer.console.print") as mock_print:
+    with patch("cli.renderer.console.print") as mock_print:
         list_tasks()
         # Verify that print was called with rich Table object
         args, kwargs = mock_print.call_args
@@ -52,7 +52,7 @@ def test_get_task_status():
     storage.create_session(session_id, "localhost", ["localhost"], "Test Status Goal")
     storage.save_plan(session_id, ["Step 1", "Step 2"], current_index=0)
     
-    with patch("security_agent.cli.renderer.console.print") as mock_print:
+    with patch("cli.renderer.console.print") as mock_print:
         get_task_status(session_id)
         # Verify it printed the status panel
         found_panel = False
@@ -101,7 +101,7 @@ def test_generate_report(tmp_path):
     storage.update_session_status(session_id, TaskStatus.COMPLETED)
     
     # Patch Path to save in tmp_path
-    with patch("security_agent.cli.commands.Path") as mock_path:
+    with patch("cli.commands.Path") as mock_path:
         mock_path.return_value = tmp_path
         mock_path.side_path = tmp_path
         
@@ -117,8 +117,8 @@ def test_generate_report(tmp_path):
             assert "HIGH" in content
             assert "SCREENSHOT" in content
 
-@patch("security_agent.model.ollama.OllamaProvider.is_available", return_value=True)
-@patch("security_agent.agent.loop.AgentLoop.run")
+@patch("model.ollama.OllamaProvider.is_available", return_value=True)
+@patch("agent.loop.AgentLoop.run")
 def test_resume_task(mock_run, mock_available):
     """
     Verifies resume_task correctly initializes the loop and calls run.
@@ -139,10 +139,10 @@ def test_resume_task(mock_run, mock_available):
         session_id=session_id
     )
 
-@patch("security_agent.cli.commands.OllamaProvider")
-@patch("security_agent.cli.commands.subprocess.run")
-@patch("security_agent.cli.commands.shutil.which")
-@patch("security_agent.cli.commands.render_doctor")
+@patch("cli.commands.OllamaProvider")
+@patch("cli.commands.subprocess.run")
+@patch("cli.commands.shutil.which")
+@patch("cli.commands.render_doctor")
 def test_run_doctor(mock_render, mock_which, mock_run, mock_ollama_prov):
     """
     Verifies run_doctor performs all diagnostic checks and calls render_doctor.
@@ -161,7 +161,7 @@ def test_run_doctor(mock_render, mock_which, mock_run, mock_ollama_prov):
     mock_res.returncode = 0
     mock_run.return_value = mock_res
 
-    from security_agent.cli.commands import run_doctor
+    from cli.commands import run_doctor
     run_doctor()
 
     mock_render.assert_called_once()

@@ -3,9 +3,9 @@ Phase 15 Tests: Exhaustive Mode Assessment Surface Coverage.
 Verifies that EXHAUSTIVE mode continues exploring remaining authorized surface before terminating.
 """
 
-from security_agent.agent.assessment_state import AssessmentState, AssessmentContext, ObjectiveStatus, ServiceState, ServiceRecord
-from security_agent.agent.completion_engine import CompletionEngine, AssessmentMode, CompletionAction, BudgetSnapshot
-from security_agent.intelligence.attack_graph import AttackGraph, NodeKind, NodeStatus
+from agent.assessment_state import AssessmentState, AssessmentContext, ObjectiveStatus, ServiceState, ServiceRecord
+from agent.completion_engine import CompletionEngine, AssessmentMode, CompletionAction, BudgetSnapshot
+from intelligence.attack_graph import AttackGraph, NodeKind, NodeStatus
 
 
 def test_exhaustive_mode_continues_until_surface_exhausted():

@@ -10,7 +10,7 @@ Verifies:
 """
 
 import pytest
-from security_agent.agent.assessment_state import (
+from agent.assessment_state import (
     AssessmentState,
     AssessmentContext,
     CapabilityType,
@@ -19,11 +19,11 @@ from security_agent.agent.assessment_state import (
     ObjectiveStatus,
     AssessmentPhase,
 )
-from security_agent.agent.tool_executor import ToolExecutor
-from security_agent.tools.registry import ToolRegistry
-from security_agent.events.bus import EventBus
-from security_agent.intelligence.attack_graph import AttackGraph, NodeKind
-from security_agent.intelligence.hypothesis_engine import HypothesisEngine
+from agent.tool_executor import ToolExecutor
+from tools.registry import ToolRegistry
+from events.bus import EventBus
+from intelligence.attack_graph import AttackGraph, NodeKind
+from intelligence.hypothesis_engine import HypothesisEngine
 
 
 def test_full_autonomous_recursive_session_chain():

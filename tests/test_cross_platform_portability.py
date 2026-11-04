@@ -12,9 +12,9 @@ import tempfile
 from pathlib import Path
 import pytest
 
-from security_agent.persistence.engagement_store import EngagementLock, EngagementLockError
-from security_agent.security.kill_switch import KILL_FILE_PATHS, KillSwitch
-from security_agent.tools.filesystem import set_active_workspace, get_safe_path, file_read, file_write
+from persistence.engagement_store import EngagementLock, EngagementLockError
+from security.kill_switch import KILL_FILE_PATHS, KillSwitch
+from tools.filesystem import set_active_workspace, get_safe_path, file_read, file_write
 
 
 def test_engagement_lock_concurrency_and_release(tmp_path):

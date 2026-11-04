@@ -2,8 +2,8 @@
 Tests for WebSocket endpoint discovery in DOM, scripts, and runtime events.
 """
 
-from security_agent.browser.dom import DOMReducer
-from security_agent.browser.network import NetworkRecorder
+from browser.dom import DOMReducer
+from browser.network import NetworkRecorder
 
 
 def test_websocket_discovery():

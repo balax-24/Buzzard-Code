@@ -23,10 +23,10 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List
 
-from security_agent.agent.loop import CODING_TOOL_NAMES, AgentLoop
-from security_agent.model.factory import get_model_provider
-from security_agent.storage.db import StorageManager
-from security_agent.tools.filesystem import set_active_workspace
+from agent.loop import CODING_TOOL_NAMES, AgentLoop
+from model.factory import get_model_provider
+from storage.db import StorageManager
+from tools.filesystem import set_active_workspace
 
 OUTPUT_DIR = Path("artifacts/acceptance")
 SCOPE = ["localhost", "127.0.0.1"]

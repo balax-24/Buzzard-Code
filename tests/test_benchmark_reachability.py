@@ -13,7 +13,7 @@ import pytest
 from unittest.mock import MagicMock
 from typing import Dict, Any
 
-from security_agent.agent.assessment_state import (
+from agent.assessment_state import (
     AssessmentState,
     AssessmentPhase,
     AssessmentContext,
@@ -22,14 +22,14 @@ from security_agent.agent.assessment_state import (
     ExploitStatus,
     HypothesisStatus,
 )
-from security_agent.benchmark.multi_service_runner import (
+from benchmark.multi_service_runner import (
     MultiServiceBenchmarkRunner,
     LabGroundTruth,
 )
-from security_agent.intelligence.evidence_ingestor import EvidenceIngestor
-from security_agent.agent.tool_executor import ToolExecutor, ToolExecutionResult
-from security_agent.agent.planner import Planner
-from security_agent.verification.finding_verifier import FindingVerifier
+from intelligence.evidence_ingestor import EvidenceIngestor
+from agent.tool_executor import ToolExecutor, ToolExecutionResult
+from agent.planner import Planner
+from verification.finding_verifier import FindingVerifier
 
 
 class BenchmarkMockRegistry:

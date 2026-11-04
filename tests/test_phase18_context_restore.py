@@ -1,9 +1,9 @@
 import pytest
-from security_agent.agent.assessment_state import AssessmentContext, AssessmentState
-from security_agent.intelligence.attack_graph import AttackGraph, NodeKind
-from security_agent.intelligence.branches import BranchManager
-from security_agent.intelligence.failure_memory import FailureAwareMemory
-from security_agent.persistence.engagement_store import ResumeContextBuilder
+from agent.assessment_state import AssessmentContext, AssessmentState
+from intelligence.attack_graph import AttackGraph, NodeKind
+from intelligence.branches import BranchManager
+from intelligence.failure_memory import FailureAwareMemory
+from persistence.engagement_store import ResumeContextBuilder
 
 def test_resume_context_builder_decision_relevance():
     state = AssessmentState(context=AssessmentContext(target="192.168.1.10", scope=["192.168.1.10"]))

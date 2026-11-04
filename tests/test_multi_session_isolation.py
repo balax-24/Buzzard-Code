@@ -3,7 +3,7 @@ Tests for multi-session support and role-based credential separation.
 """
 
 import pytest
-from security_agent.state.session_store import (
+from state.session_store import (
     SessionStore,
     Cookie,
     BearerToken,

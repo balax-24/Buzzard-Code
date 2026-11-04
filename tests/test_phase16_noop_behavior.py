@@ -3,7 +3,7 @@ Phase 16 Tests: Zero-Information No-Op Detection & Strategy Pivot.
 Proves that repeating zero-delta actions triggers strategy diversification.
 """
 
-from security_agent.intelligence.noop_detector import NoOpDetector, ActionDelta
+from intelligence.noop_detector import NoOpDetector, ActionDelta
 
 
 def test_consecutive_noops_trigger_pivot():

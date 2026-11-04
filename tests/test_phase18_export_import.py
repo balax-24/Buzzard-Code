@@ -1,7 +1,7 @@
 import pytest
 from pathlib import Path
-from security_agent.agent.assessment_state import AssessmentContext, AssessmentState
-from security_agent.persistence.engagement_store import EngagementStore
+from agent.assessment_state import AssessmentContext, AssessmentState
+from persistence.engagement_store import EngagementStore
 
 def test_export_import_portable_archive(tmp_path):
     store_a = EngagementStore(base_dir=tmp_path / "ws_a")

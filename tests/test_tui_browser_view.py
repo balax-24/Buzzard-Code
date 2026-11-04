@@ -1,4 +1,4 @@
-from security_agent.tui.test_utils import run_async
+from tui.test_utils import run_async
 """
 Tests for Browser Panel Widget.
 Verifies:
@@ -6,9 +6,9 @@ Verifies:
 """
 
 import pytest
-from security_agent.tui.app import QwythosTUIApp
-from security_agent.tui.widgets.browser_panel import BrowserPanel
-from security_agent.agent.assessment_state import HTTPEndpointRecord, HTTPState
+from tui.app import QwythosTUIApp
+from tui.widgets.browser_panel import BrowserPanel
+from agent.assessment_state import HTTPEndpointRecord, HTTPState
 
 
 def test_browser_panel():

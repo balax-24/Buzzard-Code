@@ -2,9 +2,9 @@
 Tests for Cyber Range Lab Targets, Identity Factory, and Benchmark Runner.
 """
 
-from security_agent.range.lab_targets import CyberRangeServer
-from security_agent.range.identity_factory import IdentityFactory
-from security_agent.range.benchmark import BenchmarkRunner
+from range.lab_targets import CyberRangeServer
+from range.identity_factory import IdentityFactory
+from range.benchmark import BenchmarkRunner
 import httpx
 
 

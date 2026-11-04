@@ -1,8 +1,8 @@
 import pytest
-from security_agent.storage.db import StorageManager
-from security_agent.tools.registry import ToolRegistry
-from security_agent.tools.evidence import register_evidence_tools
-from security_agent.model.schemas import Severity, Confidence, EvidenceType
+from storage.db import StorageManager
+from tools.registry import ToolRegistry
+from tools.evidence import register_evidence_tools
+from model.schemas import Severity, Confidence, EvidenceType
 
 def test_evidence_and_finding_tools(temp_db):
     """

@@ -4,7 +4,7 @@ Tests for EnvironmentDoctor diagnostics and environment verification.
 
 import pytest
 from unittest.mock import MagicMock, patch
-from security_agent.system.doctor import EnvironmentDoctor, CheckResult
+from system.doctor import EnvironmentDoctor, CheckResult
 
 def test_doctor_core_checks():
     doctor = EnvironmentDoctor()
@@ -25,7 +25,7 @@ def test_doctor_security_checks():
     assert pe_check.status == "PASS"
 
 def test_doctor_filesystem_checks(tmp_path, monkeypatch):
-    monkeypatch.setattr("security_agent.system.doctor.get_global_config_dir", lambda: tmp_path)
+    monkeypatch.setattr("system.doctor.get_global_config_dir", lambda: tmp_path)
     doctor = EnvironmentDoctor()
     results = doctor.check_filesystem()
     global_dir_check = next(r for r in results if r.name == "Global config directory")

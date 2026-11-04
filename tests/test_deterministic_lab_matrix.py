@@ -29,7 +29,7 @@ Ensures:
 
 import pytest
 from typing import Dict, Any, List, Optional
-from security_agent.agent.assessment_state import (
+from agent.assessment_state import (
     AssessmentState,
     AssessmentContext,
     AssessmentPhase,
@@ -37,8 +37,8 @@ from security_agent.agent.assessment_state import (
     CapabilityType,
     HypothesisStatus,
 )
-from security_agent.agent.deterministic_controller import DeterministicController
-from security_agent.intelligence.attack_graph import AttackGraph, NodeKind, NodeStatus
+from agent.deterministic_controller import DeterministicController
+from intelligence.attack_graph import AttackGraph, NodeKind, NodeStatus
 
 
 class LabScenarioDefinition:

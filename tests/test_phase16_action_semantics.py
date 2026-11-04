@@ -3,7 +3,7 @@ Phase 16 Tests: Action Semantics & Equivalence.
 Proves that various syntax representations map to the identical canonical key.
 """
 
-from security_agent.intelligence.action_identity import ActionIdentity, SemanticActionKey
+from intelligence.action_identity import ActionIdentity, SemanticActionKey
 
 
 def test_action_semantic_normalization_across_syntax():

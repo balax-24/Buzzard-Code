@@ -3,10 +3,10 @@ Phase 14 Tests: Information Gain & Action Decay.
 Verifies computation of information gain, action normalization, decay on repeated probes, and branch ROI ranking.
 """
 
-from security_agent.intelligence.information_gain import (
+from intelligence.information_gain import (
     InformationGainEngine,
 )
-from security_agent.intelligence.branches import BranchManager, BranchPriority
+from intelligence.branches import BranchManager, BranchPriority
 
 
 def test_action_normalization():

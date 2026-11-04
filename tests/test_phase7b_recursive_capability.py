@@ -25,7 +25,7 @@ import time
 import pytest
 from typing import Dict, Any, List, Optional
 
-from security_agent.agent.assessment_state import (
+from agent.assessment_state import (
     AssessmentState,
     AssessmentContext,
     AssessmentPhase,
@@ -34,19 +34,19 @@ from security_agent.agent.assessment_state import (
     HypothesisStatus,
     VulnerabilityHypothesis,
 )
-from security_agent.intelligence.capability import Capability, CapabilityType
-from security_agent.intelligence.attack_graph import (
+from intelligence.capability import Capability, CapabilityType
+from intelligence.attack_graph import (
     AttackGraph,
     NodeKind,
     NodeStatus,
     EdgeKind,
 )
-from security_agent.intelligence.hypothesis_engine import (
+from intelligence.hypothesis_engine import (
     HypothesisEngine,
     HypothesisProposal,
     ProposalConfidence,
 )
-from security_agent.agent.completion_engine import (
+from agent.completion_engine import (
     CompletionEngine,
     CompletionAction,
     AssessmentMode,

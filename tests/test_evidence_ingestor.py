@@ -1,5 +1,5 @@
 """
-Unit tests for EvidenceIngestor (security_agent/intelligence/evidence_ingestor.py).
+Unit tests for EvidenceIngestor (intelligence/evidence_ingestor.py).
 
 Tests:
 1. Verified service extraction from nmap scan
@@ -11,14 +11,14 @@ Tests:
 
 import pytest
 from unittest.mock import MagicMock
-from security_agent.intelligence.evidence_ingestor import (
+from intelligence.evidence_ingestor import (
     EvidenceIngestor,
     EvidenceItem,
     FactualClaim,
     ClaimStatus
 )
-from security_agent.agent.tool_executor import ToolExecutionResult
-from security_agent.agent.assessment_state import (
+from agent.tool_executor import ToolExecutionResult
+from agent.assessment_state import (
     AssessmentState,
     AssessmentContext,
     ServiceState,

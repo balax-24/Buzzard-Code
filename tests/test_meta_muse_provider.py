@@ -4,8 +4,8 @@ import pytest
 import httpx
 from unittest.mock import MagicMock, patch
 
-from security_agent.model.meta_muse import MetaMuseProvider
-from security_agent.model.factory import (
+from model.meta_muse import MetaMuseProvider
+from model.factory import (
     resolve_provider_and_model,
     get_model_provider,
     list_supported_providers,

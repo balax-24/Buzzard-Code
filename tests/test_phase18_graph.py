@@ -1,7 +1,7 @@
 import pytest
-from security_agent.agent.assessment_state import AssessmentContext, AssessmentState
-from security_agent.intelligence.attack_graph import AttackGraph, NodeKind
-from security_agent.persistence.engagement_store import EngagementStore
+from agent.assessment_state import AssessmentContext, AssessmentState
+from intelligence.attack_graph import AttackGraph, NodeKind
+from persistence.engagement_store import EngagementStore
 
 def test_attack_graph_persistence_and_sync(tmp_path):
     store = EngagementStore(base_dir=tmp_path)

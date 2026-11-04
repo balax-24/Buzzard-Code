@@ -1,5 +1,5 @@
 import pytest
-from security_agent.benchmark.phase17_bench import MultiHostSyntheticLab, PrivilegeLevel
+from benchmark.phase17_bench import MultiHostSyntheticLab, PrivilegeLevel
 
 def test_multihost_initial_reachability():
     lab = MultiHostSyntheticLab()

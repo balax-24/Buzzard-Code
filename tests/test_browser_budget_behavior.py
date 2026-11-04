@@ -2,7 +2,7 @@
 Tests for budget enforcement and loop retry limits with browser operations.
 """
 
-from security_agent.agent.assessment_state import AssessmentStateMachine, AssessmentPhase
+from agent.assessment_state import AssessmentStateMachine, AssessmentPhase
 
 
 def test_browser_budget_and_retry_limits():

@@ -8,13 +8,13 @@ and cross-model isolation/reset.
 import pytest
 import os
 import json
-from security_agent.benchmark.multi_service_runner import (
+from benchmark.multi_service_runner import (
     MultiServiceBenchmarkRunner, ModelBenchmarkTrace, LabGroundTruth
 )
-from security_agent.range.multi_service_lab import (
+from range.multi_service_lab import (
     MultiServiceLab, MultiServiceLabWebHandler, IPPPrintServerHandler, MockSSHHandler
 )
-from security_agent.agent.assessment_state import (
+from agent.assessment_state import (
     ServiceRecord, VulnerabilityHypothesis, ExploitationRecord, ExploitStatus, AssessmentPhase
 )
 

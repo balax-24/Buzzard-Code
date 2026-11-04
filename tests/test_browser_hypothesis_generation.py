@@ -1,6 +1,6 @@
-from security_agent.agent.assessment_state import AssessmentState, AssessmentContext, ServiceRecord
-from security_agent.intelligence.hypothesis_engine import HypothesisEngine
-from security_agent.browser.dom import DOMReducer
+from agent.assessment_state import AssessmentState, AssessmentContext, ServiceRecord
+from intelligence.hypothesis_engine import HypothesisEngine
+from browser.dom import DOMReducer
 
 
 def test_browser_hypothesis_proposals():

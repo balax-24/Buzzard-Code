@@ -1,6 +1,6 @@
 import pytest
-from security_agent.intelligence.noop_detector import ActionDelta
-from security_agent.benchmark.phase17_bench import Phase17LongHorizonBenchmark
+from intelligence.noop_detector import ActionDelta
+from benchmark.phase17_bench import Phase17LongHorizonBenchmark
 
 def test_information_gain_strictly_delta_based():
     delta_zero = ActionDelta()

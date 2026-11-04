@@ -1,4 +1,4 @@
-from security_agent.tui.test_utils import run_async
+from tui.test_utils import run_async
 """
 Tests for Layered Memory (L0-L8) Panel Widget.
 Verifies:
@@ -6,8 +6,8 @@ Verifies:
 """
 
 import pytest
-from security_agent.tui.app import QwythosTUIApp
-from security_agent.tui.widgets.memory_panel import MemoryPanel
+from tui.app import QwythosTUIApp
+from tui.widgets.memory_panel import MemoryPanel
 
 
 def test_memory_panel():

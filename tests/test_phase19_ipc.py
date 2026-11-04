@@ -5,7 +5,7 @@ Phase 19: Real-Time Event Bus, IPC Protocol, and Operator Console Tests.
 import json
 import pytest
 from unittest.mock import MagicMock
-from security_agent.cli.server import AgentServer
+from cli.server import AgentServer
 
 
 def test_agent_server_event_sequence_numbering():

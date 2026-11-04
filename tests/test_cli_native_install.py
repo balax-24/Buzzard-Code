@@ -10,19 +10,19 @@ from pathlib import Path
 from unittest.mock import patch, MagicMock
 from click.testing import CliRunner
 
-from security_agent.core.config import (
+from core.config import (
     get_setup_state_file,
     get_setup_state,
     save_setup_state,
     is_setup_completed,
     get_global_config_dir,
 )
-from security_agent.cli.setup_wizard import is_first_run, run_first_run_wizard
-from security_agent.cli.main import main
+from cli.setup_wizard import is_first_run, run_first_run_wizard
+from cli.main import main
 
 def test_setup_state_persistence(tmp_path, monkeypatch):
     """Verifies that persistent setup state saves and loads correctly."""
-    monkeypatch.setattr("security_agent.core.config.get_global_config_dir", lambda: tmp_path)
+    monkeypatch.setattr("core.config.get_global_config_dir", lambda: tmp_path)
 
     state = get_setup_state()
     assert state["setup_completed"] is False
@@ -43,7 +43,7 @@ def test_setup_state_persistence(tmp_path, monkeypatch):
 
 def test_is_first_run_state_check(tmp_path, monkeypatch):
     """Verifies that is_first_run reflects setup_completed state."""
-    monkeypatch.setattr("security_agent.core.config.get_global_config_dir", lambda: tmp_path)
+    monkeypatch.setattr("core.config.get_global_config_dir", lambda: tmp_path)
     
     assert is_first_run() is True
 
@@ -69,10 +69,10 @@ def test_version_command():
 
 def test_first_run_wizard_non_interactive(tmp_path, monkeypatch):
     """Verifies that first-run wizard in non-interactive environment defaults safely and sets state."""
-    monkeypatch.setattr("security_agent.core.config.get_global_config_dir", lambda: tmp_path)
+    monkeypatch.setattr("core.config.get_global_config_dir", lambda: tmp_path)
     monkeypatch.setattr("sys.stdin.isatty", lambda: False)
     
-    with patch("security_agent.sandbox.container.is_docker_active", return_value=True):
+    with patch("sandbox.container.is_docker_active", return_value=True):
         ok = run_first_run_wizard(force=True)
         assert ok is True
 
@@ -94,7 +94,7 @@ def test_uninstall_preserves_user_data(tmp_path, monkeypatch):
     fake_config.mkdir(parents=True, exist_ok=True)
     (fake_config / "config.json").write_text("{}", encoding="utf-8")
 
-    monkeypatch.setattr("security_agent.core.config.get_global_config_dir", lambda: fake_config)
+    monkeypatch.setattr("core.config.get_global_config_dir", lambda: fake_config)
 
     runner = CliRunner()
     result = runner.invoke(main, ["uninstall", "--yes"])

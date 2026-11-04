@@ -9,8 +9,8 @@ import pytest
 import tempfile
 from pathlib import Path
 
-from security_agent.persistence.journal import InvestigationJournal, JournalEventType
-from security_agent.agent.assessment_state import CapabilityType, ObjectiveStatus
+from persistence.journal import InvestigationJournal, JournalEventType
+from agent.assessment_state import CapabilityType, ObjectiveStatus
 
 
 def test_journal_recording_and_state_replay():

@@ -1,7 +1,7 @@
 """Tests for the AssessmentState machine."""
 
 import pytest
-from security_agent.agent.state import AssessmentPhase, AssessmentState
+from agent.state import AssessmentPhase, AssessmentState
 
 
 class TestAssessmentState:

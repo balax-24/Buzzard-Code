@@ -2,7 +2,7 @@
 Phase 16 Tests: Long-Horizon 100-Action & 500-Action Horizon Verification.
 """
 
-from security_agent.benchmark.phase16_bench import Phase16InvestigationBenchmark
+from benchmark.phase16_bench import Phase16InvestigationBenchmark
 
 
 def test_100_action_benchmark_execution():

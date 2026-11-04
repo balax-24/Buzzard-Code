@@ -1,7 +1,7 @@
 import pytest
 from pathlib import Path
 from unittest.mock import patch, MagicMock
-from security_agent.agent.skills import SkillManager
+from agent.skills import SkillManager
 
 def test_skill_manager_load_and_parse(tmp_path):
     # Setup mock local skills folder
@@ -29,7 +29,7 @@ Some other details here.""")
     readme.write_text("# Skills Overview")
 
     # Initialize manager pointing to tmp local_dir
-    with patch("security_agent.agent.skills.Path") as mock_path:
+    with patch("agent.skills.Path") as mock_path:
         # Mock global_skills_dir not existing to simplify
         def side_effect(path_str):
             if path_str == "skills":
@@ -73,7 +73,7 @@ tags: binary, memory, pwn
 ---
 Buffer overflow content here.""")
 
-    with patch("security_agent.agent.skills.Path") as mock_path:
+    with patch("agent.skills.Path") as mock_path:
         def side_effect(path_str):
             if path_str == "skills":
                 return local_dir
@@ -101,7 +101,7 @@ def test_skill_manager_install(mock_run, tmp_path):
     local_dir = tmp_path / "skills"
     # We do not mkdir to test creation
     
-    with patch("security_agent.agent.skills.Path") as mock_path:
+    with patch("agent.skills.Path") as mock_path:
         def side_effect(path_str):
             if path_str == "skills":
                 return local_dir

@@ -1,7 +1,7 @@
 import pytest
 import re
-from security_agent.tools.basic import get_time, calculator
-from security_agent.tools.registry import ToolRegistry, Tool
+from tools.basic import get_time, calculator
+from tools.registry import ToolRegistry, Tool
 
 def test_get_time():
     """

@@ -6,8 +6,8 @@ Verifies:
 """
 
 import pytest
-from security_agent.tui.models import ToolCallCardData, redact_sensitive_data
-from security_agent.tui.widgets.tool_card import ToolCallCard
+from tui.models import ToolCallCardData, redact_sensitive_data
+from tui.widgets.tool_card import ToolCallCard
 
 
 def test_sensitive_data_redaction():

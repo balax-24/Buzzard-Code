@@ -2,12 +2,12 @@
 Tests for Security Intelligence: AssetGraph, ThreatModeler, HypothesisEngine, and IndependentJudge.
 """
 
-from security_agent.intelligence.asset_graph import AssetGraph, AssetType
-from security_agent.intelligence.threat_model import ThreatModeler, STRIDECategory
-from security_agent.intelligence.hypothesis import HypothesisEngine, HypothesisStatus
-from security_agent.intelligence.judge import IndependentJudge
-from security_agent.model.schemas import Severity, Confidence
-from security_agent.events.bus import EventBus
+from intelligence.asset_graph import AssetGraph, AssetType
+from intelligence.threat_model import ThreatModeler, STRIDECategory
+from intelligence.hypothesis import HypothesisEngine, HypothesisStatus
+from intelligence.judge import IndependentJudge
+from model.schemas import Severity, Confidence
+from events.bus import EventBus
 
 
 def test_asset_graph_and_topology():

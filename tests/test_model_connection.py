@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import MagicMock, Mock
-from security_agent.model.ollama import OllamaProvider
+from model.ollama import OllamaProvider
 
 def test_ollama_provider_initialization():
     """

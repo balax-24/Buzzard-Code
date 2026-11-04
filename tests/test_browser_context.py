@@ -3,8 +3,8 @@ Tests for BrowserContext lifecycle, page creation, and state management.
 """
 
 import pytest
-from security_agent.browser import BrowserContext, BrowserPage
-from security_agent.browser.errors import ContextClosedError
+from browser import BrowserContext, BrowserPage
+from browser.errors import ContextClosedError
 
 
 def test_browser_context_page_lifecycle():

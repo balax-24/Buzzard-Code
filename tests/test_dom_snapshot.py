@@ -2,7 +2,7 @@
 Tests for DOMSnapshot structure, field extraction, and serialization.
 """
 
-from security_agent.browser.dom import (
+from browser.dom import (
     FormField,
     FormRecord,
     LinkRecord,

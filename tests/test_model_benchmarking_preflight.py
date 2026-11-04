@@ -7,13 +7,13 @@ import pytest
 import os
 import json
 from unittest.mock import patch, MagicMock
-from security_agent.events.agent_event import AgentEvent, AgentEventType
-from security_agent.storage.assessment_logger import AssessmentLogger, summarize_tool_output
-from security_agent.sandbox.preflight import SandboxPreflightValidator, CheckResult
-from security_agent.sandbox.container import BlockedSandbox
-from security_agent.agent.assessment_state import AssessmentStateMachine, AssessmentPhase
-from security_agent.model.discovery import ModelDiscoverer, ModelCapabilities
-from security_agent.benchmark.runner import ModelBenchmarkRunner, ModelBenchmarkResult, BenchmarkScenario
+from events.agent_event import AgentEvent, AgentEventType
+from storage.assessment_logger import AssessmentLogger, summarize_tool_output
+from sandbox.preflight import SandboxPreflightValidator, CheckResult
+from sandbox.container import BlockedSandbox
+from agent.assessment_state import AssessmentStateMachine, AssessmentPhase
+from model.discovery import ModelDiscoverer, ModelCapabilities
+from benchmark.runner import ModelBenchmarkRunner, ModelBenchmarkResult, BenchmarkScenario
 
 
 def test_agent_event_formatting():

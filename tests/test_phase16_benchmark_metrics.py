@@ -3,7 +3,7 @@ Phase 16 Tests: Benchmark Metrics Validation & Sanity Constraints.
 Proves that no metric inconsistencies exist between unique, duplicate, and useful action rates.
 """
 
-from security_agent.benchmark.phase16_bench import Phase16InvestigationBenchmark
+from benchmark.phase16_bench import Phase16InvestigationBenchmark
 
 
 def test_metric_consistency():

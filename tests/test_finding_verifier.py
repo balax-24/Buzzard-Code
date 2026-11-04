@@ -1,5 +1,5 @@
 """
-Unit tests for FindingVerifier (security_agent/verification/finding_verifier.py).
+Unit tests for FindingVerifier (verification/finding_verifier.py).
 
 Tests:
 1. Evidence-backed finding is accepted with CONFIRMED confidence.
@@ -9,10 +9,10 @@ Tests:
 """
 
 import pytest
-from security_agent.verification.finding_verifier import FindingVerifier
-from security_agent.intelligence.evidence_ingestor import ClaimStatus
-from security_agent.model.schemas import Finding, Severity, Confidence
-from security_agent.agent.assessment_state import (
+from verification.finding_verifier import FindingVerifier
+from intelligence.evidence_ingestor import ClaimStatus
+from model.schemas import Finding, Severity, Confidence
+from agent.assessment_state import (
     AssessmentState,
     AssessmentContext,
     ServiceState,

@@ -20,7 +20,7 @@ import time
 from dataclasses import dataclass
 from typing import Dict, Any, List
 
-from security_agent.agent.assessment_state import (
+from agent.assessment_state import (
     AssessmentState,
     AssessmentContext,
     AssessmentPhase,
@@ -32,14 +32,14 @@ from security_agent.agent.assessment_state import (
     ObjectiveStatus,
     HypothesisStatus,
 )
-from security_agent.intelligence.asset_graph import AssetGraph, AssetType
-from security_agent.intelligence.attack_graph import AttackGraph, NodeKind, NodeStatus
-from security_agent.intelligence.evidence_ingestor import EvidenceIngestor
-from security_agent.intelligence.hypothesis_engine import HypothesisEngine
-from security_agent.intelligence.capability import Capability, CapabilityType
-from security_agent.events.bus import EventBus, EventType
-from security_agent.agent.tool_executor import ToolExecutionResult
-from security_agent.model.schemas import Finding
+from intelligence.asset_graph import AssetGraph, AssetType
+from intelligence.attack_graph import AttackGraph, NodeKind, NodeStatus
+from intelligence.evidence_ingestor import EvidenceIngestor
+from intelligence.hypothesis_engine import HypothesisEngine
+from intelligence.capability import Capability, CapabilityType
+from events.bus import EventBus, EventType
+from agent.tool_executor import ToolExecutionResult
+from model.schemas import Finding
 
 
 def test_single_authoritative_service_write():

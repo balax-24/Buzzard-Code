@@ -3,9 +3,9 @@ Phase 15 Tests: Information Gain Prediction & Calibration.
 Verifies predictive gain calculation, novelty scoring, and calibration adjustment.
 """
 
-from security_agent.intelligence.gain_predictor import GainPredictor
-from security_agent.intelligence.action_history import ActionHistoryStore, ActionOutcome
-from security_agent.intelligence.attack_graph import AttackGraph, NodeKind
+from intelligence.gain_predictor import GainPredictor
+from intelligence.action_history import ActionHistoryStore, ActionOutcome
+from intelligence.attack_graph import AttackGraph, NodeKind
 
 
 def test_gain_prediction_on_novel_vs_explored():

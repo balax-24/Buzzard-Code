@@ -2,8 +2,8 @@ import io
 import json
 import pytest
 from unittest.mock import patch, MagicMock
-from security_agent.cli.server import AgentServer
-from security_agent.events.types import Event, EventType
+from cli.server import AgentServer
+from events.types import Event, EventType
 
 
 def test_agent_server_event_mapping():

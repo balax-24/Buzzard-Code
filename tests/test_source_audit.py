@@ -4,7 +4,7 @@ Tests for Source Code, Secrets, and Configuration Auditing Suite.
 
 import json
 from pathlib import Path
-from security_agent.tools.source_audit import scan_source_secrets, audit_configurations
+from tools.source_audit import scan_source_secrets, audit_configurations
 
 
 def test_scan_source_secrets(tmp_path):

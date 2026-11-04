@@ -3,9 +3,9 @@
 import time
 import threading
 import pytest
-from security_agent.events.types import Event, EventType, EventSeverity
-from security_agent.events.bus import EventBus
-from security_agent.events.store import EventStore
+from events.types import Event, EventType, EventSeverity
+from events.bus import EventBus
+from events.store import EventStore
 
 
 # ---------------------------------------------------------------------------

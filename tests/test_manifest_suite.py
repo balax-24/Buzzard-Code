@@ -3,8 +3,8 @@ Tests for Manifest Suite Tools (All 34 tools from Four-Model Manifest).
 """
 import os
 import pytest
-from security_agent.tools.registry import ToolRegistry
-from security_agent.tools.manifest_suite import (
+from tools.registry import ToolRegistry
+from tools.manifest_suite import (
     edit_file,
     glob_files,
     grep_search,
@@ -20,7 +20,7 @@ from security_agent.tools.manifest_suite import (
     static_analysis,
     register_manifest_tools
 )
-from security_agent.storage.db import StorageManager
+from storage.db import StorageManager
 
 def test_edit_file(tmp_path):
     f = tmp_path / "test.txt"

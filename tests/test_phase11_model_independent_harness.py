@@ -4,10 +4,10 @@ Verifies the end-to-end flow from candidate selection -> tool validation -> self
 """
 
 import pytest
-from security_agent.agent.assessment_state import AssessmentState, AssessmentContext
-from security_agent.intelligence.tool_reliability import ToolCallParser, ToolCallValidator
-from security_agent.intelligence.planner_prompt import PlannerPromptBuilder
-from security_agent.intelligence.decision import DecisionRecord, DecisionSource, AutonomyEvaluator, AutonomyMode
+from agent.assessment_state import AssessmentState, AssessmentContext
+from intelligence.tool_reliability import ToolCallParser, ToolCallValidator
+from intelligence.planner_prompt import PlannerPromptBuilder
+from intelligence.decision import DecisionRecord, DecisionSource, AutonomyEvaluator, AutonomyMode
 
 
 def test_scripted_model_decision_and_self_repair_flow():

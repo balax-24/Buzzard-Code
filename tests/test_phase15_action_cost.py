@@ -3,7 +3,7 @@ Phase 15 Tests: Action Cost & Investigation Efficiency.
 Verifies cost breakdown and efficiency calculations.
 """
 
-from security_agent.intelligence.action_cost import ActionCostEngine
+from intelligence.action_cost import ActionCostEngine
 
 
 def test_cost_estimation_and_efficiency():

@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import MagicMock
-from security_agent.tools.registry import ToolRegistry
-from security_agent.tools.security import (
+from tools.registry import ToolRegistry
+from tools.security import (
     terminal_execute,
     ping_host,
     scan_ports,
@@ -97,12 +97,12 @@ def test_register_security_tools():
     assert "check_headers" in registry.tools
 
 def test_dns_lookup_localhost():
-    from security_agent.tools.security import dns_lookup
+    from tools.security import dns_lookup
     res = dns_lookup("localhost")
     assert "DNS Lookup for localhost" in res
     assert "IP Addresses:" in res
 
 def test_ssl_check_empty():
-    from security_agent.tools.security import ssl_check
+    from tools.security import ssl_check
     res = ssl_check("")
     assert "Error: Host parameter is required." in res

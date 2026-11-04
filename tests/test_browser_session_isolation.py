@@ -2,8 +2,8 @@
 Tests for multi-role browser context isolation and session boundaries.
 """
 
-from security_agent.state.session_store import SessionStore, Cookie
-from security_agent.browser import BrowserEngine
+from state.session_store import SessionStore, Cookie
+from browser import BrowserEngine
 
 
 def test_browser_multi_role_session_isolation():

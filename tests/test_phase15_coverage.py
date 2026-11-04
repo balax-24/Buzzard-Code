@@ -3,8 +3,8 @@ Phase 15 Tests: Surface Coverage Engine.
 Verifies calculation of authorized surface coverage metrics.
 """
 
-from security_agent.intelligence.attack_graph import AttackGraph, NodeKind, NodeStatus, EdgeKind
-from security_agent.intelligence.frontier import FrontierEngine
+from intelligence.attack_graph import AttackGraph, NodeKind, NodeStatus, EdgeKind
+from intelligence.frontier import FrontierEngine
 
 
 def test_surface_coverage_calculation():

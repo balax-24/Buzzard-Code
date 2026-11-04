@@ -7,14 +7,14 @@ Verifies:
 """
 
 import pytest
-from security_agent.agent.assessment_state import (
+from agent.assessment_state import (
     AssessmentState,
     AssessmentContext,
     Capability,
     CapabilityType,
 )
-from security_agent.intelligence.memory import LayeredMemoryManager
-from security_agent.persistence.models import BudgetSnapshot
+from intelligence.memory import LayeredMemoryManager
+from persistence.models import BudgetSnapshot
 
 
 def test_layered_memory_recording_and_rehydration():

@@ -1,5 +1,5 @@
 import pytest
-from security_agent.benchmark.phase18_bench import Phase18PersistenceBenchmark
+from benchmark.phase18_bench import Phase18PersistenceBenchmark
 
 def test_model_independent_resumption():
     # Exact resumption benchmark executes deterministically without LLM calls

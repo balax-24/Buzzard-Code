@@ -1,5 +1,5 @@
 import pytest
-from security_agent.persistence.migration import SchemaMigrator, CURRENT_SCHEMA_VERSION
+from persistence.migration import SchemaMigrator, CURRENT_SCHEMA_VERSION
 
 def test_schema_migration_from_v1_0():
     legacy_payload = {

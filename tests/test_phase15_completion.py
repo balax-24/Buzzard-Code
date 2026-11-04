@@ -3,9 +3,9 @@ Phase 15 Tests: Completion Engine Decision Integration.
 Verifies completion decisions under various frontier, verification, and budget conditions.
 """
 
-from security_agent.agent.assessment_state import AssessmentState, AssessmentContext, ObjectiveStatus
-from security_agent.agent.completion_engine import CompletionEngine, AssessmentMode, CompletionAction, BudgetSnapshot
-from security_agent.intelligence.attack_graph import AttackGraph, NodeKind, NodeStatus
+from agent.assessment_state import AssessmentState, AssessmentContext, ObjectiveStatus
+from agent.completion_engine import CompletionEngine, AssessmentMode, CompletionAction, BudgetSnapshot
+from intelligence.attack_graph import AttackGraph, NodeKind, NodeStatus
 
 
 def test_completion_engine_demands_verification_before_conclusion():

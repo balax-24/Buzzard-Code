@@ -1,6 +1,6 @@
 import pytest
 from pathlib import Path
-from security_agent.persistence.checkpoint import AtomicCheckpoint
+from persistence.checkpoint import AtomicCheckpoint
 
 def test_crash_during_temp_file_leaves_existing_valid(tmp_path):
     target = tmp_path / "chk.json"

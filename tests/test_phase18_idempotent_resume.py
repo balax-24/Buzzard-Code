@@ -1,6 +1,6 @@
 import pytest
-from security_agent.intelligence.action_identity import ActionIdentity
-from security_agent.intelligence.action_history import ActionHistoryStore
+from intelligence.action_identity import ActionIdentity
+from intelligence.action_history import ActionHistoryStore
 
 def test_idempotent_resume_deduplication():
     hist = ActionHistoryStore()

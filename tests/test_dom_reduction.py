@@ -2,7 +2,7 @@
 Tests for DOMReducer context reduction, token efficiency, and signal extraction.
 """
 
-from security_agent.browser.dom import DOMReducer
+from browser.dom import DOMReducer
 
 
 def test_dom_reduction_ratio_and_signal():

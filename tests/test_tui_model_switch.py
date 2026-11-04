@@ -1,4 +1,4 @@
-from security_agent.tui.test_utils import run_async
+from tui.test_utils import run_async
 """
 Tests for TUI Model Switching without state loss.
 Verifies:
@@ -7,7 +7,7 @@ Verifies:
 
 import pytest
 from textual.widgets import Input
-from security_agent.tui.app import QwythosTUIApp
+from tui.app import QwythosTUIApp
 
 
 def test_model_switching_preserves_state():

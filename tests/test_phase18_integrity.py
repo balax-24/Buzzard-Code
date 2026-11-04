@@ -1,7 +1,7 @@
 import pytest
 import json
-from security_agent.persistence.integrity import StateIntegrity, StateIntegrityError
-from security_agent.persistence.checkpoint import AtomicCheckpoint
+from persistence.integrity import StateIntegrity, StateIntegrityError
+from persistence.checkpoint import AtomicCheckpoint
 
 def test_tamper_detection(tmp_path):
     target = tmp_path / "tamper_test.json"

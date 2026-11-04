@@ -1,7 +1,7 @@
 import pytest
-from security_agent.intelligence.action_history import ActionHistoryStore
-from security_agent.agent.assessment_state import AssessmentContext, AssessmentState
-from security_agent.persistence.engagement_store import EngagementStore
+from intelligence.action_history import ActionHistoryStore
+from agent.assessment_state import AssessmentContext, AssessmentState
+from persistence.engagement_store import EngagementStore
 
 def test_information_gain_history_persistence(tmp_path):
     store = EngagementStore(base_dir=tmp_path)

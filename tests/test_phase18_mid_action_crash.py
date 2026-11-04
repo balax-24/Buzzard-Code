@@ -1,5 +1,5 @@
 import pytest
-from security_agent.intelligence.action_history import ActionHistoryStore, ActionOutcome
+from intelligence.action_history import ActionHistoryStore, ActionOutcome
 
 def test_mid_action_crash_unknown_outcome():
     store = ActionHistoryStore()

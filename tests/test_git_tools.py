@@ -3,9 +3,9 @@ import subprocess
 import tempfile
 import pytest
 from pathlib import Path
-from security_agent.tools.filesystem import set_active_workspace, get_active_workspace
-from security_agent.tools.git_tools import git_status, git_diff, git_log, register_git_tools
-from security_agent.tools.registry import ToolRegistry
+from tools.filesystem import set_active_workspace, get_active_workspace
+from tools.git_tools import git_status, git_diff, git_log, register_git_tools
+from tools.registry import ToolRegistry
 
 
 @pytest.fixture

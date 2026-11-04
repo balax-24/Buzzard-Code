@@ -3,15 +3,15 @@ Tests for automatic authenticated surface discovery and AttackGraph expansion.
 """
 
 import pytest
-from security_agent.agent.assessment_state import (
+from agent.assessment_state import (
     AssessmentState,
     AssessmentContext,
     CapabilityType,
     ServiceRecord,
     ServiceState,
 )
-from security_agent.intelligence.attack_graph import AttackGraph, NodeKind
-from security_agent.intelligence.hypothesis_engine import HypothesisEngine
+from intelligence.attack_graph import AttackGraph, NodeKind
+from intelligence.hypothesis_engine import HypothesisEngine
 
 
 def test_authenticated_endpoint_discovery_expands_graph_and_hypotheses():

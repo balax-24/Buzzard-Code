@@ -1,4 +1,4 @@
-from security_agent.tui.test_utils import run_async
+from tui.test_utils import run_async
 """
 Tests for Qwythos TUI Startup and Widget Composition.
 Verifies:
@@ -8,9 +8,9 @@ Verifies:
 """
 
 import pytest
-from security_agent.tui.app import QwythosTUIApp
-from security_agent.tui.models import AppMode
-from security_agent.tui.config import TUIConfig
+from tui.app import QwythosTUIApp
+from tui.models import AppMode
+from tui.config import TUIConfig
 
 
 def test_tui_startup_and_composition():

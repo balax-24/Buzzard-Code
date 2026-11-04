@@ -1,5 +1,5 @@
 import pytest
-from security_agent.benchmark.phase17_bench import HypothesisLifecycleState, Phase17Hypothesis
+from benchmark.phase17_bench import HypothesisLifecycleState, Phase17Hypothesis
 
 def test_hypothesis_lifecycle_transitions():
     hyp = Phase17Hypothesis("HYP-1", "192.168.1.10", "SQLI", HypothesisLifecycleState.PROPOSED)

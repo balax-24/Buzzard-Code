@@ -2,7 +2,7 @@
 Tests for form structure extraction, CSRF detection, and login classification.
 """
 
-from security_agent.browser.dom import DOMReducer
+from browser.dom import DOMReducer
 
 
 def test_form_discovery_and_classification():

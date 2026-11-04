@@ -2,13 +2,13 @@ import os
 import json
 import pytest
 from pathlib import Path
-from security_agent.intelligence.evidence_parser import (
+from intelligence.evidence_parser import (
     EvidenceValidator,
     AttackSurfaceSnapshot,
     DiscoveredService
 )
-from security_agent.model.schemas import Finding, Evidence, EvidenceType, Severity, Confidence
-from security_agent.tools.source_audit import (
+from model.schemas import Finding, Evidence, EvidenceType, Severity, Confidence
+from tools.source_audit import (
     audit_android_manifest,
     audit_mobile_storage,
     audit_api_spec

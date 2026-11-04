@@ -11,11 +11,11 @@ from typing import Any, Dict, List, Optional
 
 import pytest
 
-from security_agent.core.usage import estimate_tokens
-from security_agent.sandbox.container import BlockedSandbox
-from security_agent.storage.db import StorageManager
-from security_agent.agent.project_context import build_mention_context, load_conversation, save_conversation
-from security_agent.tools.filesystem import (
+from core.usage import estimate_tokens
+from sandbox.container import BlockedSandbox
+from storage.db import StorageManager
+from agent.project_context import build_mention_context, load_conversation, save_conversation
+from tools.filesystem import (
     _edit_history,
     file_edit,
     file_write,
@@ -23,11 +23,11 @@ from security_agent.tools.filesystem import (
     set_active_workspace,
     undo_last_edit,
 )
-from security_agent.tui.app import BuzzardTUIApp
-from security_agent.tui.test_utils import run_async
-from security_agent.tui.widgets.chat import MessageBubble
-from security_agent.tui.widgets.modals import ApprovalModal
-from security_agent.tui.widgets.tool_card import ToolActivityCard
+from tui.app import BuzzardTUIApp
+from tui.test_utils import run_async
+from tui.widgets.chat import MessageBubble
+from tui.widgets.modals import ApprovalModal
+from tui.widgets.tool_card import ToolActivityCard
 
 SCREENSHOT_DIR = os.environ.get("BUZZARD_TUI_SCREENSHOT_DIR")
 
@@ -82,7 +82,7 @@ def repo(tmp_path, monkeypatch):
     monkeypatch.setenv("BUZZARD_MCP_CONFIG", str(tmp_path / "no-mcp.json"))
     monkeypatch.setenv("BUZZARD_HOME", str(tmp_path / "home"))
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr("security_agent.agent.loop.get_sandbox", lambda: BlockedSandbox(reason="test"))
+    monkeypatch.setattr("agent.loop.get_sandbox", lambda: BlockedSandbox(reason="test"))
     previous = get_active_workspace()
     set_active_workspace(project)
     yield project
@@ -208,7 +208,7 @@ def test_follow_up_message_has_context_of_previous_turn(repo, tmp_path):
 
 
 def test_status_bar_reports_docker_truthfully(repo, tmp_path, monkeypatch):
-    monkeypatch.setattr("security_agent.sandbox.container.is_docker_active", lambda: False)
+    monkeypatch.setattr("sandbox.container.is_docker_active", lambda: False)
     app = make_app(ScriptedProvider([]), tmp_path)
 
     async def run() -> None:
@@ -469,7 +469,7 @@ def test_selected_model_is_the_model_actually_used(monkeypatch, tmp_path):
 
 
 def test_switching_provider_drops_the_old_endpoint(monkeypatch, tmp_path):
-    monkeypatch.setattr("security_agent.tui.app.save_global_config", lambda config: None)
+    monkeypatch.setattr("tui.app.save_global_config", lambda config: None)
     monkeypatch.setenv("GEMINI_API_KEY", "test-key")
     config = {"model": {"provider": "ollama", "name": "local", "endpoint": "http://old-host:11434"}}
     app = BuzzardTUIApp(config=config, storage=StorageManager(db_path=str(tmp_path / "audit.db")))

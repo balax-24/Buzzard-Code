@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import MagicMock, patch
-from security_agent.sandbox.container import (
+from sandbox.container import (
     get_sandbox,
     get_security_sandbox_image,
     DockerSandbox,
@@ -9,11 +9,11 @@ from security_agent.sandbox.container import (
     ToolResult,
     ToolErrorType
 )
-from security_agent.toolchain.manifest import ToolchainManifest
-from security_agent.sandbox.preflight import SandboxPreflightValidator
-from security_agent.cli.commands import run_runtime
-from security_agent.agent.loop import AgentLoop
-from security_agent.model.schemas import TaskStatus
+from toolchain.manifest import ToolchainManifest
+from sandbox.preflight import SandboxPreflightValidator
+from cli.commands import run_runtime
+from agent.loop import AgentLoop
+from model.schemas import TaskStatus
 
 
 def test_authoritative_sandbox_image_consistency():
@@ -111,8 +111,8 @@ def test_run_runtime_probe():
         "stderr": ""
     }
 
-    with patch("security_agent.sandbox.container.get_sandbox", return_value=mock_sb), \
-         patch("security_agent.sandbox.container.is_docker_active", return_value=True):
+    with patch("sandbox.container.get_sandbox", return_value=mock_sb), \
+         patch("sandbox.container.is_docker_active", return_value=True):
         passed = run_runtime()
         assert passed is True
         assert mock_sb.execute.call_count >= 5
@@ -125,7 +125,7 @@ def test_agent_loop_blocks_on_image_mismatch():
     loop = AgentLoop(provider=mock_provider, quiet=True)
 
     mismatched_sb = DockerSandbox(image="ubuntu:latest")
-    with patch("security_agent.agent.loop.get_sandbox", return_value=mismatched_sb):
+    with patch("agent.loop.get_sandbox", return_value=mismatched_sb):
         result = loop.run(task_goal="test", target="localhost", scope=["localhost"])
         assert result["status"] == TaskStatus.FAILED.value
         assert "Image mismatch" in result["error"]

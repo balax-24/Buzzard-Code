@@ -1,4 +1,4 @@
-from security_agent.tui.test_utils import run_async
+from tui.test_utils import run_async
 """
 Tests for Evidence Panel Widget.
 Verifies:
@@ -6,8 +6,8 @@ Verifies:
 """
 
 import pytest
-from security_agent.tui.app import QwythosTUIApp
-from security_agent.tui.widgets.evidence_panel import EvidencePanel
+from tui.app import QwythosTUIApp
+from tui.widgets.evidence_panel import EvidencePanel
 
 
 def test_evidence_panel():

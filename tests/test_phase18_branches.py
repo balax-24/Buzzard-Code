@@ -1,7 +1,7 @@
 import pytest
-from security_agent.agent.assessment_state import AssessmentContext, AssessmentState
-from security_agent.intelligence.branches import BranchManager, BranchPriority
-from security_agent.persistence.engagement_store import EngagementStore
+from agent.assessment_state import AssessmentContext, AssessmentState
+from intelligence.branches import BranchManager, BranchPriority
+from persistence.engagement_store import EngagementStore
 
 def test_branch_state_persistence(tmp_path):
     store = EngagementStore(base_dir=tmp_path)

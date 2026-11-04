@@ -6,14 +6,14 @@ Verifies:
 """
 
 import pytest
-from security_agent.agent.assessment_state import (
+from agent.assessment_state import (
     AssessmentState,
     AssessmentContext,
     Capability,
     CapabilityType,
 )
-from security_agent.model.schemas import Finding, Severity, Confidence
-from security_agent.intelligence.long_horizon import LongHorizonContextCompactor
+from model.schemas import Finding, Severity, Confidence
+from intelligence.long_horizon import LongHorizonContextCompactor
 
 
 def test_context_compaction_preserves_critical_invariants():

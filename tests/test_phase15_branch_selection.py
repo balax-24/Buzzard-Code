@@ -3,7 +3,7 @@ Phase 15 Tests: Branch Prioritization & 3-Branch Convergence.
 Verifies that the branch manager selects branches with highest ROI and information gain rather than round-robin.
 """
 
-from security_agent.intelligence.branches import BranchManager, BranchPriority
+from intelligence.branches import BranchManager, BranchPriority
 
 
 def test_3_branch_roi_convergence():

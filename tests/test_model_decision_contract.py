@@ -12,7 +12,7 @@ Verifies:
 
 import pytest
 import json
-from security_agent.model.decision_contract import (
+from model.decision_contract import (
     ModelDecision,
     ModelDecisionParser,
     DecisionType,
@@ -23,7 +23,7 @@ from security_agent.model.decision_contract import (
     VerificationIntent,
     CompletionAssessment,
 )
-from security_agent.agent.assessment_state import AssessmentState, ObjectiveStatus
+from agent.assessment_state import AssessmentState, ObjectiveStatus
 
 
 def test_valid_structured_json_decision():

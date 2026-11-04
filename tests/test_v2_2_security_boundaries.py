@@ -9,16 +9,16 @@ Guarantees:
 
 import pytest
 from unittest.mock import MagicMock
-from security_agent.events.bus import EventBus
-from security_agent.events.types import EventType
-from security_agent.security.autonomy import AutonomyLevel, EnvironmentProfile
-from security_agent.security.risk import RiskClass, get_tool_risk_metadata
-from security_agent.security.approvals import ApprovalGate
-from security_agent.security.policy import PolicyEngine
-from security_agent.tools.registry import create_authoritative_registry
-from security_agent.model.decision_contract import ModelDecisionParser, ModelDecision, DecisionType, ActionIntent
-from security_agent.agent.assessment_state import AssessmentState, AssessmentContext, FailureClassification
-from security_agent.agent.tool_executor import CandidateActionValidator, ToolExecutor
+from events.bus import EventBus
+from events.types import EventType
+from security.autonomy import AutonomyLevel, EnvironmentProfile
+from security.risk import RiskClass, get_tool_risk_metadata
+from security.approvals import ApprovalGate
+from security.policy import PolicyEngine
+from tools.registry import create_authoritative_registry
+from model.decision_contract import ModelDecisionParser, ModelDecision, DecisionType, ActionIntent
+from agent.assessment_state import AssessmentState, AssessmentContext, FailureClassification
+from agent.tool_executor import CandidateActionValidator, ToolExecutor
 
 
 def test_unauthorized_tool_invocation():
@@ -145,7 +145,7 @@ def test_recovery_after_denied_action():
     assert state.tool_failure_counts["scan_ports"] == 1
 
     # AssessmentStateMachine tracks retries and guides recovery
-    from security_agent.agent.assessment_state import AssessmentStateMachine
+    from agent.assessment_state import AssessmentStateMachine
     sm = AssessmentStateMachine(max_tool_retries=2)
     advice, phase = sm.record_tool_failure("scan_ports", "Missing required ports argument")
     assert "Retry attempt 1/2" in advice
@@ -218,8 +218,8 @@ def test_model_cannot_downgrade_risk_class():
     The runtime RiskEngine and get_tool_risk_metadata MUST ignore model-claimed risk
     and remain strictly authoritative.
     """
-    from security_agent.security.risk import get_tool_risk_metadata, RiskClass
-    from security_agent.model.decision_contract import ModelDecisionParser
+    from security.risk import get_tool_risk_metadata, RiskClass
+    from model.decision_contract import ModelDecisionParser
 
     raw_json = '''{
         "decision_type": "TOOL_CALL",
@@ -247,8 +247,8 @@ def test_valid_authorized_tool_execution_functional():
     Valid authorized actions within defined scope (e.g., nmap_scan on authorized IP)
     must remain fully functional and pass PolicyEngine evaluation.
     """
-    from security_agent.security.policy import PolicyEngine
-    from security_agent.security.policy import ApprovalGate, AutonomyLevel, EnvironmentProfile
+    from security.policy import PolicyEngine
+    from security.policy import ApprovalGate, AutonomyLevel, EnvironmentProfile
 
     gate = ApprovalGate(
         autonomy_level=AutonomyLevel.LEVEL_2_SAFE_ACTIVE,

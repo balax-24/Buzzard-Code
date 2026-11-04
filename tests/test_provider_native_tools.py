@@ -7,13 +7,13 @@ from unittest.mock import MagicMock, patch
 import httpx
 import pytest
 
-from security_agent.model.anthropic_provider import AnthropicProvider
-from security_agent.model.factory import get_model_provider
-from security_agent.model.gemini_provider import GeminiProvider
-from security_agent.model.openai_compatible import OpenAICompatibleProvider
-from security_agent.model.openai_provider import OpenAIProvider
-from security_agent.model.tool_calls import from_wire_name, repair_tool_call_pairs, to_anthropic_messages, to_wire_name
-from security_agent.tools.registry import create_authoritative_registry
+from model.anthropic_provider import AnthropicProvider
+from model.factory import get_model_provider
+from model.gemini_provider import GeminiProvider
+from model.openai_compatible import OpenAICompatibleProvider
+from model.openai_provider import OpenAIProvider
+from model.tool_calls import from_wire_name, repair_tool_call_pairs, to_anthropic_messages, to_wire_name
+from tools.registry import create_authoritative_registry
 
 TOOLS = [{"type": "function", "function": {
     "name": "file_read",

@@ -3,12 +3,12 @@ Phase 16 Tests: Model Independence & Deterministic Candidate Ranking.
 Proves that candidates are ranked by multi-attribute utility without relying on raw model bias.
 """
 
-from security_agent.agent.assessment_state import AssessmentContext, AssessmentState
-from security_agent.intelligence.action_history import ActionHistoryStore, ActionOutcome
-from security_agent.intelligence.action_selection import ActionSelectionEngine
-from security_agent.intelligence.attack_graph import AttackGraph
-from security_agent.intelligence.failure_memory import FailureAwareMemory
-from security_agent.intelligence.hypothesis_engine import HypothesisProposal, ProposalConfidence
+from agent.assessment_state import AssessmentContext, AssessmentState
+from intelligence.action_history import ActionHistoryStore, ActionOutcome
+from intelligence.action_selection import ActionSelectionEngine
+from intelligence.attack_graph import AttackGraph
+from intelligence.failure_memory import FailureAwareMemory
+from intelligence.hypothesis_engine import HypothesisProposal, ProposalConfidence
 
 
 def test_deterministic_candidate_ranking_filters_blocked_and_promotes_novel():

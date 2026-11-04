@@ -1,5 +1,5 @@
 """
-Unit tests for the Planner module (security_agent/agent/planner.py).
+Unit tests for the Planner module (agent/planner.py).
 
 Verifies:
 1. Valid tool selection and XML/JSON parsing
@@ -17,8 +17,8 @@ Verifies:
 import pytest
 from typing import Dict, Any
 
-from security_agent.agent.planner import Planner, PlannerDecision
-from security_agent.agent.assessment_state import (
+from agent.planner import Planner, PlannerDecision
+from agent.assessment_state import (
     AssessmentState,
     AssessmentPhase,
     AssessmentContext,

@@ -2,7 +2,7 @@ import os
 import tempfile
 import shutil
 import pytest
-from security_agent.tools.filesystem import (
+from tools.filesystem import (
     get_safe_path,
     get_active_workspace,
     set_active_workspace,
@@ -14,7 +14,7 @@ from security_agent.tools.filesystem import (
     file_search,
     register_filesystem_tools,
 )
-from security_agent.tools.registry import ToolRegistry
+from tools.registry import ToolRegistry
 
 
 @pytest.fixture

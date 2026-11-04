@@ -3,18 +3,18 @@ Tests for recursive exploration chain:
 Network -> Browser Page -> Form -> Submission -> Auth Session -> Admin API -> Finding.
 """
 
-from security_agent.agent.assessment_state import (
+from agent.assessment_state import (
     AssessmentState,
     AssessmentContext,
     ServiceRecord,
     Capability,
     CapabilityType,
 )
-from security_agent.agent.tool_executor import ToolExecutionResult
-from security_agent.state.session_store import Cookie
-from security_agent.intelligence.evidence_ingestor import EvidenceIngestor
-from security_agent.intelligence.attack_graph import AttackGraph, NodeKind
-from security_agent.intelligence.hypothesis_engine import HypothesisEngine
+from agent.tool_executor import ToolExecutionResult
+from state.session_store import Cookie
+from intelligence.evidence_ingestor import EvidenceIngestor
+from intelligence.attack_graph import AttackGraph, NodeKind
+from intelligence.hypothesis_engine import HypothesisEngine
 
 
 def test_browser_recursive_exploitation_chain():

@@ -1,8 +1,8 @@
 import pytest
-from security_agent.tui.test_utils import run_async
-from security_agent.tui.app import QwythosTUIApp
-from security_agent.tui.widgets.branches_panel import BranchesPanel
-from security_agent.intelligence.branches import BranchPriority
+from tui.test_utils import run_async
+from tui.app import QwythosTUIApp
+from tui.widgets.branches_panel import BranchesPanel
+from intelligence.branches import BranchPriority
 
 
 def test_branches_panel():

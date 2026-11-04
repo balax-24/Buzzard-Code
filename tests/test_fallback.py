@@ -3,9 +3,9 @@ from __future__ import annotations
 
 import pytest
 
-from security_agent.tools.fallback import FallbackRunner, is_failed_result, strategy_from_cmd
-from security_agent.tools import arsenal
-from security_agent.tools.registry import ToolRegistry
+from tools.fallback import FallbackRunner, is_failed_result, strategy_from_cmd
+from tools import arsenal
+from tools.registry import ToolRegistry
 
 
 class FakeSandbox:
@@ -96,7 +96,7 @@ def test_strategy_from_cmd_uses_sandbox():
 
 
 def test_strategy_from_cmd_fails_when_binary_missing(monkeypatch):
-    monkeypatch.setattr("security_agent.tools.fallback.shutil.which", lambda name: None)
+    monkeypatch.setattr("tools.fallback.shutil.which", lambda name: None)
     strat = strategy_from_cmd("nmap", lambda kw: "nmap x")
     ok, summary, detail = strat(FallbackRunner(), {})
     assert ok is False
@@ -134,7 +134,7 @@ def test_arsenal_tool_runs_through_registry():
 
 
 def test_router_routing():
-    from security_agent.model.router import ModelRouter
+    from model.router import ModelRouter
     r = ModelRouter(available=["k3-sec:latest", "qwen-cyber:latest", "deephat:latest", "qwythos:latest"])
     assert r.route("scan the host for open ports") == "k3-sec:latest"
     assert r.route("exploit the rce on the target") == "qwen-cyber:latest"

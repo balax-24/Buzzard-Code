@@ -7,9 +7,9 @@ Verifies:
 """
 
 import pytest
-from security_agent.intelligence.decision import DecisionRecord, DecisionSource, AutonomyMode, AutonomyEvaluator
-from security_agent.agent.assessment_state import AssessmentState, AssessmentContext
-from security_agent.intelligence.long_horizon import LongHorizonContextCompactor
+from intelligence.decision import DecisionRecord, DecisionSource, AutonomyMode, AutonomyEvaluator
+from agent.assessment_state import AssessmentState, AssessmentContext
+from intelligence.long_horizon import LongHorizonContextCompactor
 
 
 def test_raw_model_mode_decision_flow():

@@ -18,21 +18,21 @@ import inspect
 import pytest
 from unittest.mock import MagicMock
 
-from security_agent.agent.assessment_state import (
+from agent.assessment_state import (
     AssessmentContext,
     AssessmentPhase,
     AssessmentState,
     ObjectiveStatus,
     VerificationPredicates,
 )
-from security_agent.agent.loop import AgentLoop
-from security_agent.benchmark.p5_autonomy_bench import (
+from agent.loop import AgentLoop
+from benchmark.p5_autonomy_bench import (
     FailureCategory,
     LimitationSource,
     P5AutonomyBenchmarkHarness,
     P5TrialMetrics,
 )
-from security_agent.range.p5_unfamiliar_lab import (
+from range.p5_unfamiliar_lab import (
     CONFIG_ALPHA,
     CONFIG_BETA,
     LabState,

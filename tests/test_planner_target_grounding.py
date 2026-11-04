@@ -13,7 +13,7 @@ Unit tests for Planner Target Grounding & Action Eligibility:
 import pytest
 from dataclasses import FrozenInstanceError
 
-from security_agent.agent.assessment_state import (
+from agent.assessment_state import (
     AssessmentState,
     AssessmentContext,
     AssessmentPhase,

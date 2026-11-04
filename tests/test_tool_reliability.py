@@ -7,7 +7,7 @@ Verifies:
 """
 
 import pytest
-from security_agent.intelligence.tool_reliability import (
+from intelligence.tool_reliability import (
     ToolCallParser,
     ToolCallValidator,
     CANONICAL_TOOL_REGISTRY,

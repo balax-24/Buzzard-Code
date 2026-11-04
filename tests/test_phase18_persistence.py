@@ -1,8 +1,8 @@
 import pytest
 import shutil
 from pathlib import Path
-from security_agent.agent.assessment_state import AssessmentContext, AssessmentState
-from security_agent.persistence.engagement_store import EngagementStore
+from agent.assessment_state import AssessmentContext, AssessmentState
+from persistence.engagement_store import EngagementStore
 
 def test_engagement_store_save_load(tmp_path):
     store = EngagementStore(base_dir=tmp_path)

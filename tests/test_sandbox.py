@@ -1,6 +1,6 @@
 import os
 import pytest
-from security_agent.sandbox.container import get_sandbox, LocalSandboxFallback, DockerSandbox, BlockedSandbox
+from sandbox.container import get_sandbox, LocalSandboxFallback, DockerSandbox, BlockedSandbox
 
 def test_sandbox_factory_resolution():
     """

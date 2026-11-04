@@ -5,14 +5,14 @@ Native-safe tools MUST continue to execute normally.
 """
 
 from unittest.mock import patch
-from security_agent.tools.registry import create_authoritative_registry
-from security_agent.agent.tool_executor import ToolExecutor
+from tools.registry import create_authoritative_registry
+from agent.tool_executor import ToolExecutor
 
 def test_sandbox_required_tool_fails_closed_when_docker_inactive():
     reg = create_authoritative_registry()
     executor = ToolExecutor(registry=reg)
 
-    with patch("security_agent.sandbox.container.is_docker_active", return_value=False):
+    with patch("sandbox.container.is_docker_active", return_value=False):
         # 1. Test terminal.execute
         res1 = executor.execute("terminal.execute", {"command": "whoami"})
         assert not res1.success
@@ -31,7 +31,7 @@ def test_sandbox_required_tool_fails_closed_when_docker_inactive():
 def test_native_safe_tools_allowed_when_docker_inactive():
     reg = create_authoritative_registry()
 
-    with patch("security_agent.sandbox.container.is_docker_active", return_value=False):
+    with patch("sandbox.container.is_docker_active", return_value=False):
         # calculator is native-safe (sandbox_required=False)
         out = reg.execute("calculator", {"expression": "21 * 2"})
         assert "42" in out
