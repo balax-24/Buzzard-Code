@@ -48,8 +48,9 @@ def get_active_workspace() -> str:
     Priority:
     1. Explicitly configured via set_active_workspace()
     2. Environment variable BUZZARD_WORKSPACE
-    3. Legacy data/workspace if directory exists and not in a project root
-    4. Current working directory
+    3. Current working directory
+    The legacy data/workspace folder applies only under the test suite; in real use, a folder
+    with that name would silently hide the user's project.
     """
     global _ACTIVE_WORKSPACE
     if _ACTIVE_WORKSPACE:
@@ -60,7 +61,7 @@ def get_active_workspace() -> str:
         return os.path.abspath(env_ws)
 
     # Legacy test support: if data/workspace exists and no buzzard.json present
-    if os.path.isdir("data/workspace") and not os.path.isfile("buzzard.json"):
+    if os.environ.get("PYTEST_CURRENT_TEST") and os.path.isdir("data/workspace") and not os.path.isfile("buzzard.json"):
         return os.path.abspath("data/workspace")
 
     return os.path.abspath(os.getcwd())
