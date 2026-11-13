@@ -23,6 +23,7 @@ import os
 import sys
 import threading
 import time
+from pathlib import Path
 from typing import Any, Callable, Dict, IO, Optional
 
 from agent.run_session import ALLOW, ALLOW_SESSION, DECISIONS, DENY, ApprovalRequest, RunSession
@@ -139,6 +140,8 @@ class StdioRuntimeServer:
         handlers = {
             "run/start": self._run_start,
             "run/cancel": self._run_cancel,
+            "run/resume": self._run_resume,
+            "task/list": self._task_list,
             "approval/respond": self._approval_respond,
             "session/setPlanMode": self._set_plan_mode,
             "memory/list": self._memory_list,
@@ -200,7 +203,7 @@ class StdioRuntimeServer:
                 "sandbox": runtime_config.get("sandbox"),
                 "confirmation": runtime_config.get("confirmation"),
             },
-            "capabilities": {"planMode": True, "memory": True, "undo": True, "subagents": True},
+            "capabilities": {"planMode": True, "memory": True, "undo": True, "subagents": True, "resume": True},
         }
 
     def _run_start(self, params: Dict[str, Any]) -> Dict[str, Any]:
@@ -217,6 +220,37 @@ class StdioRuntimeServer:
         import uuid
 
         run_id = f"task-{uuid.uuid4().hex[:8]}"
+        goal = goal.strip()
+        return self._begin_run(run_id, lambda: self.session.run(
+            goal, target="localhost", scope=["localhost", "127.0.0.1"], session_id=run_id, attempts=attempts))
+
+    def _run_resume(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Continues an unfinished task saved by an earlier run (durable_tasks.py), under the same id."""
+        from agent.durable_tasks import JournalError, load_journal
+
+        task_id = params.get("taskId")
+        if not isinstance(task_id, str) or not task_id:
+            raise RpcError(INVALID_PARAMS, "taskId must be a non-empty string.")
+        if self._run_thread is not None and self._run_thread.is_alive():
+            raise RpcError(BUSY, "A task is already running; cancel it or wait for run/finished.")
+        try:
+            journal = load_journal(task_id)
+        except JournalError as error:
+            raise RpcError(INVALID_PARAMS, str(error)) from None
+        if journal.workspace != str(Path(self.workspace).resolve()):
+            raise RpcError(INVALID_PARAMS, f"Task {task_id} belongs to another workspace.")
+        if not journal.unfinished:
+            raise RpcError(INVALID_PARAMS, f"Task {task_id} already finished ({journal.status}).")
+        return self._begin_run(task_id, lambda: self.session.resume(task_id))
+
+    def _task_list(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        from agent.durable_tasks import list_journals
+
+        saved = list_journals(Path(self.workspace), unfinished_only=True)
+        return {"tasks": [{"taskId": item.session_id, "status": item.status, "turn": item.turn,
+                           "goal": item.goal, "updatedAt": item.updated_at} for item in saved]}
+
+    def _begin_run(self, run_id: str, work: Callable[[], Any]) -> Dict[str, Any]:
         with self._run_metrics_lock:
             self._run_started_at = time.monotonic()
             self._run_metrics = {
@@ -226,13 +260,13 @@ class StdioRuntimeServer:
                 "countsEstimated": False,
                 "turns": 0,
             }
-        self._run_thread = threading.Thread(target=self._run_task, args=(goal.strip(), run_id, attempts), daemon=True)
+        self._run_thread = threading.Thread(target=self._run_task, args=(run_id, work), daemon=True)
         self._run_thread.start()
         return {"runId": run_id}
 
-    def _run_task(self, goal: str, run_id: str, attempts: int = 1) -> None:
+    def _run_task(self, run_id: str, work: Callable[[], Any]) -> None:
         assert self.session is not None
-        outcome = self.session.run(goal, target="localhost", scope=["localhost", "127.0.0.1"], session_id=run_id, attempts=attempts)
+        outcome = work()
         self._deny_pending()
         if outcome.evidence_report:
             self.notify("run/evidence", {"runId": run_id, "report": outcome.evidence_report})

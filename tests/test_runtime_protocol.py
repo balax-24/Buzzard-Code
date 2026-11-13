@@ -391,3 +391,35 @@ def test_attempts_option_is_validated(tmp_path, project):
             assert client.request("run/start", {"goal": "Fix it", "attempts": bad})["error"]["code"] == -32602
     finally:
         client.close()
+
+
+def test_unfinished_tasks_are_listed_and_resumed(tmp_path, project):
+    tasks = tmp_path / "home" / "tasks"
+    tasks.mkdir(parents=True)
+
+    def saved(task_id, status):
+        (tasks / f"{task_id}.json").write_text(json.dumps({
+            "version": 1, "session_id": task_id, "goal": "Explain what calc.py does", "target": "localhost",
+            "scope": ["localhost"], "workspace": str(project.resolve()), "status": status, "turn": 1,
+            "updated_at": 1.0, "messages": [{"role": "user", "content": "Explain what calc.py does"},
+                                            {"role": "assistant", "content": "Reading calc.py first."}]}), encoding="utf-8")
+
+    saved("task-crashed", "failed")
+    saved("task-done", "completed")
+    client = start(tmp_path, [{"content": "calc.py subtracts b from a."}])
+    try:
+        info = initialize(client, project)
+        assert info["capabilities"]["resume"] is True
+        listed = client.request("task/list")["result"]["tasks"]
+        assert [item["taskId"] for item in listed] == ["task-crashed"] and listed[0]["status"] == "failed"
+        assert client.request("run/resume", {"taskId": "task-done"})["error"]["code"] == -32602
+        assert client.request("run/resume", {"taskId": "task-missing"})["error"]["code"] == -32602
+        assert client.request("run/resume", {"taskId": "../escape"})["error"]["code"] == -32602
+        assert client.request("run/resume", {})["error"]["code"] == -32602
+        run_id = client.request("run/resume", {"taskId": "task-crashed"})["result"]["runId"]
+        assert run_id == "task-crashed"
+        finished = client.notification("run/finished")
+        assert finished["runId"] == "task-crashed" and finished["status"] == "completed", finished
+        assert finished["finalAnswer"] == "calc.py subtracts b from a."
+    finally:
+        assert client.close() == 0

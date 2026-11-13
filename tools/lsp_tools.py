@@ -211,6 +211,20 @@ def _edits_by_file(workspace_edit: Any) -> Dict[str, List[Dict[str, Any]]]:
     return by_uri
 
 
+def _in_workspace_spelling(path: Path, root: Path) -> Path:
+    """
+    Rewrites a server path with the workspace's own spelling when both resolve to the same place.
+    Servers report long Windows names (C:\\Users\\Jane Doe) while the workspace may be held as a
+    short name (C:\\Users\\JANEDO~1); the boundary check compares spellings, so it would refuse a
+    file that is inside. The rewritten path still goes through get_safe_path.
+    """
+    try:
+        relative = path.resolve().relative_to(root.resolve())
+    except (OSError, ValueError):
+        return path
+    return root / relative
+
+
 def lsp_rename(path: str, line: int, column: int, new_name: str) -> str:
     """
     Renames the symbol at a position everywhere it is used, with the project's language server.
@@ -238,7 +252,7 @@ def lsp_rename(path: str, line: int, column: int, new_name: str) -> str:
             raise LspError(f"the rename touches {len(by_uri)} files, more than {MAX_RENAME_FILES}")
         planned = []  # (safe path, original bytes, new text, edit count)
         for file_uri, edits in by_uri.items():
-            file_path = uri_to_path(file_uri)
+            file_path = _in_workspace_spelling(uri_to_path(file_uri), root)
             try:
                 safe = Path(get_safe_path(str(file_path)))
             except PermissionError:

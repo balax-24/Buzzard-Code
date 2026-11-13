@@ -81,6 +81,17 @@ def uri_to_path(uri: str) -> Path:
     return Path(url2pathname(unquote(parsed.path)) if os.name == "nt" else unquote(parsed.path))
 
 
+def uri_key(uri: str) -> str:
+    """
+    One spelling for a file URI. Servers rewrite URIs (Pyright sends file:///c%3A/... for
+    file:///C:/...), so diagnostics are stored and looked up by the normalized path.
+    """
+    try:
+        return os.path.normcase(str(uri_to_path(uri).resolve()))
+    except (OSError, ValueError):
+        return uri
+
+
 def _config_path() -> Path:
     override = os.environ.get("BUZZARD_LSP_CONFIG")
     if override:
@@ -199,7 +210,7 @@ class LanguageServer:
         if method == "textDocument/publishDiagnostics":
             params = message.get("params", {})
             with self._diagnostics_changed:
-                self.diagnostics[params.get("uri", "")] = (time.time(), params.get("diagnostics", []))
+                self.diagnostics[uri_key(params.get("uri", ""))] = (time.time(), params.get("diagnostics", []))
                 self._diagnostics_changed.notify_all()
             return
         if "id" in message:  # a request from the server: answer conservatively
@@ -268,7 +279,7 @@ class LanguageServer:
         deadline = time.time() + timeout
         with self._diagnostics_changed:
             while True:
-                entry = self.diagnostics.get(uri)
+                entry = self.diagnostics.get(uri_key(uri))
                 if entry and entry[0] >= since:
                     return entry[1]
                 remaining = deadline - time.time()

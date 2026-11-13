@@ -51,7 +51,9 @@ while True:
         uri = message["params"]["textDocument"]["uri"]
         text = message["params"]["textDocument"].get("text") or message["params"]["contentChanges"][0]["text"]
         opened[uri] = text
-        if mode == "push":
+        if mode == "rewrite":  # like Pyright: lower-case drive letter and an encoded colon
+            uri = uri[:8] + uri[8].lower() + uri[9:].replace(":", "%3A", 1) if uri[9:10] == ":" else uri.replace("file://", "file://localhost")
+        if mode in ("push", "rewrite"):
             problems = [] if "fixed" in text else [{"range": {"start": {"line": 2, "character": 4}, "end": {"line": 2, "character": 9}},
                                                      "severity": 1, "message": "Type mismatch\nmore detail"}]
             send({"jsonrpc": "2.0", "method": "textDocument/publishDiagnostics", "params": {"uri": uri, "diagnostics": problems}})
@@ -269,3 +271,52 @@ def test_text_edits_use_utf16_columns_and_refuse_overlaps():
         lsp_tools.apply_text_edits("abcdef", [
             {"range": {"start": {"line": 0, "character": 0}, "end": {"line": 0, "character": 4}}, "newText": "x"},
             {"range": {"start": {"line": 0, "character": 2}, "end": {"line": 0, "character": 5}}, "newText": "y"}])
+
+
+def test_server_paths_are_mapped_to_the_workspace_spelling(tmp_path):
+    root = tmp_path / "proj"
+    (root / "pkg").mkdir(parents=True)
+    (root / "pkg" / "lib.py").write_text("x = 1\n", encoding="utf-8")
+    assert lsp_tools._in_workspace_spelling(root / "pkg" / ".." / "pkg" / "lib.py", root) == root / "pkg" / "lib.py"
+    outside = tmp_path / "other.py"
+    assert lsp_tools._in_workspace_spelling(outside, root) == outside  # left alone, so the boundary check refuses it
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows short (8.3) names")
+def test_windows_short_workspace_name_accepts_long_server_paths(tmp_path):
+    import ctypes
+
+    long_root = tmp_path / "Long Folder Name"
+    long_root.mkdir()
+    buffer = ctypes.create_unicode_buffer(1024)
+    if not ctypes.windll.kernel32.GetShortPathNameW(str(long_root), buffer, 1024) or buffer.value == str(long_root):
+        pytest.skip("8.3 names are turned off on this volume")
+    short_root = Path(buffer.value)
+    (long_root / "lib.py").write_text("x = 1\n", encoding="utf-8")
+    mapped = lsp_tools._in_workspace_spelling(long_root / "lib.py", short_root)
+    assert mapped == short_root / "lib.py"
+    set_active_workspace(str(short_root))
+    try:
+        from tools.filesystem import get_safe_path
+
+        assert Path(get_safe_path(str(mapped))).is_file()
+    finally:
+        set_active_workspace(None)
+
+
+def test_diagnostics_match_when_the_server_rewrites_the_uri(project):
+    root, use = project
+    use("rewrite")
+    assert "Type mismatch" in lsp_tools.lsp_diagnostics("app.py")
+
+
+def test_uri_key_treats_equivalent_spellings_as_one_file(tmp_path):
+    from intelligence.lsp_client import path_to_uri, uri_key
+
+    target = tmp_path / "a b.py"
+    target.write_text("x = 1\n", encoding="utf-8")
+    uri = path_to_uri(target)
+    if sys.platform == "win32":
+        rewritten = uri[:8] + uri[8].lower() + uri[9:].replace(":", "%3A", 1)
+        assert rewritten != uri and uri_key(rewritten) == uri_key(uri)
+    assert uri_key(uri) != uri_key(path_to_uri(tmp_path / "other.py"))

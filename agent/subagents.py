@@ -136,7 +136,10 @@ def delegate_task(role: str, task: str) -> str:
             return "Error: the task was stopped."
         child = _make_child(parent, ROLES[role_name])
         goal = f"[{role_name} subagent] {ROLES[role_name].instructions}\n\nTask: {task_text}"
-        result = child.run(task_goal=goal, target=parent.run_target or "workspace", scope=parent.run_scope)
+        try:
+            result = child.run(task_goal=goal, target=parent.run_target or "workspace", scope=parent.run_scope)
+        finally:
+            charge_parent(parent, child)
         report = _report(result, role_name, str(getattr(child.provider, "model_name", "")) or None)
         if child.last_error:
             report += f"\n[Subagent error: {child.last_error}]"
@@ -147,6 +150,20 @@ def delegate_task(role: str, task: str) -> str:
     finally:
         with _state_lock:
             _child_running = False
+
+
+def charge_parent(parent: Any, child: Any) -> None:
+    """Adds a subagent's tokens and cost to the parent task, so the parent's task_budget covers its subagents."""
+    child_budget, parent_budget = getattr(child, "budget", None), getattr(parent, "budget", None)
+    if child_budget is None or parent_budget is None:
+        return
+    input_tokens, output_tokens = child_budget.model_input_tokens, child_budget.model_output_tokens
+    parent_budget.record_model_tokens(input_tokens=input_tokens, output_tokens=output_tokens)
+    from agent.task_budget import price_per_million
+
+    price = price_per_million(getattr(child.provider, "model_name", ""))
+    if price and isinstance(getattr(parent, "_task_cost_usd", None), float):
+        parent._task_cost_usd += (input_tokens * price[0] + output_tokens * price[1]) / 1_000_000
 
 
 _routed_providers: Dict[str, Any] = {}

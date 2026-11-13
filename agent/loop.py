@@ -333,6 +333,39 @@ class AgentLoop:
         """
         return self.planner.parse_xml_tool_call(content)
 
+    def _setup_task_budget(self, is_coding: bool, session_id: str) -> None:
+        """Reads task_budget for a top-level coding task and sets this run's turn limit from it."""
+        from agent.task_budget import TaskBudget, price_per_million, task_budget_from
+
+        self._task_budget = TaskBudget()
+        self._task_cost_usd = 0.0
+        self._task_price = None
+        if not is_coding or self.subagent_role:
+            return
+        self._task_budget = task_budget_from(self.config)  # an invalid setting fails the task with its message
+        self.max_iterations = self._task_budget.turn_limit(self.max_iterations)
+        self._task_price = price_per_million(getattr(self.provider, "model_name", ""))
+        if self._task_budget.max_usd is not None and self._task_price is None:
+            message = (f"task_budget.max_usd cannot be enforced: no known price for "
+                       f"{getattr(self.provider, 'model_name', 'this model')}; token and time limits still apply.")
+            logger.warning(message)
+            self.event_bus.emit(EventType.BUDGET_WARNING, {"category": "cost", "message": message},
+                                severity=EventSeverity.WARN, assessment_id=session_id)
+
+    def _task_budget_stop(self, is_coding: bool) -> Optional[str]:
+        """Why a coding task must stop for its budget, or None."""
+        if not is_coding:
+            return None
+        budget = getattr(self, "_task_budget", None)
+        reason = budget.exceeded(
+            self.budget.model_tokens_total,
+            self._task_cost_usd if self._task_price else None,
+            self.budget.elapsed_seconds,
+        ) if budget is not None else None
+        if reason is None and self.budget.is_exceeded():
+            reason = "run budget reached (time or tool-call limit)"
+        return reason
+
     def _compact_message_history(self, raw_messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
         Prevents runaway token accumulation delegating to ContextManager.
@@ -765,6 +798,9 @@ class AgentLoop:
                 prompt_tokens = estimate_tokens(compact_messages)
                 output_tokens = estimate_tokens([response.get("message") or {}])
             self.budget.record_model_tokens(input_tokens=prompt_tokens, output_tokens=output_tokens)
+            price = getattr(self, "_task_price", None)
+            if price:
+                self._task_cost_usd += (prompt_tokens * price[0] + output_tokens * price[1]) / 1_000_000
 
             # Emit model.completed event
             self.event_bus.emit(
@@ -1027,6 +1063,7 @@ class AgentLoop:
         # Initialize conversation messages
         is_coding = bool(self.subagent_role) or is_coding_task(task_goal)
         self._is_coding_task = is_coding
+        self._setup_task_budget(is_coding, session_id)
         checkpointing_enabled = is_coding
         checkpoint_history: Dict[int, List[Dict[str, Any]]] = {}
 
@@ -1215,6 +1252,22 @@ class AgentLoop:
 
                 if self.ui_active:
                     self.live.update(self.get_dashboard_layout())
+
+                # A coding task's budget (task_budget.py) stops it as paused, with the reason, so it can resume
+                budget_stop = self._task_budget_stop(is_coding)
+                if budget_stop:
+                    self.event_bus.emit(
+                        EventType.BUDGET_EXCEEDED,
+                        {**self.budget.get_status(), "reason": budget_stop},
+                        severity=EventSeverity.ERROR,
+                        assessment_id=session_id,
+                    )
+                    self.last_error = (
+                        f"Stopped: {budget_stop}. The work so far is saved; raise task_budget in your config and "
+                        f"resume with `/tasks resume {session_id}` or `buzzard exec {session_id} --resume`."
+                    )
+                    status = TaskStatus.PAUSED
+                    break
 
                 # Check budget before each iteration
                 if self.budget.is_exceeded():
