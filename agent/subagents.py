@@ -93,7 +93,7 @@ def build_role_registry(source: ToolRegistry, role: SubagentRole) -> ToolRegistr
     return registry
 
 
-def _report(result: Dict[str, Any], role: str) -> str:
+def _report(result: Dict[str, Any], role: str, model: Optional[str] = None) -> str:
     messages = result.get("messages", []) if isinstance(result, dict) else []
     used: List[str] = []
     for message in messages:
@@ -104,7 +104,7 @@ def _report(result: Dict[str, Any], role: str) -> str:
     answers = [str(m.get("content") or "") for m in messages if m.get("role") == "assistant"]
     final = next((text for text in reversed(answers) if text.strip()), "(the subagent gave no report)")
     status = result.get("status", "unknown") if isinstance(result, dict) else "unknown"
-    header = f"[Subagent '{role}' finished: {status}. Tools used: {', '.join(used) or 'none'}. Its work is not verified until the completion gate runs.]"
+    header = f"[Subagent '{role}' finished: {status}. Tools used: {', '.join(used) or 'none'}.{f' Model: {model}.' if model else ''} Its work is not verified until the completion gate runs.]"
     return f"{header}\n{final}"[:MAX_REPORT_CHARS]
 
 
@@ -137,7 +137,7 @@ def delegate_task(role: str, task: str) -> str:
         child = _make_child(parent, ROLES[role_name])
         goal = f"[{role_name} subagent] {ROLES[role_name].instructions}\n\nTask: {task_text}"
         result = child.run(task_goal=goal, target=parent.run_target or "workspace", scope=parent.run_scope)
-        report = _report(result, role_name)
+        report = _report(result, role_name, str(getattr(child.provider, "model_name", "")) or None)
         if child.last_error:
             report += f"\n[Subagent error: {child.last_error}]"
         return report
@@ -149,11 +149,49 @@ def delegate_task(role: str, task: str) -> str:
             _child_running = False
 
 
+_routed_providers: Dict[str, Any] = {}
+
+
+def subagent_model_spec(config: Dict[str, Any]) -> Optional[str]:
+    """The `subagent_model` setting ("provider/model" or a model name), if any."""
+    model = config.get("model")
+    spec = model.get("subagent") if isinstance(model, dict) else None
+    spec = spec or config.get("subagent_model")
+    return spec.strip() if isinstance(spec, str) and spec.strip() else None
+
+
+def subagent_provider(parent: Any) -> Any:
+    """
+    Model routing (roadmap F5): subagents use `subagent_model` when it is set, so a cheaper model can
+    do the reading-heavy work. Falls back to the main model if the routed one cannot be created.
+    """
+    spec = subagent_model_spec(parent.config)
+    if spec is None:
+        return parent.provider
+    if spec in _routed_providers:
+        return _routed_providers[spec]
+    try:
+        from model.factory import get_model_provider, resolve_provider_and_model
+
+        provider_name, model_name = resolve_provider_and_model(spec, parent.config)
+        main = parent.config.get("model") if isinstance(parent.config.get("model"), dict) else {}
+        routed_model = {"provider": provider_name, "name": model_name}
+        if str(main.get("provider", "")).lower() == provider_name and main.get("endpoint"):
+            routed_model["endpoint"] = main["endpoint"]  # never send one provider's endpoint to another
+        provider = get_model_provider(provider_name=provider_name, model_name=model_name,
+                                      config={**parent.config, "model": routed_model})
+    except Exception as error:  # a bad routing setting must not break subagents
+        logger.warning("Could not use subagent model %r, using the main model: %s", spec, error)
+        return parent.provider
+    _routed_providers[spec] = provider
+    return provider
+
+
 def _make_child(parent: Any, role: SubagentRole) -> Any:
     from agent.loop import AgentLoop
 
     child = AgentLoop(
-        provider=parent.provider,
+        provider=subagent_provider(parent),
         registry=build_role_registry(parent.registry, role),
         storage_manager=parent.storage,
         max_iterations=SUBAGENT_MAX_ITERATIONS,
