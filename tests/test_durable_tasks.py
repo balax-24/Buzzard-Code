@@ -213,10 +213,10 @@ def test_exec_lists_and_rejects_resuming_unknown_tasks(home, tmp_path):
     from cli.main import main
 
     save_journal(journal("task-open", tmp_path, "paused", goal="Add a price check"))
-    listing = CliRunner().invoke(main, ["exec", "-", "--list", "--json", "--workspace", str(tmp_path)])
+    listing = CliRunner().invoke(main, ["exec", "--list", "--json", "--workspace", str(tmp_path)])
     assert listing.exit_code == 0, listing.output
     assert json.loads(listing.output) == [{"id": "task-open", "status": "paused", "turn": 2, "goal": "Add a price check"}]
-    empty = CliRunner().invoke(main, ["exec", "-", "--list", "--workspace", str(tmp_path / "..")])
+    empty = CliRunner().invoke(main, ["exec", "--list", "--workspace", str(tmp_path / "..")])
     assert "No unfinished tasks." in empty.output
 
 
@@ -230,3 +230,12 @@ def test_headless_resume_reports_an_unknown_task(home, tmp_path):
     finally:
         set_active_workspace(previous)
     assert result["status"] == "rejected" and result["exitCode"] == 1 and "No saved task" in result["error"]
+
+
+def test_exec_without_a_task_explains_what_to_give():
+    from click.testing import CliRunner
+
+    from cli.main import main
+
+    result = CliRunner().invoke(main, ["exec"])
+    assert result.exit_code == 2 and "--list" in result.output

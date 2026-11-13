@@ -153,6 +153,19 @@ The two highlighted boxes are deterministic code. The model cannot talk its way 
 - Native tool calling, including streaming and parallel calls, with retries for rate limits and server errors
 - MCP client for stdio servers
 
+**Since the hackathon**
+- Stronger proof at the gate: for a bug fix, a test must fail on the original code and pass with the fix (reproduce-first); changed-line coverage for pytest, Go, Node (c8) and Rust; an optional mutation check that breaks each changed line on purpose and reports what no test caught
+- `related_tests` finds the tests that import the changed code, so the agent can test a change quickly before the full suite
+- Language-server tools (`lsp_definition`, `lsp_references`, `lsp_diagnostics`, `lsp_rename`) when gopls, Pyright, typescript-language-server or another server is installed, with a fallback to the built-in code index
+- Repository index, project memory, git branch and commit tools, background processes and a persistent shell, workspace checkpoints with rewind
+- Subagents (explore, review, test, code), optionally on a cheaper model
+- Best-of-N attempts: run a task several times in separate worktrees and keep the best verified result
+- `buzzard exec` for scripts and CI, with nothing approved unless a flag allows it
+- Durable tasks: every turn is saved, so a crash or closed laptop does not lose the work; resume with `/tasks resume <id>`
+- Task budgets for tokens, money, time or turns, with a clear stop that can be resumed
+- Hooks before and after tool calls and at task end, custom slash commands, permission rules
+- Prompt caching for Anthropic models, and cached-token reporting for all providers in `/usage`
+
 ## Results on Meta models
 
 The acceptance scenario runs on a disposable repository. The agent explains the code, finds a deliberate bug, fixes it, recovers from a test failure introduced mid-run, and leaves audit records. **Outcomes are verified independently with git and pytest, not taken from the agent's word.**
@@ -240,6 +253,10 @@ Live-tested so far: Muse Glimmer through OpenRouter, Gemini and Ollama, with res
 | Command | What it does |
 |---|---|
 | `/plan` | Toggle plan mode: no edits or commands run |
+| `/attempts <n>` | Run each coding task 1-5 times and keep the best verified attempt |
+| `/tasks`, `/tasks resume <id>` | List unfinished tasks, or continue one |
+| `/commands` | List custom commands from `.buzzard/commands/` and `~/.buzzard/commands/` |
+| `/memory` | Project memory: list, add, forget, clear, on, off |
 | `/review` | Ask the agent to review uncommitted changes |
 | `/test` | Ask the agent to run the tests and report |
 | `/undo` | Revert the agent's latest file edit |
@@ -254,6 +271,16 @@ Live-tested so far: Muse Glimmer through OpenRouter, Gemini and Ollama, with res
 
 **Keys:** `@` for files, `/` for commands, `\\` at the end of a line for a new line, `Esc` to interrupt, and `y`, `s` or `n` at an approval.
 
+## Headless use
+
+```bash
+buzzard exec "Fix the failing test in calc.py" --allow-edits --allow-commands --json
+buzzard exec --list                 # unfinished tasks in this folder
+buzzard exec task-1a2b3c4d --resume # continue one
+```
+
+Nothing is approved unless a flag allows it. Exit code 0 means the task completed and the gate verified it.
+
 ## Configuration
 
 | Setting | Purpose |
@@ -262,7 +289,12 @@ Live-tested so far: Muse Glimmer through OpenRouter, Gemini and Ollama, with res
 | `BUZZARD_FALLBACK_MODELS` | Comma-separated backup models, tried in order |
 | `BUZZARD_TEST_TIMEOUT` | Seconds the gate waits for tests (default 300) |
 | `BUZZARD_BUDGET_USD` | Stop a task when estimated session cost reaches this amount |
-| `.buzzard/project.json` | Per-project `test_command` and `test_timeout`; the command still needs approval |
+| `.buzzard/project.json` | Per-project `test_command` and `test_timeout` (the command still needs approval), plus `coverage` (`auto`/`off`), `reproduce_first` (`warn`/`require`/`off`), `mutation_check` (`off`/`warn`/`require`) and `mutation_max` |
+| `task_budget` in your config | Limits for a coding task: `max_tokens`, `max_usd`, `max_minutes`, `max_turns` |
+| `model.subagent` in your config | A different `provider/model` for subagents |
+| `model.prompt_caching` in your config | `false` turns off Anthropic prompt caching |
+| `durable_tasks` in your config | `false` stops saving tasks for resume |
+| `~/.buzzard/lsp.json`, `~/.buzzard/hooks.json` | Language-server commands and hooks; user level only, never from a repository |
 | `BUZZARD_MCP_CONFIG` | Use a different MCP config path |
 | `BUZZARD_HOME` | Where sessions are stored (default `~/.buzzard`) |
 | `BUZZARD.md` in your project | Coding conventions for the agent; these cannot change approval or security rules |

@@ -132,7 +132,7 @@ def config(action):
     run_config(action=action)
 
 @main.command(name="exec")
-@click.argument("task")
+@click.argument("task", required=False)
 @click.option("--workspace", type=click.Path(exists=True, file_okay=False, path_type=Path), default=None,
               help="Project folder (defaults to the current directory).")
 @click.option("--allow-edits", is_flag=True, help="Allow file edits without asking.")
@@ -163,6 +163,8 @@ def exec_cmd(task, workspace, allow_edits, allow_commands, allow_all, plan, atte
                    "\n".join(f"{row['id']}  {row['status']:<8} turn {row['turn']:<3} {row['goal'][:80]}" for row in rows)
                    or "No unfinished tasks.")
         return
+    if not task or not task.strip():
+        raise click.UsageError("Give a task (or a task id with --resume), or use --list.")
     policy = HeadlessPolicy(allow_edits=allow_edits, allow_commands=allow_commands, allow_all=allow_all)
     result = run_headless(task, workspace or Path.cwd(), policy, attempts=attempts, plan=plan, model=model,
                           resume=resume_task_id)
