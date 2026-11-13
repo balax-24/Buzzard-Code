@@ -23,7 +23,7 @@ from tools.http import register_http_tools
 from tools.http_suite import register_http_suite_tools
 from tools.filesystem import register_filesystem_tools
 from tools.git_tools import register_git_tools
-from tools.code_index import register_code_index_tools
+from tools.code_index import get_index, register_code_index_tools
 from tools.source_audit import register_source_audit_tools
 from tools.manifest_suite import register_manifest_tools
 from tools.attack import register_attack_tools
@@ -1005,6 +1005,12 @@ class AgentLoop:
             modes=self.config.get("modes") if not is_canonical else None,
             prompt_mode=prompt_mode,
         )
+        if is_coding:
+            from agent.repo_map import build_repo_map
+
+            repo_map = build_repo_map(get_index(), task_goal)
+            if repo_map:
+                system_prompt += f"\n\n{repo_map}"
         if is_coding and self.native_tools:
             system_prompt += NATIVE_TOOLS_GUIDANCE
         if is_coding:
