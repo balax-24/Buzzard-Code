@@ -1428,6 +1428,11 @@ class AgentLoop:
                     "content": content
                 }
                 if self.native_tools and tool_calls:
+                    # Calls parsed from text have no id; without one their results cannot be paired
+                    # with them and are dropped from history, which native tool APIs reject
+                    for call in tool_calls:
+                        call.setdefault("id", f"call_{uuid.uuid4().hex[:12]}")
+                        call.setdefault("type", "function")
                     assistant_msg["tool_calls"] = tool_calls
                 if self.native_tools and thinking_text:
                     assistant_msg["thinking"] = thinking_text

@@ -180,6 +180,10 @@ def to_gemini_tools(tools: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return [{"functionDeclarations": declarations}]
 
 
+# Gemini's documented placeholder for function calls in history that the model did not produce
+UNSIGNED_CALL_SIGNATURE = "skip_thought_signature_validator"
+
+
 def to_gemini_contents(messages: List[Dict[str, Any]]) -> Tuple[Optional[Dict[str, Any]], List[Dict[str, Any]]]:
     """
     Converts agent-loop history to Gemini contents, returning (system_instruction, contents).
@@ -206,7 +210,11 @@ def to_gemini_contents(messages: List[Dict[str, Any]]) -> Tuple[Optional[Dict[st
             add("user", [{"functionResponse": {"name": name, "response": {"result": content}}}])
         elif role in ("assistant", "model"):
             parts: List[Dict[str, Any]] = [{"text": content}] if content else []
-            for call in message.get("tool_calls") or []:
+            calls = message.get("tool_calls") or []
+            # Calls Buzzard parsed from the model's text were never sent by Gemini, so they have no
+            # signature; Gemini 3 rejects unsigned calls unless marked as not model-generated.
+            model_signed = any(call.get("thought_signature") for call in calls)
+            for call in calls:
                 function = call.get("function") or {}
                 wire_name = to_wire_name(function.get("name"))
                 call_names[call.get("id")] = wire_name
@@ -216,6 +224,8 @@ def to_gemini_contents(messages: List[Dict[str, Any]]) -> Tuple[Optional[Dict[st
                 }}
                 if call.get("thought_signature"):
                     part["thoughtSignature"] = call["thought_signature"]
+                elif not model_signed:
+                    part["thoughtSignature"] = UNSIGNED_CALL_SIGNATURE
                 parts.append(part)
             if parts:
                 add("model", parts)
