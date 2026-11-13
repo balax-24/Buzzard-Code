@@ -15,7 +15,7 @@ MAX_ACTIONS = 80
 MAX_DECISIONS = 8
 MAX_QUESTIONS = 8
 MAX_COMMAND_OUTPUT_CHARS = 240
-_FILE_WRITE_TOOLS = frozenset({"file_edit", "file_write", "multi_edit"})
+_FILE_WRITE_TOOLS = frozenset({"file_edit", "file_write", "multi_edit", "apply_patch"})
 _QUESTION_PATTERN = re.compile(r"(?:^|\n)[^\n?]{3,240}\?\s*$")
 
 
@@ -105,6 +105,16 @@ class TaskLedger:
             path = arguments.get("path") or arguments.get("file_path")
             if isinstance(path, str) and path.strip() and path not in self.files_touched:
                 self.files_touched.append(path)
+        elif tool == "apply_patch":
+            patch_text = arguments.get("patch")
+            if isinstance(patch_text, str):
+                for line in patch_text.splitlines():
+                    if line.startswith(("--- ", "+++ ")):
+                        path = line[4:].split("\t", 1)[0]
+                        if path != "/dev/null" and path.startswith(("a/", "b/")):
+                            path = path[2:]
+                        if path and path != "/dev/null" and path not in self.files_touched:
+                            self.files_touched.append(path)
         if tool == "terminal.execute":
             command = str(arguments.get("command", ""))
             result = sanitize_untrusted_data(raw_result)

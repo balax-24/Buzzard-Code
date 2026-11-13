@@ -17,6 +17,7 @@ from __future__ import annotations
 import os
 import difflib
 import fnmatch
+import re
 import stat
 import tempfile
 from pathlib import Path
@@ -26,6 +27,8 @@ _ACTIVE_WORKSPACE: Optional[str] = None
 
 
 MAX_EDIT_HISTORY = 50
+MAX_PATCH_BYTES = 1_000_000
+_PATCH_HUNK_HEADER = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
 # (path, bytes before the edit or None for a new file, bytes the edit wrote)
 _edit_history: List[Tuple[str, Optional[bytes], Optional[bytes]]] = []
 
@@ -356,16 +359,16 @@ def file_edit(path: str, old_str: str, new_str: str, replace_all: bool = False) 
 def multi_edit(path: str, edits: List[Dict[str, Any]]) -> str:
     """Apply several validated exact replacements to one file with one atomic write."""
     if not isinstance(path, str) or not path.strip():
-        return "Error: path must be a non-empty string."
+        return "TOOL ERROR: path must be a non-empty string."
     if not isinstance(edits, list) or not edits or len(edits) > 100:
-        return "Error: edits must contain between 1 and 100 replacements."
+        return "TOOL ERROR: edits must contain between 1 and 100 replacements."
 
     try:
         safe_path = get_safe_path(path)
         if not os.path.isfile(safe_path):
-            return f"Error: File '{path}' does not exist or is not a regular file."
+            return f"TOOL ERROR: File '{path}' does not exist or is not a regular file."
         if os.path.islink(safe_path):
-            return f"Error: Refusing to edit symlink '{path}'."
+            return f"TOOL ERROR: Refusing to edit symlink '{path}'."
         with open(safe_path, "rb") as file:
             previous = file.read()
         original = previous.decode("utf-8")
@@ -374,21 +377,21 @@ def multi_edit(path: str, edits: List[Dict[str, Any]]) -> str:
 
         for index, edit in enumerate(edits, start=1):
             if not isinstance(edit, dict):
-                return f"Error: edits[{index - 1}] must be an object."
+                return f"TOOL ERROR: edits[{index - 1}] must be an object."
             old_str = edit.get("old_str")
             new_str = edit.get("new_str")
             replace_all = edit.get("replace_all", False)
             if not isinstance(old_str, str) or not old_str:
-                return f"Error: edits[{index - 1}].old_str must be a non-empty string."
+                return f"TOOL ERROR: edits[{index - 1}].old_str must be a non-empty string."
             if not isinstance(new_str, str):
-                return f"Error: edits[{index - 1}].new_str must be a string."
+                return f"TOOL ERROR: edits[{index - 1}].new_str must be a string."
             if not isinstance(replace_all, bool):
-                return f"Error: edits[{index - 1}].replace_all must be a boolean."
+                return f"TOOL ERROR: edits[{index - 1}].replace_all must be a boolean."
             match_count = updated.count(old_str)
             if match_count == 0:
-                return f"Error: edits[{index - 1}] original text was not found; no changes were written."
+                return f"TOOL ERROR: edits[{index - 1}] original text was not found; no changes were written."
             if match_count > 1 and not replace_all:
-                return f"Error: edits[{index - 1}] is ambiguous ({match_count} matches); no changes were written."
+                return f"TOOL ERROR: edits[{index - 1}] is ambiguous ({match_count} matches); no changes were written."
             updated = updated.replace(old_str, new_str, -1 if replace_all else 1)
             summaries.append(f"{index}: {match_count} replacement(s)")
 
@@ -396,7 +399,7 @@ def multi_edit(path: str, edits: List[Dict[str, Any]]) -> str:
             return f"No changes needed for '{path}'."
 
         if _read_bytes_or_none(safe_path) != previous:
-            return f"Error: '{path}' changed while edits were being prepared; no changes were written."
+            return f"TOOL ERROR: '{path}' changed while edits were being prepared; no changes were written."
 
         temporary_path = None
         try:
@@ -423,6 +426,261 @@ def multi_edit(path: str, edits: List[Dict[str, Any]]) -> str:
         return f"Successfully applied {len(edits)} edits to '{path}'.\n{'; '.join(summaries)}\n\nDiff:\n{diff}"
     except (OSError, UnicodeDecodeError, PermissionError) as error:
         return f"TOOL ERROR: Failed to apply multi_edit to '{path}': {error}"
+
+
+def apply_patch(patch: str) -> str:
+    """Apply a strict, UTF-8 unified patch to one or more workspace files."""
+    if not isinstance(patch, str) or not patch.strip():
+        return "TOOL ERROR: patch must be a non-empty unified diff string."
+    try:
+        patch_size = len(patch.encode("utf-8"))
+    except UnicodeEncodeError as error:
+        return f"TOOL ERROR: patch must be valid UTF-8 text: {error}"
+    if patch_size > MAX_PATCH_BYTES:
+        return f"TOOL ERROR: patch exceeds the {MAX_PATCH_BYTES}-byte limit."
+    if "\x00" in patch:
+        return "TOOL ERROR: patch contains a NUL character."
+
+    try:
+        file_patches = _parse_unified_patch(patch)
+        if not file_patches:
+            return "TOOL ERROR: patch contains no file hunks."
+        planned: list[tuple[str, bytes | None, bytes | None, int]] = []
+        seen_paths: set[str] = set()
+
+        for file_patch in file_patches:
+            old_name, new_name, hunks = file_patch
+            relative_path = new_name if new_name != "/dev/null" else old_name
+            if not relative_path or relative_path == "/dev/null":
+                return "TOOL ERROR: patch file headers do not name a workspace path."
+            if old_name != "/dev/null" and new_name != "/dev/null" and old_name != new_name:
+                return f"TOOL ERROR: rename patches are not supported ('{old_name}' to '{new_name}')."
+
+            safe_path = get_safe_path(relative_path)
+            normalized_path = os.path.normcase(os.path.abspath(safe_path))
+            if normalized_path in seen_paths:
+                return f"TOOL ERROR: patch includes '{relative_path}' more than once."
+            seen_paths.add(normalized_path)
+            exists = os.path.lexists(safe_path)
+            creating = old_name == "/dev/null"
+            deleting = new_name == "/dev/null"
+            if creating and exists:
+                return f"TOOL ERROR: cannot create '{relative_path}'; it already exists."
+            if not creating and not exists:
+                return f"TOOL ERROR: cannot patch '{relative_path}'; it does not exist."
+            if exists and (os.path.islink(safe_path) or not os.path.isfile(safe_path)):
+                return f"TOOL ERROR: refusing to patch non-regular file or symlink '{relative_path}'."
+            parent = os.path.dirname(safe_path)
+            if not os.path.isdir(parent):
+                return f"TOOL ERROR: parent directory for '{relative_path}' does not exist."
+
+            previous = None
+            original = ""
+            file_mode = 0o644
+            if exists:
+                with open(safe_path, "rb") as source:
+                    previous = source.read()
+                original = previous.decode("utf-8")
+                file_mode = stat.S_IMODE(os.stat(safe_path).st_mode)
+            updated = _apply_file_hunks(original, hunks, relative_path)
+            if deleting:
+                if updated:
+                    return f"TOOL ERROR: deletion patch for '{relative_path}' leaves content behind."
+                new_bytes = None
+            else:
+                new_bytes = updated.encode("utf-8")
+            planned.append((safe_path, previous, new_bytes, file_mode))
+
+        return _commit_patch_transaction(planned)
+    except (OSError, UnicodeDecodeError, PermissionError, ValueError) as error:
+        return f"TOOL ERROR: Patch rejected without changes: {error}"
+
+
+def _parse_unified_patch(
+    patch: str,
+) -> list[tuple[str, str, list[tuple[int, int, list[tuple[str, str, bool]]]]]]:
+    """Parse standard unified file headers and hunks; reject binary or malformed patches."""
+    lines = patch.splitlines(keepends=True)
+    parsed: list[tuple[str, str, list[list[tuple[str, str, bool]]]]] = []
+    index = 0
+    while index < len(lines):
+        if not lines[index].startswith("--- "):
+            index += 1
+            continue
+        old_name = _patch_header_path(lines[index][4:])
+        index += 1
+        if index >= len(lines) or not lines[index].startswith("+++ "):
+            raise ValueError("expected a '+++ ' file header after '--- '")
+        new_name = _patch_header_path(lines[index][4:])
+        index += 1
+        hunks: list[tuple[int, int, list[tuple[str, str, bool]]]] = []
+        while index < len(lines) and not lines[index].startswith("--- "):
+            header = _PATCH_HUNK_HEADER.match(lines[index].rstrip("\r\n"))
+            if not header:
+                index += 1
+                continue
+            old_count = int(header.group(2) or "1")
+            new_count = int(header.group(4) or "1")
+            old_start = int(header.group(1))
+            index += 1
+            hunk: list[tuple[str, str, bool]] = []
+            consumed_old = consumed_new = 0
+            while index < len(lines) and (consumed_old < old_count or consumed_new < new_count):
+                line = lines[index]
+                if line.startswith("\\ No newline at end of file"):
+                    if not hunk:
+                        raise ValueError("newline marker has no preceding hunk line")
+                    kind, text, _ = hunk[-1]
+                    hunk[-1] = (kind, text, True)
+                    index += 1
+                    continue
+                if not line or line[0] not in " +-":
+                    raise ValueError("malformed unified hunk line")
+                kind = line[0]
+                text = line[1:].rstrip("\r\n")
+                hunk.append((kind, text, False))
+                consumed_old += kind in " -"
+                consumed_new += kind in " +"
+                index += 1
+            if consumed_old != old_count or consumed_new != new_count:
+                raise ValueError("unified hunk line counts do not match its header")
+            while index < len(lines) and lines[index].startswith("\\ No newline at end of file"):
+                if not hunk:
+                    raise ValueError("newline marker has no preceding hunk line")
+                kind, text, _ = hunk[-1]
+                hunk[-1] = (kind, text, True)
+                index += 1
+            hunks.append((old_start, old_count, hunk))
+        if not hunks:
+            raise ValueError(f"file patch for '{old_name}' contains no hunks")
+        parsed.append((old_name, new_name, hunks))
+    return parsed
+
+
+def _patch_header_path(value: str) -> str:
+    name = value.rstrip("\r\n").split("\t", 1)[0]
+    if name == "/dev/null":
+        return name
+    if name.startswith(("a/", "b/")):
+        name = name[2:]
+    if not name or "\x00" in name:
+        raise ValueError("file header contains an invalid path")
+    return name
+
+
+def _apply_file_hunks(
+    original: str,
+    hunks: list[tuple[int, int, list[tuple[str, str, bool]]]],
+    path: str,
+) -> str:
+    lines = original.splitlines()
+    had_final_newline = original.endswith(("\n", "\r"))
+    eol = "\r\n" if "\r\n" in original else "\n"
+    offset = 0
+    final_newline: bool | None = True if not original else None
+    for old_start, old_count, hunk in hunks:
+        old_lines = [text for kind, text, _ in hunk if kind in " -"]
+        new_lines = [text for kind, text, _ in hunk if kind in " +"]
+        expected = (old_start - 1 if old_count else old_start) + offset
+        location = _find_hunk_location(lines, old_lines, expected)
+        if location is None:
+            raise ValueError(f"hunk context did not match '{path}' near line {expected + 1}")
+        lines[location:location + len(old_lines)] = new_lines
+        offset += len(new_lines) - len(old_lines)
+        for kind, _text, no_newline in hunk:
+            if no_newline and kind in " +":
+                final_newline = False
+    output = eol.join(lines)
+    if final_newline is None:
+        final_newline = had_final_newline
+    return output + (eol if output and final_newline else "")
+
+
+def _find_hunk_location(lines: list[str], old_lines: list[str], expected: int) -> int | None:
+    if not old_lines:
+        return min(max(expected, 0), len(lines))
+    if lines[expected:expected + len(old_lines)] == old_lines:
+        return expected
+    matches = [
+        position for position in range(len(lines) - len(old_lines) + 1)
+        if lines[position:position + len(old_lines)] == old_lines
+    ]
+    return matches[0] if len(matches) == 1 else None
+
+
+def _commit_patch_transaction(planned: list[tuple[str, bytes | None, bytes | None, int]]) -> str:
+    staged: dict[str, str] = {}
+    committed: list[str] = []
+    try:
+        for safe_path, previous, new_bytes, file_mode in planned:
+            if new_bytes is None:
+                continue
+            parent = os.path.dirname(safe_path)
+            with tempfile.NamedTemporaryFile(
+                mode="wb", prefix=".buzzard-patch-", suffix=".tmp", dir=parent, delete=False,
+            ) as temporary_file:
+                temporary_path = temporary_file.name
+                temporary_file.write(new_bytes)
+                temporary_file.flush()
+                os.fsync(temporary_file.fileno())
+            os.chmod(temporary_path, file_mode)
+            staged[safe_path] = temporary_path
+
+        for safe_path, previous, _new_bytes, _file_mode in planned:
+            current_exists = os.path.lexists(safe_path)
+            current = _read_bytes_or_none(safe_path) if current_exists else None
+            if current_exists != (previous is not None) or current != previous:
+                raise OSError(f"'{safe_path}' changed while the patch was being prepared")
+
+        for safe_path, _previous, new_bytes, _file_mode in planned:
+            if new_bytes is None:
+                os.remove(safe_path)
+            else:
+                os.replace(staged.pop(safe_path), safe_path)
+            committed.append(safe_path)
+
+    except OSError as error:
+        rollback_errors = []
+        for safe_path in reversed(committed):
+            original, mode = next(
+                (previous, file_mode)
+                for candidate, previous, _new_bytes, file_mode in planned
+                if candidate == safe_path
+            )
+            try:
+                if original is None:
+                    if os.path.exists(safe_path):
+                        os.remove(safe_path)
+                else:
+                    _atomic_restore(safe_path, original, mode)
+            except OSError as rollback_error:
+                rollback_errors.append(f"{safe_path}: {rollback_error}")
+        detail = f"Patch transaction failed: {error}."
+        if rollback_errors:
+            detail += " Rollback also failed for " + "; ".join(rollback_errors)
+        return "TOOL ERROR: " + detail
+    finally:
+        for temporary_path in staged.values():
+            if os.path.exists(temporary_path):
+                os.unlink(temporary_path)
+
+    for safe_path, previous, _new_bytes, _file_mode in planned:
+        _record_edit(safe_path, previous)
+    return f"Successfully applied patch to {len(planned)} file(s)."
+
+
+def _atomic_restore(path: str, content: bytes, mode: int) -> None:
+    with tempfile.NamedTemporaryFile(mode="wb", prefix=".buzzard-restore-", dir=os.path.dirname(path), delete=False) as file:
+        temporary_path = file.name
+        file.write(content)
+        file.flush()
+        os.fsync(file.fileno())
+    try:
+        os.chmod(temporary_path, mode)
+        os.replace(temporary_path, path)
+    finally:
+        if os.path.exists(temporary_path):
+            os.unlink(temporary_path)
 
 
 def file_search(query: str, path: str = ".") -> str:
@@ -533,6 +791,24 @@ def register_filesystem_tools(registry):
         scope_required=True,
         approval_required=False,
         timeout=15
+    )
+    registry.register(
+        name="apply_patch",
+        description="Applies a UTF-8 unified diff to workspace files. Existing files can be edited, new files added with /dev/null headers, and files deleted by a patch. All hunks and paths are validated before any write; the operation requests approval and rolls back earlier replacements if a later one fails. Arguments: patch (str).",
+        func=apply_patch,
+        category=ToolCategory.AUTOMATION,
+        risk_level="MEDIUM",
+        read_only=False,
+        destructive=True,
+        sandbox_required=False,
+        scope_required=True,
+        approval_required=True,
+        timeout=60,
+        schema={
+            "type": "object",
+            "properties": {"patch": {"type": "string"}},
+            "required": ["patch"],
+        },
     )
     registry.register(
         name="multi_edit",

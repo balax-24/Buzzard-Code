@@ -119,7 +119,7 @@ NATIVE_TOOLS_GUIDANCE = (
 # Tools described to the model on coding tasks. This narrows the prompt only; it is not a
 # permission boundary, since dispatch still goes through the full registry and PolicyEngine.
 CODING_TOOL_NAMES = frozenset({
-    "directory_list", "file_search", "file_read", "file_view", "file_edit", "file_write", "multi_edit",
+    "directory_list", "file_search", "file_read", "file_view", "file_edit", "file_write", "multi_edit", "apply_patch",
     "terminal.execute", "git_status", "git_diff", "git_log", "todo_write",
     "code_symbols", "code_references", "code_related", "memory_save",
     "git_prepare_commit", "git_branch_create", "git_commit", "git_prepare_pr",
