@@ -371,6 +371,15 @@ class ToolExecutor:
         exit_code = container_res.exit_code
         error_type = container_res.error_type.value
 
+        if is_success:
+            from verification.edit_diagnostics import diagnose_edited_files
+
+            diagnostics = diagnose_edited_files(tool_name, tool_args)
+            if diagnostics:
+                raw_res_str += "\n\nImmediate syntax diagnostics (edit was applied):\n" + "\n".join(
+                    f"- {diagnostic}" for diagnostic in diagnostics
+                )
+
         # Auto-quarantine if dependency_missing
         if error_type == "dependency_missing" or exit_code == 127:
             if hasattr(self.registry, "quarantine"):
