@@ -169,6 +169,10 @@ def test_full_fix_through_stdio(tmp_path, project):
         tests = client.notification("approval/requested")
         assert tests["tool"] == "terminal.execute" and "pytest" in tests["arguments"]["command"]
         client.request("approval/respond", {"requestId": tests["requestId"], "decision": "allow"})
+        # A bug fix also runs the tests on the original code (reproduce-first), which needs approval too
+        before = client.notification("approval/requested")
+        assert before["tool"] == "terminal.execute" and "before-junit" in before["arguments"]["command"]
+        client.request("approval/respond", {"requestId": before["requestId"], "decision": "allow"})
         evidence = client.notification("run/evidence")
         assert "exit 0" in evidence["report"] and evidence["runId"] == run_id
         finished = client.notification("run/finished")

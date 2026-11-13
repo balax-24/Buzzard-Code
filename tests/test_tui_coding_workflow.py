@@ -544,7 +544,9 @@ def test_evidence_report_uses_real_records_and_warns_about_missing_test(repo, tm
             report = _report(app)
             assert "exit 0, run by the gate" in report and "-m pytest" in report
             assert "`calc.py` +1 -1" in report
-            assert "2 approved, 0 denied" in report
+            # edit, test run, and the reproduce-first run of the tests on the original code
+            assert "3 approved, 0 denied" in report
+            assert "Reproduced: failed before the fix and passes now" in report
             assert "No test changed" in report
             assert "Lint: not configured" in report
             assert "500" not in report

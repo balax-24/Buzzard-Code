@@ -47,7 +47,7 @@ SUPPORTED_SCHEMA_VERSIONS = {7}
 MAX_LISTED_UNCOVERED = 40
 MAX_LISTED_UNMEASURED = 20
 
-_PYTEST_COMMAND = re.compile(r"^(?P<python>\S+)\s+-m\s+pytest(?P<rest>(\s.*)?)$")
+_PYTEST_COMMAND = re.compile(r'^(?P<python>"[^"]+"|\S+)\s+-m\s+pytest(?P<rest>(\s.*)?)$')
 _BARE_PYTEST = re.compile(r"^pytest(?P<rest>(\s.*)?)$")
 _GO_TEST = re.compile(r"^go\s+test(?P<rest>(\s.*)?)$")
 _CARGO_TEST = re.compile(r"^cargo\s+test(?P<rest>(\s.*)?)$")
@@ -136,7 +136,7 @@ def coverage_directory(workspace: Path) -> Path:
 
 
 def coverage_data_path(workspace: Path) -> Path:
-    return coverage_directory(workspace) / "coverage.db"
+    return coverage_directory(workspace) / "coverage-data"
 
 
 def _fresh(path: Path) -> None:
@@ -477,7 +477,7 @@ def plan_coverage(workspace: Path, command: str, runner: Optional[str], settings
         if _PYTEST_COMMAND.match(text) or _BARE_PYTEST.match(text):
             return _plan_python(workspace, text, python, directory)
         if _GO_TEST.match(text):
-            profile = directory / "go-cover.out"
+            profile = directory / "go-cover-profile"
             _fresh(profile)
             return CoveragePlan(
                 wrap_go_command(text, profile) or text, not_measured("tests did not finish", "go test -cover"),
@@ -487,7 +487,7 @@ def plan_coverage(workspace: Path, command: str, runner: Optional[str], settings
             tool = "cargo-llvm-cov"
             if shutil.which("cargo-llvm-cov") is None:
                 return CoveragePlan(text, not_measured("cargo-llvm-cov is not installed (cargo install cargo-llvm-cov)", tool))
-            lcov_file = directory / "rust.lcov"
+            lcov_file = directory / "rust-lcov"
             _fresh(lcov_file)
             return CoveragePlan(
                 wrap_cargo_command(text, lcov_file) or text, not_measured("tests did not finish", tool),
@@ -518,7 +518,7 @@ def _plan_python(workspace: Path, command: str, python: str, directory: Path) ->
         return CoveragePlan(command, not_measured("coverage.py is not installed in the project's virtual environment"))
     if version < MIN_COVERAGE_VERSION:
         return CoveragePlan(command, not_measured("coverage.py 6.3 or newer is needed"))
-    data_file = directory / "coverage.db"
+    data_file = directory / "coverage-data"
     wrapped = wrap_pytest_command(command, data_file, python)
     if wrapped is None:
         return CoveragePlan(command, not_measured("could not find the project's Python interpreter"))

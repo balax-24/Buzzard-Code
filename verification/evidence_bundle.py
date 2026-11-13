@@ -146,6 +146,7 @@ def create_evidence_bundle(
         "lint_command": getattr(verification, "lint_command", None),
         "lint_status": getattr(verification, "lint_status", "not measured"),
         "changed_line_coverage": getattr(verification, "changed_line_coverage", None),
+        "reproduction": getattr(verification, "reproduction", None),
     }
     bundle: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,

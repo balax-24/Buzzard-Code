@@ -39,6 +39,28 @@ class PolicyDecision:
     approved: bool = False
 
 
+_QUOTED = re.compile(r'"([^"]*)"|\'([^\']*)\'')
+_ABSOLUTE_PATH = re.compile(r"^(?:[A-Za-z]:[\\/]|[\\/])")
+
+
+def _only_inside_absolute_paths(candidate: str, command: str) -> bool:
+    """
+    True when every occurrence of a domain-like string sits inside a quoted absolute file path,
+    such as --data-file="C:\\Users\\john.doe\\.buzzard\\coverage-data". Buzzard quotes the paths it
+    builds; a host named anywhere else in the command, or inside a URL, is still checked.
+    """
+    remainder = command
+    found = False
+    for match in _QUOTED.finditer(command):
+        text = match.group(1) if match.group(1) is not None else match.group(2)
+        if candidate in text:
+            if "://" in text or not _ABSOLUTE_PATH.match(text):
+                return False
+            found = True
+            remainder = remainder.replace(match.group(0), " ", 1)
+    return found and candidate not in remainder
+
+
 def _names_existing_file(candidate: str, command: str) -> bool:
     """True when a domain-like string in a command is really a file path, such as test_app.py."""
     from pathlib import Path
@@ -252,7 +274,7 @@ class PolicyEngine:
             for candidate in domains + ips:
                 if candidate.lower() in ["localhost", "127.0.0.1"]:
                     continue
-                if _names_existing_file(candidate, command):
+                if _names_existing_file(candidate, command) or _only_inside_absolute_paths(candidate, command):
                     continue
                 if not is_in_scope(candidate, self.scope):
                     return False, f"Command contains out-of-scope target '{candidate}'. Scope is: {self.scope}"

@@ -62,6 +62,17 @@ def build_evidence_report(verification: Any, workspace: str, approved: int, deni
     if command and isinstance(coverage, dict):
         lines.append(f"- {_coverage_mark(coverage)} Changed-line coverage: {_coverage_text(coverage)}")
 
+    reproduction = getattr(verification, "reproduction", None)
+    if command and isinstance(reproduction, dict):
+        status = reproduction.get("status")
+        if status == "reproduced":
+            tests = ", ".join(f"`{test}`" for test in reproduction.get("reproduced_tests") or [])
+            lines.append(f"- ✓ Reproduced: failed before the fix and passes now: {tests}")
+        elif status == "not_reproduced":
+            lines.append(f"- ⚠ Not reproduced: {reproduction.get('reason')}")
+        else:
+            lines.append(f"- ○ Reproduce-first: not checked ({reproduction.get('reason') or 'unknown reason'})")
+
     lint_status = getattr(verification, "lint_status", "not configured")
     lint_mark = {"passed": "✓", "issues found": "⚠"}.get(lint_status, "○")
     lines.append(f"- {lint_mark} Lint: {lint_status}")

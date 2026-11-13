@@ -25,6 +25,16 @@ from typing import Callable, Dict, Any, List, Optional, Tuple
 from tools.filesystem import get_active_workspace
 from sandbox.container import ControlledHostSandbox
 from verification.changed_coverage import CoveragePlan, not_measured, plan_coverage
+from verification.reproduce_first import (
+    ReproductionResult,
+    check_directory,
+    check_reproduction,
+    is_bug_fix_task,
+    not_checked,
+    reproduce_mode,
+    split_pytest_command,
+    with_junit,
+)
 from verification.docker_tests import (
     IsolationConfigError,
     container_command,
@@ -53,6 +63,7 @@ class CodingVerificationResult:
     lint_status: str = "not configured"
     test_environment: str = "host"
     changed_line_coverage: Optional[Dict[str, Any]] = None
+    reproduction: Optional[Dict[str, Any]] = None
 
 
 _EDIT_REQUEST = re.compile(
@@ -329,6 +340,33 @@ class CodingVerifier:
         self.command_approver = command_approver
         self.sandbox = ControlledHostSandbox(workspace=self.workspace)
 
+    def _plan_reproduction(
+        self, task_goal: str, test_command: str, settings: Dict[str, Any], workspace: Path
+    ) -> Tuple[Optional[ReproductionResult], Optional[Path]]:
+        """Decides whether the reproduce-first check applies; returns (result so far, JUnit path)."""
+        if not is_bug_fix_task(task_goal):
+            return None, None
+        mode, problem = reproduce_mode(settings)
+        if problem:
+            return not_checked(problem), None
+        if mode == "off":
+            return not_checked("turned off in .buzzard/project.json"), None
+        if split_pytest_command(test_command, project_python(workspace)) is None:
+            return not_checked("only pytest test commands are checked so far"), None
+        after_junit = check_directory(workspace) / "after-junit"
+        try:
+            after_junit.parent.mkdir(parents=True, exist_ok=True)
+            after_junit.unlink(missing_ok=True)
+        except OSError as error:
+            return not_checked(f"could not prepare the test report: {error}"), None
+        return not_checked("tests did not finish"), after_junit
+
+    def _run_in_directory(self, timeout: float) -> Callable[[Path, str], int]:
+        def run(directory: Path, command: str) -> int:
+            result = ControlledHostSandbox(workspace=str(directory)).execute(command, timeout=timeout)
+            return int(result.get("exit_code", 1)) if isinstance(result, dict) else int(getattr(result, "exit_code", 1))
+        return run
+
     def _run_lint(self, workspace: Path) -> Tuple[Optional[str], str]:
         """Reports lint results without blocking, so existing lint debt cannot stop a good fix."""
         command = detect_lint_command(workspace, list_changed_files(workspace))
@@ -429,6 +467,9 @@ class CodingVerifier:
                     test_environment="docker (unavailable)",
                 )
             coverage_plan: Optional[CoveragePlan] = None
+            reproduction: Optional[ReproductionResult] = None
+            after_junit: Optional[Path] = None
+            plain_test_command = cmd
             if use_docker:
                 container_test = container_command(detected_runner, cmd, configured)
                 cmd = f"{isolation.setup} && {container_test}" if isolation.setup else container_test
@@ -436,12 +477,18 @@ class CodingVerifier:
                 coverage_plan = CoveragePlan(cmd, not_measured(
                     "tests ran in Docker; the coverage tool would have to be installed in the container image"
                 ))
+                if is_bug_fix_task(task_goal):
+                    reproduction = not_checked("tests ran in Docker; the reproduce-first check runs on the host only")
             else:
                 environment = "host (Docker not reachable)" if isolation.mode == "auto" else "host"
+                plain_test_command = cmd
                 coverage_plan = plan_coverage(
                     workspace_path, cmd, detected_runner, settings, project_python(workspace_path)
                 )
                 cmd = coverage_plan.command
+                reproduction, after_junit = self._plan_reproduction(task_goal, plain_test_command, settings, workspace_path)
+                if after_junit is not None:
+                    cmd = with_junit(cmd, after_junit)
 
             if self.command_approver is not None and not self.command_approver(cmd):
                 return CodingVerificationResult(
@@ -494,7 +541,32 @@ class CodingVerifier:
                     changed_line_coverage=coverage_result,
                 )
 
-            # Test suite passed!
+            # Test suite passed: for a bug fix, check that some test failed before the fix
+            if after_junit is not None:
+                reproduction = check_reproduction(
+                    workspace_path, plain_test_command, project_python(workspace_path), after_junit,
+                    self.command_approver, self._run_in_directory(resolve_test_timeout(settings)),
+                )
+            reproduction_result = reproduction.to_dict() if reproduction is not None else None
+            mode, _ = reproduce_mode(settings)
+            if mode == "require" and reproduction is not None and reproduction.status == "not_reproduced":
+                return CodingVerificationResult(
+                    passed=False,
+                    requires_action=True,
+                    message=(
+                        "COMPLETION GATE REJECTED: This is a bug fix, but no test fails on the original code "
+                        "and passes with the fix (reproduce_first is \"require\").\n"
+                        "Write a test that reproduces the bug, confirm it fails without the fix, then complete again."
+                    ),
+                    runner_detected=runner,
+                    test_command=cmd,
+                    test_exit_code=0,
+                    test_output=output[-500:],
+                    diff_summary=diff_text[:800] if diff_text else None,
+                    test_environment=environment,
+                    changed_line_coverage=coverage_result,
+                    reproduction=reproduction_result,
+                )
             lint_command, lint_status = self._run_lint(workspace_path)
             return CodingVerificationResult(
                 lint_command=lint_command,
@@ -509,6 +581,7 @@ class CodingVerifier:
                 test_output=output[-500:],
                 diff_summary=diff_text[:800] if diff_text else None,
                 changed_line_coverage=coverage_result,
+                reproduction=reproduction_result,
             )
 
         # Gate 4: If no test runner configured, pass if syntax and diff are valid

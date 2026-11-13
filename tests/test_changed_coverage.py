@@ -206,7 +206,7 @@ def test_gate_wraps_command_and_records_coverage(repo, tmp_path, monkeypatch):
 
     verifier = CodingVerifier(workspace=str(repo), command_approver=lambda command: True)
     monkeypatch.setattr(verifier.sandbox, "execute", fake_execute)
-    result = verifier.verify_task("fix the total function")
+    result = verifier.verify_task("update the total function")
     assert result.passed, result.message
     assert "-m coverage run --data-file=" in commands[0] and commands[0].endswith("-m pytest -q")
     assert str(tmp_path / "home") in commands[0] and str(repo) not in commands[0].split("--data-file=")[1]
@@ -224,7 +224,7 @@ def test_gate_without_coverage_installed_runs_plain_command(repo, tmp_path, monk
     verifier = CodingVerifier(workspace=str(repo), command_approver=lambda command: True)
     monkeypatch.setattr(verifier.sandbox, "execute",
                         lambda command, timeout=None, **kwargs: commands.append(command) or {"exit_code": 0, "stdout": "", "stderr": ""})
-    result = verifier.verify_task("fix the total function")
+    result = verifier.verify_task("update the total function")
     assert result.passed and "coverage" not in commands[0]
     assert result.changed_line_coverage == ChangedLineCoverage(
         measured=False, reason="coverage.py is not installed in the project's virtual environment"
@@ -300,7 +300,7 @@ def test_plan_explains_missing_tools(tmp_path, monkeypatch):
 
 def test_plan_removes_stale_reports(tmp_path, monkeypatch):
     monkeypatch.setenv("BUZZARD_HOME", str(tmp_path / "home"))
-    stale = cc.coverage_directory(tmp_path) / "go-cover.out"
+    stale = cc.coverage_directory(tmp_path) / "go-cover-profile"
     stale.parent.mkdir(parents=True)
     stale.write_text("old", encoding="utf-8")
     plan = plan_coverage(tmp_path, "go test ./...", "go", {}, "python")
