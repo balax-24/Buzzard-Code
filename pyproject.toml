@@ -37,6 +37,7 @@ training = [
     "datasets>=2.18.0",
     "accelerate>=0.29.0",
 ]
+benchmarks = ["datasets>=2.18.0"]
 
 [build-system]
 requires = ["hatchling"]

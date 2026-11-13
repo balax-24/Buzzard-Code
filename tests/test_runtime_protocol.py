@@ -173,6 +173,11 @@ def test_full_fix_through_stdio(tmp_path, project):
         assert "exit 0" in evidence["report"] and evidence["runId"] == run_id
         finished = client.notification("run/finished")
         assert finished["status"] == "completed" and finished["finalAnswer"] == "Fixed add."
+        assert finished["metrics"]["modelCalls"] == 2
+        assert finished["metrics"]["turns"] > 0
+        assert finished["metrics"]["inputCount"] > 0
+        assert finished["metrics"]["countsEstimated"] is True
+        assert finished["metrics"]["costUsd"] is None
         assert any(m.get("method") == "tool/started" and m["params"]["tool"] == "file_edit" for m in client.seen)
         assert "return a + b" in (project / "calc.py").read_text(encoding="utf-8")
     finally:

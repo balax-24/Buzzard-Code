@@ -22,6 +22,7 @@ import logging
 import os
 import sys
 import threading
+import time
 from typing import Any, Callable, Dict, IO, Optional
 
 from agent.run_session import ALLOW, ALLOW_SESSION, DECISIONS, DENY, ApprovalRequest, RunSession
@@ -68,6 +69,9 @@ class StdioRuntimeServer:
         self._pending_lock = threading.Lock()
         self._closed = threading.Event()
         self._run_thread: Optional[threading.Thread] = None
+        self._run_started_at: Optional[float] = None
+        self._run_metrics: Dict[str, Any] = {}
+        self._run_metrics_lock = threading.Lock()
         self.session: Optional[RunSession] = None
         self.workspace: Optional[str] = None
 
@@ -172,6 +176,7 @@ class StdioRuntimeServer:
         else:
             from model.factory import get_model_provider
             provider = get_model_provider(config=config)
+        runtime_config = config.get("runtime") if isinstance(config.get("runtime"), dict) else {}
         bus = EventBus()
         bus.subscribe_all(self._forward_event)
         self.session = RunSession(
@@ -188,6 +193,13 @@ class StdioRuntimeServer:
             "serverInfo": {"name": "buzzard-code"},
             "workspace": self.workspace,
             "model": str(getattr(provider, "model_name", "unknown")),
+            "provider": type(provider).__name__,
+            "settings": {
+                "maxIterations": runtime_config.get("max_iterations"),
+                "timeoutSeconds": runtime_config.get("timeout_seconds"),
+                "sandbox": runtime_config.get("sandbox"),
+                "confirmation": runtime_config.get("confirmation"),
+            },
             "capabilities": {"planMode": True, "memory": True, "undo": True, "subagents": True},
         }
 
@@ -202,6 +214,15 @@ class StdioRuntimeServer:
         import uuid
 
         run_id = f"task-{uuid.uuid4().hex[:8]}"
+        with self._run_metrics_lock:
+            self._run_started_at = time.monotonic()
+            self._run_metrics = {
+                "modelCalls": 0,
+                "inputCount": 0,
+                "outputCount": 0,
+                "countsEstimated": False,
+                "turns": 0,
+            }
         self._run_thread = threading.Thread(target=self._run_task, args=(goal.strip(), run_id), daemon=True)
         self._run_thread.start()
         return {"runId": run_id}
@@ -212,11 +233,17 @@ class StdioRuntimeServer:
         self._deny_pending()
         if outcome.evidence_report:
             self.notify("run/evidence", {"runId": run_id, "report": outcome.evidence_report})
+        with self._run_metrics_lock:
+            metrics = dict(self._run_metrics)
+            if self._run_started_at is not None:
+                metrics["elapsedSeconds"] = round(time.monotonic() - self._run_started_at, 3)
+            metrics["costUsd"] = None
         self.notify("run/finished", {
             "runId": run_id,
             "status": outcome.status,
             "finalAnswer": outcome.final_answer,
             "error": outcome.error,
+            "metrics": metrics,
         })
 
     def _run_cancel(self, params: Dict[str, Any]) -> Dict[str, Any]:
@@ -279,10 +306,24 @@ class StdioRuntimeServer:
 
     # -- events --------------------------------------------------------------------------
     def _forward_event(self, event: Any) -> None:
-        method = FORWARDED_EVENTS.get(getattr(getattr(event, "type", None), "value", ""))
+        payload = getattr(event, "payload", {}) or {}
+        event_type = getattr(getattr(event, "type", None), "value", "")
+        if event_type == "model.completed":
+            with self._run_metrics_lock:
+                self._run_metrics["modelCalls"] += 1
+                self._run_metrics["inputCount"] += int(payload.get("prompt_tokens") or 0)
+                self._run_metrics["outputCount"] += int(payload.get("output_tokens") or 0)
+                self._run_metrics["countsEstimated"] = (
+                    self._run_metrics["countsEstimated"] or bool(payload.get("tokens_estimated"))
+                )
+            return
+        if event_type in ("assessment.completed", "assessment.stopped"):
+            with self._run_metrics_lock:
+                self._run_metrics["turns"] = int(payload.get("iterations") or 0)
+            return
+        method = FORWARDED_EVENTS.get(event_type)
         if not method:
             return
-        payload = getattr(event, "payload", {}) or {}
         params: Dict[str, Any] = {"tool": payload.get("tool"), "runId": getattr(event, "assessment_id", None)}
         if method == "tool/started":
             params["arguments"] = payload.get("args", {})
