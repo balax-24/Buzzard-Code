@@ -698,6 +698,10 @@ class BuzzardTUIApp(App[None]):
         if self.plan_mode:
             self.approvals_denied += 1
             return False
+        from tools.mcp_client import is_mcp_auto_approved
+        if is_mcp_auto_approved(tool_name):
+            self.approvals_granted += 1
+            return True
         from sandbox.container import is_docker_active
 
         session_rule = session_rule_for(tool_name, arguments)
@@ -832,8 +836,18 @@ class BuzzardTUIApp(App[None]):
         manager = get_mcp_manager()
         lines = [f"MCP config: `{mcp_config_path()}`", ""]
         for name, connection in manager.connections.items():
-            tools = ", ".join(str(tool["name"]) for tool in connection.tools) or "no tools"
-            lines.append(f"- **{name}**: connected ({tools})")
+            rules = manager.permissions.get(name, {})
+            allowed = [str(tool["name"]) for tool in manager.allowed_tools(name)]
+            auto = sorted(set(allowed) & rules.get("auto", set()))
+            hidden = len(connection.tools) - len(allowed)
+            details = [f"{connection.transport}", f"tools: {', '.join(allowed) or 'none'}"]
+            if auto:
+                details.append(f"run without asking: {', '.join(auto)}")
+            if hidden:
+                details.append(f"{hidden} disabled")
+            if connection.resources:
+                details.append(f"{len(connection.resources)} resource(s)" + ("" if rules.get("resources", True) else " hidden"))
+            lines.append(f"- **{name}**: connected ({'; '.join(details)})")
         for name, error in manager.errors.items():
             lines.append(f"- **{name}**: failed ({error})")
         if not manager.connections and not manager.errors:
