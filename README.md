@@ -154,7 +154,7 @@ The two highlighted boxes are deterministic code. The model cannot talk its way 
 - MCP client for stdio servers
 
 **Since the hackathon**
-- Stronger proof at the gate: for a bug fix, a test must fail on the original code and pass with the fix (reproduce-first); changed-line coverage for pytest, Go, Node (c8) and Rust; an optional mutation check that breaks each changed line on purpose and reports what no test caught
+- Stronger proof at the gate: for a bug fix, a test must fail on the original code and pass with the fix (reproduce-first); changed-line coverage for pytest, Go, Node (c8) and Rust; an optional mutation check (Python, JavaScript, TypeScript, Go) that breaks each changed line on purpose and reports what no test caught
 - `related_tests` finds the tests that import the changed code, so the agent can test a change quickly before the full suite
 - Language-server tools (`lsp_definition`, `lsp_references`, `lsp_diagnostics`, `lsp_rename`) when gopls, Pyright, typescript-language-server or another server is installed, with a fallback to the built-in code index
 - Repository index, project memory, git branch and commit tools, background processes and a persistent shell, workspace checkpoints with rewind
