@@ -121,7 +121,7 @@ NATIVE_TOOLS_GUIDANCE = (
 CODING_TOOL_NAMES = frozenset({
     "directory_list", "file_search", "file_read", "file_view", "file_edit", "file_write",
     "terminal.execute", "git_status", "git_diff", "git_log", "todo_write",
-    "code_symbols", "code_references", "code_related",
+    "code_symbols", "code_references", "code_related", "memory_save",
 })
 
 
@@ -156,6 +156,8 @@ class AgentLoop:
         self.registry = registry or create_authoritative_registry()
         register_git_tools(self.registry)
         register_code_index_tools(self.registry)
+        from agent.project_memory import register_memory_tools
+        register_memory_tools(self.registry)
         self.storage = storage_manager or StorageManager()
         self.evidence_parser = EvidenceParser()
         self.assessment_logger = AssessmentLogger()
@@ -968,6 +970,8 @@ class AgentLoop:
         if is_coding:
             from agent.project_context import load_project_instructions
             system_prompt += load_project_instructions(self.config.get("workspace"))
+            from agent.project_memory import memory_prompt
+            system_prompt += memory_prompt(self.config.get("workspace"))
         if not is_canonical and not is_coding:
             system_prompt += f"\n\n{self.assessment_context.format_summary()}\n"
 

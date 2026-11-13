@@ -128,6 +128,7 @@ BUZZARD_COMMANDS: List[tuple[str, str]] = [
     ("/test", "Ask the agent to run the tests and report"),
     ("/export", "Save this conversation to a file"),
     ("/undo", "Revert the agent's latest file edit"),
+    ("/memory", "Project memory: list, add, forget <n>, clear, on, off"),
     ("/failover", "Show backup models; /failover test rehearses an outage"),
     ("/plan", "Toggle plan mode: no edits or commands run"),
     ("/continue", "Restore the last conversation in this workspace"),
@@ -951,6 +952,11 @@ class BuzzardTUIApp(App[None]):
 
         elif command == "/failover":
             self._handle_failover_command(tokens[1:])
+            return
+
+        elif command == "/memory":
+            from agent.project_memory import handle_memory_command
+            self._system_note(handle_memory_command(tokens[1:]))
             return
 
         elif command == "/undo":

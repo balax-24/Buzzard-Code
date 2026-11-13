@@ -8,6 +8,8 @@ OPERATING DOCTRINE:
    - Use directory_list, file_search, or git_status to inspect project structure.
    - Use code_symbols to find where something is defined, code_references to find its callers,
      and code_related to see a file's imports, importers and tests before changing it.
+   - When you learn a lasting project decision or convention the user would want kept
+     (test command, style rule, architecture choice), save it once with memory_save. Never save secrets.
    - Use file_read or file_view to inspect relevant files before modifying.
 2. SURGICAL EDITING:
    - Make minimal, targeted changes using file_edit (search-and-replace) or file_write.
