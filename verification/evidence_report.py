@@ -73,6 +73,19 @@ def build_evidence_report(verification: Any, workspace: str, approved: int, deni
         else:
             lines.append(f"- ○ Reproduce-first: not checked ({reproduction.get('reason') or 'unknown reason'})")
 
+    mutation = getattr(verification, "mutation", None)
+    if command and isinstance(mutation, dict):
+        if mutation.get("status") == "checked":
+            survived = mutation.get("survived") or []
+            text = f"{mutation.get('killed')} of {mutation.get('mutants')} deliberate breakages caught by the tests"
+            if survived:
+                shown = "; ".join(f"`{item['path']}:{item['line']}` {item['change']}" for item in survived[:5])
+                lines.append(f"- ⚠ Mutation check: {text}; not caught: {shown}")
+            else:
+                lines.append(f"- ✓ Mutation check: {text}")
+        else:
+            lines.append(f"- ○ Mutation check: not checked ({mutation.get('reason') or 'unknown reason'})")
+
     lint_status = getattr(verification, "lint_status", "not configured")
     lint_mark = {"passed": "✓", "issues found": "⚠"}.get(lint_status, "○")
     lines.append(f"- {lint_mark} Lint: {lint_status}")

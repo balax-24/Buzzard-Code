@@ -24,7 +24,8 @@ from typing import Callable, Dict, Any, List, Optional, Tuple
 
 from tools.filesystem import get_active_workspace
 from sandbox.container import ControlledHostSandbox
-from verification.changed_coverage import CoveragePlan, not_measured, plan_coverage
+from verification.changed_coverage import CoveragePlan, changed_python_lines, not_measured, plan_coverage
+from verification import mutation_check
 from verification.reproduce_first import (
     ReproductionResult,
     check_directory,
@@ -64,6 +65,7 @@ class CodingVerificationResult:
     test_environment: str = "host"
     changed_line_coverage: Optional[Dict[str, Any]] = None
     reproduction: Optional[Dict[str, Any]] = None
+    mutation: Optional[Dict[str, Any]] = None
 
 
 _EDIT_REQUEST = re.compile(
@@ -367,6 +369,23 @@ class CodingVerifier:
             return int(result.get("exit_code", 1)) if isinstance(result, dict) else int(getattr(result, "exit_code", 1))
         return run
 
+    def _run_mutation_check(
+        self, settings: Dict[str, Any], workspace: Path, test_command: str, use_docker: bool
+    ) -> Optional[mutation_check.MutationResult]:
+        """The optional mutation check (C5); None when it is turned off."""
+        mode, limit, problem = mutation_check.mutation_settings(settings)
+        if problem:
+            return mutation_check.not_checked(problem)
+        if mode == "off":
+            return None
+        if use_docker:
+            return mutation_check.not_checked("tests ran in Docker; the mutation check runs on the host only")
+        return mutation_check.check_mutations(
+            workspace, test_command, project_python(workspace), changed_python_lines(workspace),
+            list_changed_files(workspace), limit, self.command_approver,
+            self._run_in_directory(resolve_test_timeout(settings)),
+        )
+
     def _run_lint(self, workspace: Path) -> Tuple[Optional[str], str]:
         """Reports lint results without blocking, so existing lint debt cannot stop a good fix."""
         command = detect_lint_command(workspace, list_changed_files(workspace))
@@ -567,6 +586,28 @@ class CodingVerifier:
                     changed_line_coverage=coverage_result,
                     reproduction=reproduction_result,
                 )
+            mutation = self._run_mutation_check(settings, workspace_path, plain_test_command, use_docker)
+            mutation_result = mutation.to_dict() if mutation is not None else None
+            if mutation is not None and mutation.survived and mutation_check.mutation_settings(settings)[0] == "require":
+                survivors = "\n".join(f"- {item['path']}:{item['line']}: {item['change']}" for item in mutation.survived)
+                return CodingVerificationResult(
+                    passed=False,
+                    requires_action=True,
+                    message=(
+                        "COMPLETION GATE REJECTED: The tests pass, but they also pass when these changed lines are "
+                        f"broken on purpose (mutation_check is \"require\"):\n{survivors}\n"
+                        "Add or strengthen tests so each of these changes makes a test fail, then complete again."
+                    ),
+                    runner_detected=runner,
+                    test_command=cmd,
+                    test_exit_code=0,
+                    test_output=output[-500:],
+                    diff_summary=diff_text[:800] if diff_text else None,
+                    test_environment=environment,
+                    changed_line_coverage=coverage_result,
+                    reproduction=reproduction_result,
+                    mutation=mutation_result,
+                )
             lint_command, lint_status = self._run_lint(workspace_path)
             return CodingVerificationResult(
                 lint_command=lint_command,
@@ -582,6 +623,7 @@ class CodingVerifier:
                 diff_summary=diff_text[:800] if diff_text else None,
                 changed_line_coverage=coverage_result,
                 reproduction=reproduction_result,
+                mutation=mutation_result,
             )
 
         # Gate 4: If no test runner configured, pass if syntax and diff are valid
