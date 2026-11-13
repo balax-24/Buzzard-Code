@@ -839,6 +839,10 @@ class AgentLoop:
         """
         session_id = session_id or f"session-{uuid.uuid4().hex[:8]}"
         self.run_target, self.run_scope = target, scope or [target]
+        # Quiet runs point the shared console at a buffer; put it back afterwards. The private
+        # attributes are saved because `_file is None` means "follow sys.stdout", which a plain
+        # `console.file` read would pin to whatever stdout is now.
+        saved_console = (getattr(console, "_file", None), getattr(console, "_force_terminal", None))
         try:
             if self.subagent_role:
                 return self._run(task_goal, target, scope, session_id, conversation_history, attached_context)
@@ -850,6 +854,8 @@ class AgentLoop:
             finally:
                 set_parent_loop(None)
         finally:
+            if self.quiet:
+                console._file, console._force_terminal = saved_console
             try:
                 from tools.process_manager import cleanup_session_processes
                 cleanup_session_processes(session_id)
