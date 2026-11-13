@@ -436,3 +436,5 @@ def register_code_index_tools(registry) -> None:
         description="Lists the local files a source file imports, the files that import it, and its tests. Arguments: path (str).",
         func=code_related, **common,
     )
+    from tools.semantic_search import register_semantic_search_tool
+    register_semantic_search_tool(registry)

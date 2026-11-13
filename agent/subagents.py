@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 READ_TOOLS: FrozenSet[str] = frozenset({
     "directory_list", "file_search", "file_read", "file_view",
-    "code_symbols", "code_references", "code_related", "related_tests",
+    "code_symbols", "code_references", "code_related", "code_search", "related_tests",
     "lsp_definition", "lsp_references", "lsp_diagnostics",
     "git_status", "git_diff", "git_log",
 })

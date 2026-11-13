@@ -157,6 +157,7 @@ The two highlighted boxes are deterministic code. The model cannot talk its way 
 - Stronger proof at the gate: for a bug fix, a test must fail on the original code and pass with the fix (reproduce-first); changed-line coverage for pytest, Go, Node (c8) and Rust; an optional mutation check (Python, JavaScript, TypeScript, Go) that breaks each changed line on purpose and reports what no test caught
 - `related_tests` finds the tests that import the changed code, so the agent can test a change quickly before the full suite
 - Language-server tools (`lsp_definition`, `lsp_references`, `lsp_diagnostics`, `lsp_rename`) when gopls, Pyright, typescript-language-server or another server is installed, with a fallback to the built-in code index
+- Semantic code search (`code_search`): find code by what it does, with a local Ollama embedding model or a built-in lexical fallback; nothing leaves your machine by default
 - Repository index, project memory, git branch and commit tools, background processes and a persistent shell, workspace checkpoints with rewind
 - Subagents (explore, review, test, code), optionally on a cheaper model
 - Best-of-N attempts: run a task several times in separate worktrees and keep the best verified result
@@ -322,6 +323,7 @@ Nothing is approved unless a flag allows it. Exit code 0 means the task complete
 | `task_budget` in your config | Limits for a coding task: `max_tokens`, `max_usd`, `max_minutes`, `max_turns` |
 | `model.subagent` in your config | A different `provider/model` for subagents |
 | `model.prompt_caching` in your config | `false` turns off Anthropic prompt caching |
+| `semantic_search` in your config | `embedder` (`auto`/`ollama`/`lexical`), `model` (default `nomic-embed-text`), `url` (local Ollama); a remote `url` needs `allow_remote: true` |
 | `durable_tasks` in your config | `false` stops saving tasks for resume |
 | `~/.buzzard/lsp.json`, `~/.buzzard/hooks.json` | Language-server commands and hooks; user level only, never from a repository |
 | `BUZZARD_MCP_CONFIG` | Use a different MCP config path |
@@ -376,7 +378,7 @@ Buzzard began as a security assessment agent, and that tooling remains in `tools
 
 **Failover limits:** a failing model may retry for 30 seconds or more before the switch. If a reply fails after output has started, you see the error rather than a silent retry. Failover has been tested against simulated failures, not a real outage.
 
-**Not yet built:** subagents, repository indexing or semantic search, IDE integration, and MCP resources, prompts or HTTP transport.
+**Not yet built:** IDE integration, and MCP resources, prompts or HTTP transport.
 
 **Important limits:**
 - A passing gate proves only what the project's tests check. If the tests share a misunderstanding of the requirement, the gate will still pass.
