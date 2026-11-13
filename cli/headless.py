@@ -60,6 +60,7 @@ def run_headless(
     model: Optional[str] = None,
     provider_factory: Optional[Any] = None,
     max_iterations: int = 25,
+    resume: bool = False,
 ) -> Dict[str, Any]:
     """Runs one coding task without a UI and returns a JSON-ready result."""
     from core.config import load_merged_config
@@ -79,7 +80,10 @@ def run_headless(
         config=config, ask_approval=policy.decide, max_iterations=max_iterations,
     )
     session.plan_mode = plan
-    outcome = session.run(task, target="localhost", scope=["localhost", "127.0.0.1"], attempts=attempts)
+    if resume:  # `task` is a saved task id (see durable_tasks.py)
+        outcome = session.resume(task)
+    else:
+        outcome = session.run(task, target="localhost", scope=["localhost", "127.0.0.1"], attempts=attempts)
     return {
         "status": outcome.status,
         "exitCode": exit_code_for(outcome),

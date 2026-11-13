@@ -14,3 +14,12 @@ def temp_db():
         os.remove(path)
     except OSError:
         pass
+
+
+@pytest.fixture(autouse=True)
+def isolated_buzzard_home(tmp_path_factory, monkeypatch):
+    """Keeps task journals and other per-user state out of the real ~/.buzzard during tests.
+
+    Tests that need a specific BUZZARD_HOME still set their own with monkeypatch.
+    """
+    monkeypatch.setenv("BUZZARD_HOME", str(tmp_path_factory.mktemp("buzzard-home")))

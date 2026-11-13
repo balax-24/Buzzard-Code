@@ -142,8 +142,11 @@ def config(action):
 @click.option("--attempts", type=click.IntRange(1, 5), default=1, show_default=True,
               help="Run the task several times and keep the best verified attempt.")
 @click.option("--model", default=None, help="Model override.")
+@click.option("--resume", "resume_task_id", is_flag=True,
+              help="TASK is the id of an unfinished task to continue (see `buzzard exec --list`).")
+@click.option("--list", "list_tasks", is_flag=True, help="List unfinished tasks for the workspace and exit.")
 @click.option("--json", "as_json", is_flag=True, help="Print the result as JSON.")
-def exec_cmd(task, workspace, allow_edits, allow_commands, allow_all, plan, attempts, model, as_json):
+def exec_cmd(task, workspace, allow_edits, allow_commands, allow_all, plan, attempts, model, resume_task_id, list_tasks, as_json):
     """
     Run one coding task without the terminal UI, for CI and scripts.
     Nothing is approved unless a flag allows it. Exit code 0 means completed and verified.
@@ -151,8 +154,18 @@ def exec_cmd(task, workspace, allow_edits, allow_commands, allow_all, plan, atte
     import json as json_module
     from cli.headless import HeadlessPolicy, render_text, run_headless
 
+    if list_tasks:
+        from agent.durable_tasks import list_journals
+
+        saved = list_journals(workspace or Path.cwd(), unfinished_only=True)
+        rows = [{"id": item.session_id, "status": item.status, "turn": item.turn, "goal": item.goal} for item in saved]
+        click.echo(json_module.dumps(rows, indent=2) if as_json else
+                   "\n".join(f"{row['id']}  {row['status']:<8} turn {row['turn']:<3} {row['goal'][:80]}" for row in rows)
+                   or "No unfinished tasks.")
+        return
     policy = HeadlessPolicy(allow_edits=allow_edits, allow_commands=allow_commands, allow_all=allow_all)
-    result = run_headless(task, workspace or Path.cwd(), policy, attempts=attempts, plan=plan, model=model)
+    result = run_headless(task, workspace or Path.cwd(), policy, attempts=attempts, plan=plan, model=model,
+                          resume=resume_task_id)
     click.echo(json_module.dumps(result, indent=2) if as_json else render_text(result))
     raise click.exceptions.Exit(result["exitCode"])
 

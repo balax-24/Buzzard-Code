@@ -1029,8 +1029,26 @@ class AgentLoop:
         checkpointing_enabled = is_coding
         checkpoint_history: Dict[int, List[Dict[str, Any]]] = {}
 
+        journaling_enabled = is_coding and not self.subagent_role and self.config.get("durable_tasks", True) is not False
+
+        def journal_turn(turn_number: int, conversation: List[Dict[str, Any]], state: str = "running") -> None:
+            """Saves the conversation so the task can resume after a crash or restart (durable_tasks.py)."""
+            nonlocal journaling_enabled
+            if not journaling_enabled:
+                return
+            try:
+                from agent.durable_tasks import TaskJournal, save_journal
+                from tools.filesystem import get_active_workspace
+
+                save_journal(TaskJournal(session_id, task_goal, target, list(scope), str(get_active_workspace()),
+                                         status=state, turn=turn_number, messages=conversation))
+            except (OSError, ValueError, TypeError) as error:
+                journaling_enabled = False
+                logger.warning("Task journal disabled for %s: %s", session_id, error)
+
         def checkpoint_turn(turn_number: int, conversation: List[Dict[str, Any]]) -> None:
             nonlocal checkpointing_enabled
+            journal_turn(turn_number, conversation)
             if not checkpointing_enabled:
                 return
             try:
@@ -2114,6 +2132,7 @@ class AgentLoop:
                 self.live.stop()
 
         self.storage.update_session_status(session_id, status)
+        journal_turn(iteration, messages, status.value)
 
         # Emit assessment lifecycle completion event
         completion_event_type = {

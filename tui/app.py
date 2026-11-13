@@ -132,6 +132,7 @@ BUZZARD_COMMANDS: List[tuple[str, str]] = [
     ("/plan", "Toggle plan mode: no edits or commands run"),
     ("/attempts", "Run each coding task N times (1-5); the gate keeps the best"),
     ("/commands", "List custom commands from .buzzard/commands and ~/.buzzard/commands"),
+    ("/tasks", "List unfinished tasks in this workspace; /tasks resume <id> continues one"),
     ("/continue", "Restore the last conversation in this workspace"),
     ("/version", "Buzzard Code version"),
     ("/providers", "Supported model providers"),
@@ -1004,6 +1005,24 @@ class BuzzardTUIApp(App[None]):
             )
             return
 
+        elif command == "/tasks":
+            from agent.durable_tasks import list_journals
+            from tools.filesystem import get_active_workspace
+
+            if len(tokens) >= 3 and tokens[1].lower() == "resume":
+                if self.is_running_operation:
+                    self._system_note("A task is already running.")
+                else:
+                    self._run_security_task(f"Resume task {tokens[2]}", resume_id=tokens[2])
+                return
+            saved = list_journals(get_active_workspace(), unfinished_only=True)
+            if not saved:
+                self._system_note("No unfinished tasks in this workspace.")
+            else:
+                rows = [f"- `{item.session_id}` ({item.status}, turn {item.turn}): {item.goal[:100]}" for item in saved[:15]]
+                self._system_note("### Unfinished tasks\n" + "\n".join(rows) + "\n\nType `/tasks resume <id>` to continue one.")
+            return
+
         elif command == "/commands":
             available = load_custom_commands()
             if not available:
@@ -1301,7 +1320,7 @@ class BuzzardTUIApp(App[None]):
     # Security Assessment Task Execution (AgentLoop)
     # -------------------------------------------------------------------------
     @work(exclusive=True, thread=True)
-    def _run_security_task(self, task_goal: str) -> None:
+    def _run_security_task(self, task_goal: str, resume_id: Optional[str] = None) -> None:
         self.is_running_operation = True
 
         # Enforce KillSwitch
@@ -1318,7 +1337,7 @@ class BuzzardTUIApp(App[None]):
             return
 
         from agent.intent import is_coding_task
-        is_coding = is_coding_task(task_goal)
+        is_coding = resume_id is not None or is_coding_task(task_goal)
 
         # Scope verification
         mentioned_targets = _extract_targets_from_text(task_goal)
@@ -1337,7 +1356,7 @@ class BuzzardTUIApp(App[None]):
             return
 
         primary_target = mentioned_targets[0] if mentioned_targets else self.scope[0]
-        session_id = f"task-{uuid.uuid4().hex[:8]}"
+        session_id = resume_id or f"task-{uuid.uuid4().hex[:8]}"
         self.current_session_id = session_id
 
         self.app.call_from_thread(self.header_widget.update_state, status="PLANNING")
@@ -1351,7 +1370,10 @@ class BuzzardTUIApp(App[None]):
         self.session.provider = self.provider
         self.session.config = self.buzzard_config
         self.session.registry = self.registry
-        outcome = self.session.run(task_goal, target=primary_target, scope=self.scope, session_id=session_id)
+        if resume_id is not None:
+            outcome = self.session.resume(resume_id)
+        else:
+            outcome = self.session.run(task_goal, target=primary_target, scope=self.scope, session_id=session_id)
         if outcome.error:
             self.app.call_from_thread(
                 self.chat_view.add_message,

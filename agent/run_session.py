@@ -20,6 +20,7 @@ import os
 import subprocess
 import threading
 import uuid
+from pathlib import Path
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional
 
@@ -151,20 +152,49 @@ class RunSession:
                 return run_best_of(self, goal, target, scope, session_id, count)
             return self._run(goal, target, scope, session_id)
         finally:
-            try:
-                from tools.process_manager import cleanup_session_processes
-                cleanup_session_processes(session_id)
-            except Exception:
-                logger.exception("Could not clean up managed processes for %s", session_id)
-            try:
-                from tools.shell_manager import cleanup_session_shells
-                cleanup_session_shells(session_id)
-            except Exception:
-                logger.exception("Could not clean up shell for %s", session_id)
-            self.current_loop = None
-            self._run_lock.release()
+            self._finish(session_id)
 
-    def _run(self, goal: str, target: str, scope: List[str], session_id: str) -> RunOutcome:
+    def _finish(self, session_id: str) -> None:
+        """Stops the run's background processes and shell, then frees the session for the next task."""
+        try:
+            from tools.process_manager import cleanup_session_processes
+            cleanup_session_processes(session_id)
+        except Exception:
+            logger.exception("Could not clean up managed processes for %s", session_id)
+        try:
+            from tools.shell_manager import cleanup_session_shells
+            cleanup_session_shells(session_id)
+        except Exception:
+            logger.exception("Could not clean up shell for %s", session_id)
+        self.current_loop = None
+        self._run_lock.release()
+
+    def resume(self, task_id: str) -> RunOutcome:
+        """Continues a saved coding task (see durable_tasks.py) in the same workspace, under the same id."""
+        from agent.durable_tasks import JournalError, continuation_goal, load_journal
+        from tools.filesystem import get_active_workspace
+
+        try:
+            journal = load_journal(task_id)
+        except JournalError as error:
+            return RunOutcome(task_id, "rejected", error=str(error))
+        workspace = str(Path(get_active_workspace()).resolve())
+        if journal.workspace != workspace:
+            return RunOutcome(task_id, "rejected", error=f"Task {task_id} belongs to {journal.workspace}, not {workspace}.")
+        if not journal.unfinished:
+            return RunOutcome(task_id, "rejected", error=f"Task {task_id} already finished ({journal.status}).")
+        if not self._run_lock.acquire(blocking=False):
+            return RunOutcome(task_id, "rejected", error="A task is already running in this session.")
+        try:
+            return self._run(continuation_goal(journal), journal.target, journal.scope or [journal.target],
+                             task_id, history=journal.messages)
+        finally:
+            self._finish(task_id)
+
+    def _run(
+        self, goal: str, target: str, scope: List[str], session_id: str,
+        history: Optional[List[Dict[str, Any]]] = None,
+    ) -> RunOutcome:
         from agent.loop import AgentLoop
 
         self.stop_event.clear()
@@ -194,7 +224,7 @@ class RunSession:
                 target=target,
                 scope=scope,
                 session_id=session_id,
-                conversation_history=self.conversation[-MAX_CONVERSATION_MESSAGES:],
+                conversation_history=history if history is not None else self.conversation[-MAX_CONVERSATION_MESSAGES:],
                 attached_context=build_mention_context(goal),
             )
         except Exception as error:
