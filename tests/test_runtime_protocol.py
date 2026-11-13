@@ -257,6 +257,19 @@ def test_plan_mode_refuses_process_start_and_stop_without_asking(tmp_path, proje
         client.close()
 
 
+def test_plan_mode_refuses_workspace_rewind_without_asking(tmp_path, project):
+    script = [{"tool_calls": [call("workspace_rewind", turn=0)]}]
+    client = start(tmp_path, script)
+    try:
+        initialize(client, project)
+        client.request("run/start", {"goal": "Fix the bug in calc.py", "planMode": True})
+        client.notification("run/finished")
+        assert not any(message.get("method") == "approval/requested" for message in client.seen)
+        assert "return a - b" in (project / "calc.py").read_text(encoding="utf-8")
+    finally:
+        client.close()
+
+
 def test_cancel_while_waiting_denies_and_finishes(tmp_path, project):
     client = start(tmp_path, FIX_SCRIPT)
     try:

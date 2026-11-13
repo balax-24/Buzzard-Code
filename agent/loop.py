@@ -121,6 +121,7 @@ NATIVE_TOOLS_GUIDANCE = (
 CODING_TOOL_NAMES = frozenset({
     "directory_list", "file_search", "file_read", "file_view", "file_edit", "file_write", "file_move", "multi_edit", "apply_patch",
     "process_start", "process_logs", "process_stop",
+    "checkpoint_list", "workspace_rewind",
     "terminal.execute", "git_status", "git_diff", "git_log", "todo_write",
     "code_symbols", "code_references", "code_related", "memory_save",
     "git_prepare_commit", "git_branch_create", "git_commit", "git_prepare_pr",
@@ -168,6 +169,8 @@ class AgentLoop:
             register_git_workflow_tools(self.registry)
             from tools.process_manager import register_process_tools
             register_process_tools(self.registry)
+            from agent.workspace_checkpoints import register_checkpoint_tools
+            register_checkpoint_tools(self.registry)
             from agent.subagents import register_subagent_tools
             register_subagent_tools(self.registry)
         self.run_target: Optional[str] = None
@@ -997,6 +1000,23 @@ class AgentLoop:
         # Initialize conversation messages
         is_coding = bool(self.subagent_role) or is_coding_task(task_goal)
         self._is_coding_task = is_coding
+        checkpointing_enabled = is_coding
+
+        def checkpoint_turn(turn_number: int) -> None:
+            nonlocal checkpointing_enabled
+            if not checkpointing_enabled:
+                return
+            try:
+                from agent.workspace_checkpoints import (
+                    CheckpointError,
+                    create_workspace_checkpoint,
+                )
+                from tools.filesystem import get_active_workspace
+
+                create_workspace_checkpoint(get_active_workspace(), session_id, turn_number)
+            except (CheckpointError, OSError) as error:
+                checkpointing_enabled = False
+                logger.warning("Workspace checkpoints disabled for %s: %s", session_id, error)
         prompt_mode = self.config.get("prompt_mode", "baseline")
         if is_coding and prompt_mode == "baseline":
             prompt_mode = "coding"
@@ -1123,6 +1143,7 @@ class AgentLoop:
 
             while iteration < self.max_iterations:
                 iteration += 1
+                checkpoint_turn(iteration - 1)
                 self.ui_iteration = iteration
                 if self.stop_event is not None and self.stop_event.is_set():
                     status = TaskStatus.PAUSED
@@ -2041,6 +2062,7 @@ class AgentLoop:
             status = TaskStatus.FAILED
             self.assessment_state.transition(AssessmentPhase.FAILED)
         finally:
+            checkpoint_turn(iteration)
             if self.ui_active:
                 self.live.stop()
 

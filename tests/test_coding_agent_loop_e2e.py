@@ -94,6 +94,9 @@ TASK = "Fix the bug in calc.py so the test suite passes."
 
 
 def test_agent_fixes_bug_and_completes(buggy_repo, tmp_path):
+    head_before = subprocess.run(
+        ["git", "-C", str(buggy_repo), "rev-parse", "HEAD"], check=True, capture_output=True, text=True,
+    ).stdout.strip()
     provider = ScriptedProvider([
         {"tool_calls": [call("file_read", path="calc.py")]},
         {"tool_calls": [FIX]},
@@ -102,6 +105,17 @@ def test_agent_fixes_bug_and_completes(buggy_repo, tmp_path):
     result = run_loop(provider, TASK, tmp_path)
     assert "return a + b" in (buggy_repo / "calc.py").read_text(encoding="utf-8")
     assert result["status"] == "completed"
+    refs = subprocess.run(
+        ["git", "-C", str(buggy_repo), "for-each-ref", "--format=%(refname)", "refs/buzzard/checkpoints/"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.splitlines()
+    assert any(ref.endswith("/turn-000000") for ref in refs)
+    assert any(ref.endswith("/turn-000001") for ref in refs)
+    assert subprocess.run(
+        ["git", "-C", str(buggy_repo), "rev-parse", "HEAD"], check=True, capture_output=True, text=True,
+    ).stdout.strip() == head_before
 
 
 def test_final_text_with_failing_tests_is_rejected(buggy_repo, tmp_path):
