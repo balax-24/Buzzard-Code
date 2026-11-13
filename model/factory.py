@@ -194,6 +194,7 @@ def _build_provider(
         return GeminiProvider(model_name=m_name, base_url=base_url, **kwargs)
     elif p_name == "anthropic":
         base_url = kwargs.get("base_url") or configured_endpoint
+        kwargs.setdefault("prompt_caching", model_cfg.get("prompt_caching", True) is not False)
         return AnthropicProvider(model_name=m_name, base_url=base_url, **kwargs)
     elif p_name in ("meta", "muse"):
         base_url = kwargs.get("base_url") or configured_endpoint

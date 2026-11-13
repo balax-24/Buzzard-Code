@@ -773,6 +773,7 @@ class AgentLoop:
                     "elapsed_s": round(model_elapsed, 2),
                     "prompt_tokens": prompt_tokens,
                     "output_tokens": output_tokens,
+                    "cached_prompt_tokens": int(metrics.get("cached_prompt_tokens") or 0),
                     "tokens_estimated": tokens_estimated,
                     "iteration": iteration,
                     "content": (response.get("message") or {}).get("content", ""),

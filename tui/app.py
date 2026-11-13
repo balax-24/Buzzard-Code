@@ -669,6 +669,7 @@ class BuzzardTUIApp(App[None]):
                 payload.get("output_tokens", 0),
                 estimated=bool(payload.get("tokens_estimated")),
                 model_name=str(getattr(self.provider, "model_name", self.model_name)),
+                cached_tokens=int(payload.get("cached_prompt_tokens") or 0),
             )
             limit = budget_limit_usd()
             if limit and self.usage.cost_known and self.usage.cost_usd >= limit and self.is_running_operation:
@@ -843,6 +844,10 @@ class BuzzardTUIApp(App[None]):
             f"**Input tokens:** {self.usage.input_tokens:,}",
             f"**Output tokens:** {self.usage.output_tokens:,}",
             f"**Last prompt:** {self.usage.last_prompt_tokens:,} tokens",
+            f"**Prompt cache:** " + (
+                f"{self.usage.cached_input_tokens:,} input tokens read from cache ({self.usage.cache_hit_percent}% hit rate)"
+                if self.usage.cache_hit_percent is not None else "no cached tokens reported"
+            ),
             f"**Estimated cost:** {f'about ${self.usage.cost_usd:.4f}' if self.usage.cost_known else 'no known price for this model'}",
             f"**Budget:** {f'${budget_limit_usd():.2f}' if budget_limit_usd() else 'none set (BUZZARD_BUDGET_USD)'}",
             f"**Context window:** {f'{window:,} tokens ({percent}% used)' if window else 'unknown for this model'}",

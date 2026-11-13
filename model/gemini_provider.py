@@ -116,6 +116,7 @@ class GeminiProvider(ModelProvider):
                 "metrics": {
                     "prompt_eval_count": usage.get("promptTokenCount", 0),
                     "eval_count": usage.get("candidatesTokenCount", 0),
+                    "cached_prompt_tokens": usage.get("cachedContentTokenCount", 0),
                 },
             }
         except Exception as e:

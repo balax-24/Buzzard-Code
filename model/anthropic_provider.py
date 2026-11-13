@@ -34,11 +34,13 @@ class AnthropicProvider(ModelProvider):
         api_key: Optional[str] = None,
         base_url: Optional[str] = None,
         timeout: float = 120.0,
+        prompt_caching: bool = True,
     ):
         self.model_name = model_name or os.environ.get("ANTHROPIC_MODEL", self.DEFAULT_MODEL)
         self.base_url = (base_url or os.environ.get("ANTHROPIC_BASE_URL", self.DEFAULT_BASE_URL)).rstrip("/")
         self.api_key = api_key or get_credential("anthropic") or os.environ.get("ANTHROPIC_API_KEY")
         self.timeout = timeout
+        self.prompt_caching = prompt_caching
         self.client = httpx.Client(timeout=timeout)
 
     def __repr__(self) -> str:
@@ -86,6 +88,22 @@ class AnthropicProvider(ModelProvider):
             pass
         return ["claude-3-5-sonnet-20241022", "claude-3-7-sonnet-20250219", "claude-3-5-haiku-20241022"]
 
+    def _mark_cacheable_prefix(self, payload: Dict[str, Any]) -> None:
+        """
+        Marks the end of the stable prefix (tool list, then system prompt) with a cache breakpoint.
+
+        Anthropic caches everything up to the breakpoint, so later turns of the same task reuse
+        the tool schemas and system prompt instead of paying for them again. Messages are not
+        marked: the coding history changes every turn after the original request.
+        """
+        if not self.prompt_caching:
+            return
+        marker = {"type": "ephemeral"}
+        if payload.get("system"):
+            payload["system"] = [{"type": "text", "text": payload["system"], "cache_control": marker}]
+        elif payload.get("tools"):
+            payload["tools"][-1] = {**payload["tools"][-1], "cache_control": marker}
+
     def _convert_messages(self, messages: List[Dict[str, Any]]) -> Tuple[Optional[str], List[Dict[str, Any]]]:
         return to_anthropic_messages(messages)
 
@@ -106,6 +124,7 @@ class AnthropicProvider(ModelProvider):
             payload["system"] = system_prompt
         if tools:
             payload["tools"] = to_anthropic_tools(tools)
+        self._mark_cacheable_prefix(payload)
         if options:
             payload.update(options)
 
@@ -144,6 +163,7 @@ class AnthropicProvider(ModelProvider):
             payload["system"] = system_prompt
         if tools:
             payload["tools"] = to_anthropic_tools(tools)
+        self._mark_cacheable_prefix(payload)
         if options:
             payload.update(options)
 
@@ -160,6 +180,7 @@ class AnthropicProvider(ModelProvider):
 
                 # tool_use blocks stream their input as JSON fragments, keyed by block index
                 pending_tool_calls: Dict[int, Dict[str, Any]] = {}
+                stream_usage: Dict[str, Any] = {}
                 for line in response.iter_lines():
                     if not line:
                         continue
@@ -168,6 +189,10 @@ class AnthropicProvider(ModelProvider):
                         try:
                             event = json.loads(raw_data)
                             event_type = event.get("type")
+                            if event_type == "message_start":
+                                stream_usage.update((event.get("message") or {}).get("usage") or {})
+                            elif event_type == "message_delta":
+                                stream_usage.update(event.get("usage") or {})
                             if event_type == "content_block_start":
                                 block = event.get("content_block", {})
                                 if block.get("type") == "tool_use":
@@ -190,7 +215,7 @@ class AnthropicProvider(ModelProvider):
                                 final_message: Dict[str, Any] = {"content": ""}
                                 if pending_tool_calls:
                                     final_message["tool_calls"] = finish_openai_tool_fragments(pending_tool_calls)
-                                yield {"message": final_message, "done": True}
+                                yield {"message": final_message, "done": True, "usage": stream_usage or None}
                                 break
                         except Exception:
                             continue
