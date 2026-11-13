@@ -381,3 +381,13 @@ def test_real_cli_entry_point_speaks_the_protocol(tmp_path, project):
         assert client.request("shutdown")["result"]["ok"] is True
     finally:
         assert client.close() == 0
+
+
+def test_attempts_option_is_validated(tmp_path, project):
+    client = start(tmp_path, [])
+    try:
+        initialize(client, project)
+        for bad in (0, 6, "2", True, 1.5):
+            assert client.request("run/start", {"goal": "Fix it", "attempts": bad})["error"]["code"] == -32602
+    finally:
+        client.close()

@@ -211,6 +211,9 @@ class StdioRuntimeServer:
             raise RpcError(BUSY, "A task is already running; cancel it or wait for run/finished.")
         if "planMode" in params:
             self._set_plan_mode({"enabled": params["planMode"]})
+        attempts = params.get("attempts", 1)
+        if isinstance(attempts, bool) or not isinstance(attempts, int) or not 1 <= attempts <= 5:
+            raise RpcError(INVALID_PARAMS, "attempts must be a whole number from 1 to 5.")
         import uuid
 
         run_id = f"task-{uuid.uuid4().hex[:8]}"
@@ -223,13 +226,13 @@ class StdioRuntimeServer:
                 "countsEstimated": False,
                 "turns": 0,
             }
-        self._run_thread = threading.Thread(target=self._run_task, args=(goal.strip(), run_id), daemon=True)
+        self._run_thread = threading.Thread(target=self._run_task, args=(goal.strip(), run_id, attempts), daemon=True)
         self._run_thread.start()
         return {"runId": run_id}
 
-    def _run_task(self, goal: str, run_id: str) -> None:
+    def _run_task(self, goal: str, run_id: str, attempts: int = 1) -> None:
         assert self.session is not None
-        outcome = self.session.run(goal, target="localhost", scope=["localhost", "127.0.0.1"], session_id=run_id)
+        outcome = self.session.run(goal, target="localhost", scope=["localhost", "127.0.0.1"], session_id=run_id, attempts=attempts)
         self._deny_pending()
         if outcome.evidence_report:
             self.notify("run/evidence", {"runId": run_id, "report": outcome.evidence_report})

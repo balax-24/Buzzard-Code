@@ -86,6 +86,8 @@ class RunSession:
         self.approvals_granted = 0
         self.approvals_denied = 0
         self.last_evidence_bundle: Optional[str] = None
+        self.last_verification: Optional[Any] = None
+        self.attempts = 1  # more than 1 runs best-of-N attempts (see best_of.py)
         self.conversation: List[Dict[str, str]] = []
         self.stop_event = threading.Event()
         self.current_loop: Optional[Any] = None
@@ -132,12 +134,18 @@ class RunSession:
     def is_running(self) -> bool:
         return self._run_lock.locked()
 
-    def run(self, goal: str, target: str, scope: List[str], session_id: Optional[str] = None) -> RunOutcome:
+    def run(
+        self, goal: str, target: str, scope: List[str], session_id: Optional[str] = None, attempts: Optional[int] = None
+    ) -> RunOutcome:
         """Runs one task to completion on the calling thread. Only one task runs at a time."""
         session_id = session_id or f"task-{uuid.uuid4().hex[:8]}"
         if not self._run_lock.acquire(blocking=False):
             return RunOutcome(session_id, "rejected", error="A task is already running in this session.")
         try:
+            count = self.attempts if attempts is None else attempts
+            if count > 1 and not self.plan_mode:
+                from agent.best_of import run_best_of
+                return run_best_of(self, goal, target, scope, session_id, count)
             return self._run(goal, target, scope, session_id)
         finally:
             try:
@@ -158,6 +166,7 @@ class RunSession:
 
         self.stop_event.clear()
         self.last_evidence_bundle = None
+        self.last_verification = None
         self.approvals_granted = 0
         self.approvals_denied = 0
         try:
@@ -194,6 +203,7 @@ class RunSession:
         final_answer = next((text for text in reversed(answers) if text.strip()), "")
         self.remember_turn(goal, final_answer)
         status = "cancelled" if self.stop_event.is_set() else str(result.get("status", "completed"))
+        self.last_verification = getattr(loop, "last_verification", None)
         evidence_report = self._evidence_report(loop, goal, session_id)
         return RunOutcome(
             session_id=session_id,

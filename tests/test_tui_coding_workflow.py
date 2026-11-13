@@ -819,3 +819,20 @@ def test_docker_mounts_the_active_project(repo, monkeypatch):
     sandbox.execute("ls", tool_name="terminal.execute")
     assert f"{repo}:/workspace" in calls[0]
     assert not (repo / "data").exists()
+
+
+def test_attempts_command_sets_and_validates(repo, tmp_path):
+    app = make_app(ScriptedProvider([]), tmp_path)
+
+    async def run() -> None:
+        async with app.run_test(size=(110, 36)) as pilot:
+            await submit(pilot, app, "/attempts 3")
+            await pilot.pause(0.2)
+            assert app.session.attempts == 3
+            await submit(pilot, app, "/attempts 9")
+            await pilot.pause(0.2)
+            assert app.session.attempts == 3
+            notes = [b.message.content for b in app.chat_view.query(MessageBubble)]
+            assert any("runs 3 times" in note for note in notes) and any("Use /attempts <1-5>" in note for note in notes)
+
+    run_async(run())

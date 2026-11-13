@@ -130,6 +130,7 @@ BUZZARD_COMMANDS: List[tuple[str, str]] = [
     ("/memory", "Project memory: list, add, forget <n>, clear, on, off"),
     ("/failover", "Show backup models; /failover test rehearses an outage"),
     ("/plan", "Toggle plan mode: no edits or commands run"),
+    ("/attempts", "Run each coding task N times (1-5); the gate keeps the best"),
     ("/continue", "Restore the last conversation in this workspace"),
     ("/version", "Buzzard Code version"),
     ("/providers", "Supported model providers"),
@@ -986,6 +987,19 @@ class BuzzardTUIApp(App[None]):
             self._system_note(
                 "✓ Plan mode on: the agent can read and plan, but edits and commands are refused."
                 if self.plan_mode else "✓ Plan mode off."
+            )
+            return
+
+        elif command == "/attempts":
+            value = tokens[1] if len(tokens) > 1 else ""
+            if not value.isdigit() or not 1 <= int(value) <= 5:
+                self._system_note(f"Attempts per task: {self.session.attempts}. Use /attempts <1-5>.")
+                return
+            self.session.attempts = int(value)
+            self._system_note(
+                f"✓ Each coding task now runs {value} times in separate copies of the project; the completion gate "
+                "keeps the best verified attempt. Each attempt asks for its own approvals."
+                if int(value) > 1 else "✓ Each coding task runs once."
             )
             return
 
