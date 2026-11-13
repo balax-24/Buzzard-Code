@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import importlib.metadata
 import json
 import os
 import platform
@@ -85,6 +86,13 @@ def _redact_bundle_values(value: Any) -> Any:
     return value
 
 
+def _buzzard_version() -> str:
+    try:
+        return importlib.metadata.version("buzzard-code")
+    except importlib.metadata.PackageNotFoundError:
+        return "source checkout (package metadata unavailable)"
+
+
 def _ensure_evidence_directory(root: Path) -> Path:
     """Create the runtime directory only when existing links remain inside the repository."""
     directory = root / ".buzzard" / "evidence"
@@ -154,7 +162,7 @@ def create_evidence_bundle(
         "approvals": {"granted": approvals_granted, "denied": approvals_denied},
         "runtime": {
             "model": model,
-            "buzzard_version": "1.0.0",
+            "buzzard_version": _buzzard_version(),
             "python": sys.version.split()[0],
             "platform": platform.platform(),
         },
