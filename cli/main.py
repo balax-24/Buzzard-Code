@@ -171,6 +171,36 @@ def exec_cmd(task, workspace, allow_edits, allow_commands, allow_all, plan, atte
     click.echo(json_module.dumps(result, indent=2) if as_json else render_text(result))
     raise click.exceptions.Exit(result["exitCode"])
 
+@main.command(name="gate")
+@click.option("--base", required=True, help="Branch or commit the changes are compared with, such as origin/main.")
+@click.option("--workspace", type=click.Path(exists=True, file_okay=False, path_type=Path), default=None,
+              help="Git working tree (defaults to the current directory).")
+@click.option("--title", default=None, help="Pull request title; a fix title also runs the reproduce-first check.")
+@click.option("--report-file", type=click.Path(dir_okay=False, path_type=Path), default=None,
+              help="Write the pull request comment (Markdown) to this file.")
+@click.option("--json", "as_json", is_flag=True, help="Print the result as JSON.")
+def gate_cmd(base, workspace, title, report_file, as_json):
+    """
+    Run the completion gate on committed changes since BASE, for CI and pull requests.
+    No model is used. Tests run without asking, so use it on code you are willing to run.
+    Exit code 0 means the gate passed.
+    """
+    import json as json_module
+    from verification.pr_gate import GateError, comment_body, run_pr_gate
+
+    try:
+        result = run_pr_gate(workspace or Path.cwd(), base, title)
+    except GateError as error:
+        click.secho(f"Buzzard gate could not run: {error}", fg="red", err=True)
+        raise click.exceptions.Exit(2)
+    if report_file is not None:
+        report_file.write_text(comment_body(result), encoding="utf-8")
+    if as_json:
+        click.echo(json_module.dumps(result.to_dict(), indent=2, default=str))
+    else:
+        click.echo(comment_body(result))
+    raise click.exceptions.Exit(0 if result.passed else 1)
+
 @main.command(name="verify")
 @click.argument("bundle", type=click.Path(exists=True, dir_okay=False, path_type=Path))
 @click.option("--workspace", type=click.Path(exists=True, file_okay=False, path_type=Path), default=None,

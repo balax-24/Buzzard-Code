@@ -1,0 +1,77 @@
+name: Buzzard Verify
+description: Runs Buzzard Code's completion gate on a pull request (diff, syntax, the real tests, changed-line coverage) and posts the Evidence Report.
+author: balax-24
+branding:
+  icon: check-circle
+  color: green
+
+inputs:
+  base:
+    description: Branch or commit to compare with. Defaults to the pull request's base commit.
+    required: false
+    default: ""
+  python-version:
+    description: Python used to install and run Buzzard Code (3.12 or newer).
+    required: false
+    default: "3.12"
+  comment:
+    description: Post the Evidence Report as a pull request comment ("true" or "false").
+    required: false
+    default: "true"
+  github-token:
+    description: Token used to post the comment. Needs pull-requests write permission.
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  passed:
+    description: '"true" when the gate passed.'
+    value: ${{ steps.gate.outputs.passed }}
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install Buzzard Code
+      shell: bash
+      run: python -m pip install --quiet "${{ github.action_path }}"
+
+    - name: Run the completion gate
+      id: gate
+      shell: bash
+      env:
+        BASE: ${{ inputs.base || github.event.pull_request.base.sha }}
+        TITLE: ${{ github.event.pull_request.title }}
+        REPORT: ${{ runner.temp }}/buzzard-verify.md
+      run: |
+        if [ -z "$BASE" ]; then
+          echo "::error::No base to compare with. Set the 'base' input, or run on pull_request events."
+          exit 2
+        fi
+        set +e
+        buzzard gate --base "$BASE" --title "$TITLE" --report-file "$REPORT"
+        status=$?
+        set -e
+        if [ "$status" -eq 0 ]; then echo "passed=true" >> "$GITHUB_OUTPUT"; else echo "passed=false" >> "$GITHUB_OUTPUT"; fi
+        if [ -f "$REPORT" ]; then cat "$REPORT" >> "$GITHUB_STEP_SUMMARY"; fi
+        echo "status=$status" >> "$GITHUB_OUTPUT"
+
+    - name: Comment on the pull request
+      if: ${{ inputs.comment == 'true' && github.event.pull_request.number }}
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        REPORT: ${{ runner.temp }}/buzzard-verify.md
+        PR: ${{ github.event.pull_request.number }}
+      run: |
+        if [ -f "$REPORT" ]; then
+          gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body-file "$REPORT" || echo "::warning::Could not post the comment (check the token's permissions)."
+        fi
+
+    - name: Fail when the gate failed
+      if: ${{ steps.gate.outputs.status != '0' }}
+      shell: bash
+      run: exit 1

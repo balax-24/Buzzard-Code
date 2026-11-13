@@ -271,6 +271,33 @@ Live-tested so far: Muse Glimmer through OpenRouter, Gemini and Ollama, with res
 
 **Keys:** `@` for files, `/` for commands, `\\` at the end of a line for a new line, `Esc` to interrupt, and `y`, `s` or `n` at an approval.
 
+## Pull request checks (GitHub Action)
+
+Buzzard Verify runs the completion gate on every pull request and posts the Evidence Report. It needs no model or API key:
+
+```yaml
+# .github/workflows/buzzard-verify.yml
+name: Buzzard Verify
+on: pull_request
+permissions:
+  contents: read
+  pull-requests: write
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # the gate needs the merge base
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[test]"   # your project's own setup
+      - uses: balax-24/Buzzard-Code@main
+```
+
+Locally, the same check is `buzzard gate --base origin/main`.
+
 ## Headless use
 
 ```bash
