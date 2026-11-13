@@ -16,6 +16,7 @@ editors/vscode/out/
 
 # Runtime artifacts
 artifacts/benchmarks/
+/.buzzard/evidence/
 miscellaneous/
 install.log
 data/

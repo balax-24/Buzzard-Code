@@ -16,6 +16,8 @@ behaviour cannot drift between them.
 from __future__ import annotations
 
 import logging
+import os
+import subprocess
 import threading
 import uuid
 from dataclasses import dataclass, field
@@ -50,6 +52,7 @@ class RunOutcome:
     final_answer: str = ""
     error: Optional[str] = None
     evidence_report: Optional[str] = None
+    evidence_bundle: Optional[str] = None
     messages: List[Dict[str, Any]] = field(default_factory=list)
 
 
@@ -82,6 +85,7 @@ class RunSession:
         self.session_rules: set = set()
         self.approvals_granted = 0
         self.approvals_denied = 0
+        self.last_evidence_bundle: Optional[str] = None
         self.conversation: List[Dict[str, str]] = []
         self.stop_event = threading.Event()
         self.current_loop: Optional[Any] = None
@@ -143,6 +147,7 @@ class RunSession:
         from agent.loop import AgentLoop
 
         self.stop_event.clear()
+        self.last_evidence_bundle = None
         self.approvals_granted = 0
         self.approvals_denied = 0
         try:
@@ -179,22 +184,48 @@ class RunSession:
         final_answer = next((text for text in reversed(answers) if text.strip()), "")
         self.remember_turn(goal, final_answer)
         status = "cancelled" if self.stop_event.is_set() else str(result.get("status", "completed"))
+        evidence_report = self._evidence_report(loop, goal, session_id)
         return RunOutcome(
             session_id=session_id,
             status=status,
             final_answer=final_answer,
             error=loop.last_error or None,
-            evidence_report=self._evidence_report(loop),
+            evidence_report=evidence_report,
+            evidence_bundle=self.last_evidence_bundle,
             messages=messages,
         )
 
-    def _evidence_report(self, loop: Any) -> Optional[str]:
+    def _evidence_report(self, loop: Any, goal: str = "", session_id: str = "task") -> Optional[str]:
         if getattr(loop, "last_verification", None) is None:
             return None
         from tools.filesystem import get_active_workspace
+        from verification.evidence_bundle import create_evidence_bundle
         from verification.evidence_report import build_evidence_report
 
-        return build_evidence_report(loop.last_verification, get_active_workspace(), self.approvals_granted, self.approvals_denied)
+        workspace = get_active_workspace()
+        report = build_evidence_report(
+            loop.last_verification, workspace, self.approvals_granted, self.approvals_denied,
+        )
+        model = str(getattr(self.provider, "model_name", type(self.provider).__name__))
+        try:
+            bundle_path = create_evidence_bundle(
+                workspace=workspace,
+                session_id=session_id,
+                task=goal,
+                verification=loop.last_verification,
+                approvals_granted=self.approvals_granted,
+                approvals_denied=self.approvals_denied,
+                model=model,
+                evidence_report=report,
+            )
+        except (OSError, ValueError, TypeError, subprocess.SubprocessError):
+            logger.exception("Could not write Evidence Bundle for %s", session_id)
+            return report
+        self.last_evidence_bundle = str(bundle_path)
+        if report is not None:
+            relative_bundle = os.path.relpath(bundle_path, workspace)
+            report += f"\n- Evidence Bundle: `{relative_bundle}`"
+        return report
 
     def remember_turn(self, user_text: str, answer: str) -> None:
         self.conversation.append({"role": "user", "content": user_text})

@@ -1,5 +1,6 @@
 import click
 import sys
+from pathlib import Path
 from cli.commands import (
     run_doctor,
     run_status,
@@ -129,6 +130,22 @@ def config(action):
     View or validate configuration settings (secrets strictly redacted).
     """
     run_config(action=action)
+
+@main.command(name="verify")
+@click.argument("bundle", type=click.Path(exists=True, dir_okay=False, path_type=Path))
+@click.option("--workspace", type=click.Path(exists=True, file_okay=False, path_type=Path), default=None,
+              help="Git working tree to compare with the Evidence Bundle (defaults to the current directory).")
+def verify_cmd(bundle: Path, workspace: Path | None):
+    """Verify an Evidence Bundle's integrity and recorded repository state."""
+    from verification.evidence_bundle import verify_evidence_bundle
+
+    result = verify_evidence_bundle(bundle, workspace or Path.cwd())
+    if result["valid"]:
+        console.print(f"[bold green]✓ {result['reason']}[/bold green]")
+        console.print(f"Bundle SHA-256: {result['bundle_sha256']}")
+        return
+    console.print(f"[bold red]✗ {result['reason']}[/bold red]")
+    raise click.exceptions.Exit(1)
 
 @main.command()
 def setup():
