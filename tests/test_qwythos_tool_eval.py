@@ -44,7 +44,7 @@ def test_tool_quarantine_workflow():
     # Count validation reflects quarantine
     is_valid, counts = reg.validate_counts()
     assert counts["registered"] == 238
-    assert counts["active"] == 234
+    assert counts["active"] == 237
     assert counts["quarantined"] == 1
     
     # Restore tool

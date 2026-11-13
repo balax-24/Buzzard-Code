@@ -209,7 +209,17 @@ class Tool:
         Generates Ollama/OpenAI-compatible tool schema for function calling.
         """
         if self.definition and self.definition.schema:
-            return self.definition.schema
+            schema = self.definition.schema
+            if schema.get("type") == "function" and isinstance(schema.get("function"), dict):
+                return schema
+            return {
+                "type": "function",
+                "function": {
+                    "name": self.name,
+                    "description": self.description,
+                    "parameters": schema,
+                },
+            }
 
         properties = {}
         required = []
