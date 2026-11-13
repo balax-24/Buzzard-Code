@@ -13,7 +13,15 @@ from types import SimpleNamespace
 
 import pytest
 
-from benchmarks.common import BenchmarkError, RuntimeClient, _load_manifest, _prepare_checkout, _run_verifier, run_benchmark
+from benchmarks.common import (
+    BenchmarkError,
+    RuntimeClient,
+    _load_manifest,
+    _prepare_checkout,
+    _run_swebench_grader,
+    _run_verifier,
+    run_benchmark,
+)
 from benchmarks.swe_bench.export_manifest import main as export_swe_manifest
 
 
@@ -195,9 +203,75 @@ def test_swe_exporter_records_the_pinned_revision_and_task_source(tmp_path: Path
     assert export_swe_manifest() == 0
     exported = json.loads(manifest_path.read_text(encoding="utf-8"))
     assert observed == {
-        "dataset": "princeton-nlp/SWE-bench_Verified", "split": "test", "revision": revision,
+        "dataset": "SWE-bench/SWE-bench_Verified", "split": "test", "revision": revision,
     }
     assert exported["task_id"] == "sympy__sympy-1"
     assert exported["repo"] == "https://github.com/sympy/sympy.git"
     assert exported["revision"] == "b" * 40
     assert exported["dataset_revision"] == revision
+
+
+def test_official_swebench_grader_records_command_and_result(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    observed = {}
+
+    def fake_run(command, **kwargs):
+        observed.update(command=command, **kwargs)
+        summary_path = kwargs["cwd"] / "logs" / "evaluation" / "run-1" / "results.json"
+        summary_path.parent.mkdir(parents=True)
+        summary_path.write_text(json.dumps({"total_instances": 500, "submitted_instances": 2,
+                                            "completed_instances": 2, "resolved_instances": 1}),
+                                encoding="utf-8")
+        return subprocess.CompletedProcess(command, 0, stdout="graded", stderr="")
+
+    monkeypatch.setattr("benchmarks.common.shutil.which", lambda _: "C:/tools/swebench.exe")
+    monkeypatch.setattr("benchmarks.common.subprocess.run", fake_run)
+    result = _run_swebench_grader(
+        tmp_path / "predictions.jsonl", tmp_path, "run-1", ["repo__project-1", "repo__project-2"], 2, 300,
+    )
+
+    assert result["status"] == "completed"
+    assert result["exit_code"] == 0
+    assert result["summary"] == {
+        "total_instances": 500, "submitted_instances": 2,
+        "completed_instances": 2, "resolved_instances": 1,
+    }
+    assert result["summary_file"] == str(tmp_path / "logs" / "evaluation" / "run-1" / "results.json")
+    assert observed["command"] == [
+        "C:/tools/swebench.exe", "eval", "verified", "--predictions", str(tmp_path / "predictions.jsonl"),
+        "--run-id", "run-1", "--workers", "2", "--instance", "repo__project-1", "--instance", "repo__project-2",
+    ]
+    assert observed["cwd"] == tmp_path
+    assert observed["shell"] is False and observed["timeout"] == 300
+
+
+def test_official_swebench_grader_reports_missing_executable_and_timeout(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("benchmarks.common.shutil.which", lambda _: None)
+    missing = _run_swebench_grader(tmp_path / "predictions.jsonl", tmp_path, "run-1", ["one"], 1, 10)
+    assert missing["status"] == "unavailable"
+
+    monkeypatch.setattr("benchmarks.common.shutil.which", lambda _: "swebench")
+
+    def timeout_run(_command, **_kwargs):
+        raise subprocess.TimeoutExpired("swebench", 10, output="partial")
+
+    monkeypatch.setattr("benchmarks.common.subprocess.run", timeout_run)
+    timed_out = _run_swebench_grader(tmp_path / "predictions.jsonl", tmp_path, "run-1", ["one"], 1, 10)
+    assert timed_out["status"] == "timed_out"
+    assert timed_out["timeout_seconds"] == 10
+
+
+def test_official_swebench_grader_requires_a_valid_summary_after_success(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("benchmarks.common.shutil.which", lambda _: "swebench")
+    monkeypatch.setattr(
+        "benchmarks.common.subprocess.run",
+        lambda command, **_kwargs: subprocess.CompletedProcess(command, 0, stdout="done", stderr=""),
+    )
+
+    result = _run_swebench_grader(tmp_path / "predictions.jsonl", tmp_path, "run-1", ["one"], 1, 10)
+
+    assert result["status"] == "failed"
+    assert "did not produce results.json" in result["error"]
