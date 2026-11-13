@@ -143,6 +143,22 @@ def test_workspace_rewind_restores_code_and_prompt_history(buggy_repo, tmp_path)
     assert len(rewind_calls) == 1
 
 
+def test_persistent_shell_is_cleaned_after_coding_task(buggy_repo, tmp_path):
+    from tools.shell_manager import _SHELLS
+
+    command = "Write-Output alive" if os.name == "nt" else "printf alive"
+    provider = ScriptedProvider([
+        {"tool_calls": [call("shell_execute", command=command)]},
+        {"tool_calls": [FIX]},
+        {"content": "The fix is verified."},
+    ])
+
+    result = run_loop(provider, TASK, tmp_path)
+
+    assert result["status"] == "completed"
+    assert result["session_id"] not in _SHELLS
+
+
 def test_final_text_with_failing_tests_is_rejected(buggy_repo, tmp_path):
     provider = ScriptedProvider([
         {"tool_calls": [call("file_edit", path="calc.py", old_str="return a - b", new_str="return a * b")]},
@@ -190,6 +206,31 @@ def test_coding_task_sends_only_coding_tool_schemas(buggy_repo, tmp_path):
     names = {schema["function"]["name"] for schema in provider.requests[0]["tools"]}
     assert names <= CODING_TOOL_NAMES
     assert "file_edit" in names
+
+
+def test_security_task_cannot_access_coding_session_tools(buggy_repo, tmp_path):
+    provider = ScriptedProvider([
+        {"tool_calls": [call("shell_execute", command="Write-Output forbidden")]},
+        {"content": "Assessment finished."},
+    ])
+    result = AgentLoop(
+        provider=provider,
+        storage_manager=StorageManager(db_path=tmp_path / "audit-security.db"),
+        max_iterations=3,
+        native_tools=True,
+        quiet=True,
+        approval_callback=APPROVE_ALL,
+    ).run(task_goal="Assess localhost for security issues.", target="localhost", scope=["localhost"])
+
+    exposed_names = {schema["function"]["name"] for schema in provider.requests[0]["tools"]}
+    assert not exposed_names.intersection({"process_start", "process_logs", "process_stop", "shell_execute", "checkpoint_list", "workspace_rewind"})
+    tool_feedback = [
+        message["content"] for request in provider.requests for message in request["messages"]
+        if message.get("role") == "tool"
+    ]
+    assert any("only available during coding tasks" in feedback for feedback in tool_feedback)
+    from tools.shell_manager import _SHELLS
+    assert result["session_id"] not in _SHELLS
 
 
 TEST_COMMAND = "python -m pytest -q -p no:cacheprovider"

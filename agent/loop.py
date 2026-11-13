@@ -123,11 +123,19 @@ NATIVE_TOOLS_GUIDANCE = (
 CODING_TOOL_NAMES = frozenset({
     "directory_list", "file_search", "file_read", "file_view", "file_edit", "file_write", "file_move", "multi_edit", "apply_patch",
     "process_start", "process_logs", "process_stop",
+    "shell_execute",
     "checkpoint_list", "workspace_rewind",
     "terminal.execute", "git_status", "git_diff", "git_log", "todo_write",
     "code_symbols", "code_references", "code_related", "memory_save",
     "git_prepare_commit", "git_branch_create", "git_commit", "git_prepare_pr",
     "delegate_task",
+})
+
+# These tools can inspect or mutate the local coding workspace and are only valid
+# during coding tasks, even when a provider attempts to call them directly.
+CODING_SESSION_ONLY_TOOLS = frozenset({
+    "process_start", "process_logs", "process_stop", "shell_execute",
+    "checkpoint_list", "workspace_rewind",
 })
 
 
@@ -173,6 +181,8 @@ class AgentLoop:
             register_process_tools(self.registry)
             from agent.workspace_checkpoints import register_checkpoint_tools
             register_checkpoint_tools(self.registry)
+            from tools.shell_manager import register_shell_tool
+            register_shell_tool(self.registry)
             from agent.subagents import register_subagent_tools
             register_subagent_tools(self.registry)
         self.run_target: Optional[str] = None
@@ -838,10 +848,14 @@ class AgentLoop:
         finally:
             try:
                 from tools.process_manager import cleanup_session_processes
-
                 cleanup_session_processes(session_id)
             except Exception:
-                logger.exception("Could not clean up processes for %s", session_id)
+                logger.exception("Could not clean up managed processes for %s", session_id)
+            try:
+                from tools.shell_manager import cleanup_session_shells
+                cleanup_session_shells(session_id)
+            except Exception:
+                logger.exception("Could not clean up shell for %s", session_id)
 
     def _run(
         self,
@@ -1086,7 +1100,9 @@ class AgentLoop:
 
         # Export tool schemas
         tools_schemas = (
-            self.registry.export_schemas(only=coding_tools if is_coding else None)
+            self.registry.export_schemas(
+                only=coding_tools if is_coding else set(self.registry.tools) - CODING_SESSION_ONLY_TOOLS
+            )
             if self.native_tools else None
         )
 
@@ -1233,6 +1249,10 @@ class AgentLoop:
                         target=target,
                         max_tools=self.config.get("max_dynamic_tools", 22),
                     )
+                    tools_schemas = [
+                        schema for schema in tools_schemas
+                        if schema.get("function", {}).get("name") not in CODING_SESSION_ONLY_TOOLS
+                    ]
 
                 # Query the model provider with live progress indicator
                 response_dict = self._chat_with_spinner(messages, tools_schemas, iteration, assessment_id=session_id)
@@ -1546,6 +1566,13 @@ class AgentLoop:
                     tool_args = func.get("arguments") or {}
 
                     if not tool_name:
+                        continue
+
+                    if not is_coding and tool_name in CODING_SESSION_ONLY_TOOLS:
+                        messages.append(self._tool_feedback(
+                            f"Tool '{tool_name}' is only available during coding tasks.",
+                            tool_call_id,
+                        ))
                         continue
 
                     # Auto-routing for scan_ports when called with large port ranges (>50 ports)

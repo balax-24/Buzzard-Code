@@ -270,6 +270,21 @@ def test_plan_mode_refuses_workspace_rewind_without_asking(tmp_path, project):
         client.close()
 
 
+def test_plan_mode_refuses_persistent_shell_without_asking(tmp_path, project):
+    marker = project / "plan-mode-shell-marker"
+    command = f"Set-Content '{marker}' ran" if os.name == "nt" else f"touch '{marker}'"
+    script = [{"tool_calls": [call("shell_execute", command=command)]}]
+    client = start(tmp_path, script)
+    try:
+        initialize(client, project)
+        client.request("run/start", {"goal": "Fix the bug in calc.py", "planMode": True})
+        client.notification("run/finished")
+        assert not any(message.get("method") == "approval/requested" for message in client.seen)
+        assert not marker.exists()
+    finally:
+        client.close()
+
+
 def test_cancel_while_waiting_denies_and_finishes(tmp_path, project):
     client = start(tmp_path, FIX_SCRIPT)
     try:

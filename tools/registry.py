@@ -681,10 +681,12 @@ def create_authoritative_registry(categories: Optional[List[str]] = None) -> Too
     from tools.filesystem import register_filesystem_tools
     from tools.git_tools import register_git_tools
     from tools.process_manager import register_process_tools
+    from tools.shell_manager import register_shell_tool
     from agent.workspace_checkpoints import register_checkpoint_tools
     register_filesystem_tools(registry)
     register_git_tools(registry)
     register_process_tools(registry)
+    register_shell_tool(registry)
     register_checkpoint_tools(registry)
     from tools.code_index import register_code_index_tools
     register_code_index_tools(registry)
