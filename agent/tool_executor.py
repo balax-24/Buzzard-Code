@@ -359,6 +359,26 @@ class ToolExecutor:
             "tool_call_id": tool_call_id,
         }
 
+        # User before_tool hooks run after approval and can veto the call
+        from agent.hooks import run_after_tool, run_before_tool
+        from tools.filesystem import get_active_workspace
+
+        hook_workspace = get_active_workspace()
+        blocked = run_before_tool(tool_name, tool_args, hook_workspace, str(session_id or ""))
+        if blocked:
+            self.tools_failed += 1
+            return ToolExecutionResult(
+                success=False,
+                tool_name=tool_name,
+                arguments=tool_args,
+                target=target,
+                exit_code=126,
+                error_type="policy_denied",
+                stderr=blocked,
+                raw_output=blocked,
+                duration=time.time() - tool_start_time,
+            )
+
         exit_code = 0
         try:
             raw_result = self.registry.execute(tool_name, tool_args, context=context)
@@ -390,6 +410,7 @@ class ToolExecutor:
                 raw_res_str += "\n\nImmediate syntax diagnostics (edit was applied):\n" + "\n".join(
                     f"- {diagnostic}" for diagnostic in diagnostics
                 )
+            raw_res_str += run_after_tool(tool_name, tool_args, raw_res_str, hook_workspace, str(session_id or ""))
 
         # Auto-quarantine if dependency_missing
         if error_type == "dependency_missing" or exit_code == 127:

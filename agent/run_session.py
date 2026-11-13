@@ -205,6 +205,10 @@ class RunSession:
         status = "cancelled" if self.stop_event.is_set() else str(result.get("status", "completed"))
         self.last_verification = getattr(loop, "last_verification", None)
         evidence_report = self._evidence_report(loop, goal, session_id)
+        from agent.hooks import run_task_end
+        from tools.filesystem import get_active_workspace
+
+        run_task_end(get_active_workspace(), session_id, status)
         return RunOutcome(
             session_id=session_id,
             status=status,
