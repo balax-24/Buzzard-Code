@@ -161,6 +161,10 @@ class ToolExecutor:
         knowledge: Optional[Any] = None,
         selector: Optional[Any] = None,
         ui_active: bool = False,
+        conversation_messages: Optional[List[Dict[str, Any]]] = None,
+        checkpoint_history: Optional[Dict[int, List[Dict[str, Any]]]] = None,
+        current_assistant_message: Optional[Dict[str, Any]] = None,
+        tool_call_id: str = "",
     ) -> ToolExecutionResult:
         """
         Executes a tool with complete pre-execution validation, quarantine checking,
@@ -348,6 +352,10 @@ class ToolExecutor:
             "knowledge": knowledge,
             "selector": selector,
             "state": state,
+            "conversation_messages": conversation_messages,
+            "checkpoint_history": checkpoint_history,
+            "current_assistant_message": current_assistant_message,
+            "tool_call_id": tool_call_id,
         }
 
         exit_code = 0

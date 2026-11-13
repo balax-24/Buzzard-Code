@@ -7,6 +7,7 @@ import threading
 import sys
 import os
 import datetime
+from copy import deepcopy
 from typing import List, Dict, Any, Optional, Tuple
 from rich.table import Table
 from rich.panel import Panel
@@ -62,6 +63,7 @@ from storage.assessment_logger import AssessmentLogger, summarize_tool_output
 from agent.planner import Planner, PlannerDecision
 from agent.tool_executor import ToolExecutor, ToolExecutionResult
 from agent.context_manager import ContextManager
+from agent.workspace_checkpoints import CheckpointError, create_workspace_checkpoint
 from agent.loop_controller import LoopRecoveryController, StuckLoopDetector
 from intelligence.attack_graph import AttackGraph
 from intelligence.hypothesis_engine import HypothesisEngine
@@ -1001,19 +1003,17 @@ class AgentLoop:
         is_coding = bool(self.subagent_role) or is_coding_task(task_goal)
         self._is_coding_task = is_coding
         checkpointing_enabled = is_coding
+        checkpoint_history: Dict[int, List[Dict[str, Any]]] = {}
 
-        def checkpoint_turn(turn_number: int) -> None:
+        def checkpoint_turn(turn_number: int, conversation: List[Dict[str, Any]]) -> None:
             nonlocal checkpointing_enabled
             if not checkpointing_enabled:
                 return
             try:
-                from agent.workspace_checkpoints import (
-                    CheckpointError,
-                    create_workspace_checkpoint,
-                )
                 from tools.filesystem import get_active_workspace
 
                 create_workspace_checkpoint(get_active_workspace(), session_id, turn_number)
+                checkpoint_history[turn_number] = deepcopy(conversation)
             except (CheckpointError, OSError) as error:
                 checkpointing_enabled = False
                 logger.warning("Workspace checkpoints disabled for %s: %s", session_id, error)
@@ -1143,7 +1143,7 @@ class AgentLoop:
 
             while iteration < self.max_iterations:
                 iteration += 1
-                checkpoint_turn(iteration - 1)
+                checkpoint_turn(iteration - 1, messages)
                 self.ui_iteration = iteration
                 if self.stop_event is not None and self.stop_event.is_set():
                     status = TaskStatus.PAUSED
@@ -1710,6 +1710,10 @@ class AgentLoop:
                         knowledge=self.knowledge,
                         selector=self.selector,
                         ui_active=self.ui_active,
+                        conversation_messages=messages,
+                        checkpoint_history=checkpoint_history,
+                        current_assistant_message=assistant_msg,
+                        tool_call_id=tool_call_id,
                     )
 
                     tool_args = exec_res.arguments
@@ -2018,6 +2022,12 @@ class AgentLoop:
                         }
                     messages.append(tool_msg)
 
+                    if tool_name == "workspace_rewind" and not is_failed:
+                        # The rewind handler replaced both the workspace and prompt history.
+                        # Skip any sibling calls from the pre-rewind model response.
+                        _redirected = True
+                        break
+
                     # Check action budget limit
                     if len(self.observations) >= self.max_actions:
                         if not self.ui_active:
@@ -2062,7 +2072,7 @@ class AgentLoop:
             status = TaskStatus.FAILED
             self.assessment_state.transition(AssessmentPhase.FAILED)
         finally:
-            checkpoint_turn(iteration)
+            checkpoint_turn(iteration, messages)
             if self.ui_active:
                 self.live.stop()
 

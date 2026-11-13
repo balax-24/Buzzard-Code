@@ -9,6 +9,7 @@ import stat
 import subprocess
 import tempfile
 import uuid
+from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
@@ -218,10 +219,35 @@ def register_checkpoint_tools(registry: Any) -> None:
             f"- turn {item['turn']}: {item['ref']}" for item in checkpoints
         )
 
-    def workspace_rewind(turn: int, session_id: str = "") -> str:
+    def workspace_rewind(
+        turn: int,
+        session_id: str = "",
+        conversation_messages: list[dict[str, Any]] | None = None,
+        checkpoint_history: dict[int, list[dict[str, Any]]] | None = None,
+        current_assistant_message: dict[str, Any] | None = None,
+        tool_call_id: str = "",
+    ) -> str:
         if not session_id:
             return "TOOL ERROR: workspace rewind requires a task session."
+        if conversation_messages is None or checkpoint_history is None:
+            return "TOOL ERROR: conversation rewind is only available during an active coding run."
+        target_history = checkpoint_history.get(turn)
+        if target_history is None:
+            return f"TOOL ERROR: turn {turn} has no retained conversation snapshot in this run."
+
+        pending_call: dict[str, Any] | None = None
+        if current_assistant_message is not None:
+            pending_call = deepcopy(current_assistant_message)
+            calls = pending_call.get("tool_calls") or []
+            if tool_call_id:
+                pending_call["tool_calls"] = [call for call in calls if call.get("id") == tool_call_id]
+
         result = restore_workspace_checkpoint(_workspace(), session_id, turn)
+        conversation_messages[:] = deepcopy(target_history)
+        if pending_call is not None:
+            conversation_messages.append(pending_call)
+        for future_turn in [saved_turn for saved_turn in checkpoint_history if saved_turn > turn]:
+            del checkpoint_history[future_turn]
         return result["message"]
 
     registry.register(

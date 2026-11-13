@@ -118,6 +118,31 @@ def test_agent_fixes_bug_and_completes(buggy_repo, tmp_path):
     ).stdout.strip() == head_before
 
 
+def test_workspace_rewind_restores_code_and_prompt_history(buggy_repo, tmp_path):
+    provider = ScriptedProvider([
+        {"tool_calls": [FIX]},
+        {"tool_calls": [call("workspace_rewind", turn=0)]},
+        {"content": "The workspace was rewound."},
+    ])
+
+    run_loop(provider, TASK, tmp_path)
+
+    assert "return a - b" in (buggy_repo / "calc.py").read_text(encoding="utf-8")
+    rewind_followup = provider.requests[2]["messages"]
+    assert not any(
+        call.get("function", {}).get("name") == "file_edit"
+        for message in rewind_followup
+        for call in message.get("tool_calls", [])
+    )
+    rewind_calls = [
+        call
+        for message in rewind_followup
+        for call in message.get("tool_calls", [])
+        if call.get("function", {}).get("name") == "workspace_rewind"
+    ]
+    assert len(rewind_calls) == 1
+
+
 def test_final_text_with_failing_tests_is_rejected(buggy_repo, tmp_path):
     provider = ScriptedProvider([
         {"tool_calls": [call("file_edit", path="calc.py", old_str="return a - b", new_str="return a * b")]},

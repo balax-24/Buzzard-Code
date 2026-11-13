@@ -34,6 +34,20 @@ class ToolHealthState(str, Enum):
     UNAVAILABLE = "unavailable"
 
 
+INTERNAL_TOOL_CONTEXT_PARAMETERS = frozenset({
+    "session_id",
+    "storage_manager",
+    "sandbox",
+    "context",
+    "knowledge",
+    "selector",
+    "conversation_messages",
+    "checkpoint_history",
+    "current_assistant_message",
+    "tool_call_id",
+})
+
+
 @dataclass
 class ToolDefinition:
     """
@@ -194,7 +208,7 @@ class Tool:
         params = []
         for name, param in self.signature.parameters.items():
             # Skip parameters that are part of context to keep description clean for LLM
-            if name in ["session_id", "storage_manager", "sandbox", "context", "knowledge", "selector"]:
+            if name in INTERNAL_TOOL_CONTEXT_PARAMETERS:
                 continue
             param_str = name
             if param.default != inspect.Parameter.empty:
@@ -227,7 +241,7 @@ class Tool:
         
         for name, param in self.signature.parameters.items():
             # Skip context parameters
-            if name in ["session_id", "storage_manager", "sandbox", "context", "knowledge", "selector"]:
+            if name in INTERNAL_TOOL_CONTEXT_PARAMETERS:
                 continue
                 
             # Determine type
