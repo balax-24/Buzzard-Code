@@ -157,7 +157,7 @@ class RunSession:
                 storage_manager=self.storage,
                 registry=self.registry,
                 max_iterations=self.max_iterations,
-                config=self.config,
+                config={**self.config, "plan_mode": self.plan_mode},
                 event_bus=self.event_bus,
                 approval_callback=self.approve,
                 on_stream_delta=self.on_delta,

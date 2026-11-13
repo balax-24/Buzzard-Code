@@ -25,6 +25,8 @@ from security.risk import RiskClass, ToolRiskMetadata, get_tool_risk_metadata
 from security.authorization import AssessmentAuthorization, AuthorizationEngine, create_default_authorization
 from security.kill_switch import KillSwitch
 from security.approvals import ApprovalGate
+from security.permission_rules import PermissionConfigError, permission_effect
+from tools.filesystem import get_active_workspace
 
 
 @dataclass
@@ -64,6 +66,7 @@ class PolicyEngine:
         event_bus: Optional[EventBus] = None,
         approval_gate: Optional[ApprovalGate] = None,
         kill_switch: Optional[KillSwitch] = None,
+        allow_permission_rules: bool = True,
     ):
         self.scope = list(scope) if scope else ["localhost", "127.0.0.1"]
         self.event_bus = event_bus
@@ -91,6 +94,7 @@ class PolicyEngine:
             event_bus=self.event_bus,
             auto_approve_lab=False,
         )
+        self.allow_permission_rules = allow_permission_rules
 
         # Call counter to enforce max_calls_per_assessment per tool
         self._tool_call_counts: Dict[str, int] = {}
@@ -162,8 +166,27 @@ class PolicyEngine:
             self._emit_denied(tool_name, reason)
             return PolicyDecision(permitted=False, reason=reason, risk_class=tool_meta.risk_class)
 
-        # Stage 7: Human Approval Gate
+        # Stage 7: explicit user and repository permission rules
+        try:
+            configured_effect = permission_effect(tool_name, arguments or {}, get_active_workspace())
+        except PermissionConfigError as error:
+            reason = f"Permission rules are invalid; tool call denied: {error}"
+            self._emit_denied(tool_name, reason)
+            return PolicyDecision(permitted=False, reason=reason, risk_class=tool_meta.risk_class)
+        if configured_effect == "deny":
+            reason = f"Permission rule denied tool '{tool_name}'."
+            self._emit_denied(tool_name, reason)
+            return PolicyDecision(permitted=False, reason=reason, risk_class=tool_meta.risk_class)
+
+        # Stage 8: Human Approval Gate. A user allow skips this prompt only; all earlier
+        # authorization, scope, environment, risk and quota checks still apply.
         req_approval, approval_reason = self.approval_gate.requires_approval(tool_name, arguments, tool_meta)
+        if configured_effect == "allow" and self.allow_permission_rules:
+            req_approval = False
+            approval_reason = "Explicit user permission rule allows this tool call."
+        elif configured_effect == "ask":
+            req_approval = True
+            approval_reason = "Explicit permission rule requires operator approval."
         if req_approval:
             is_approved = self.approval_gate.request_approval(tool_name, arguments, tool_meta)
             if not is_approved:

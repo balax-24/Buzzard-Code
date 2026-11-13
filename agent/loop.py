@@ -919,6 +919,7 @@ class AgentLoop:
             scope,
             event_bus=self.event_bus,
             approval_gate=approval_gate,
+            allow_permission_rules=not bool(self.config.get("plan_mode", False)),
         )
         sandbox = get_sandbox()
         from agent.intent import is_coding_task
