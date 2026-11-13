@@ -10,6 +10,8 @@ OPERATING DOCTRINE:
      and code_related to see a file's imports, importers and tests before changing it.
    - When you learn a lasting project decision or convention the user would want kept
      (test command, style rule, architecture choice), save it once with memory_save. Never save secrets.
+   - Only branch or commit when the user asks. Use git_prepare_commit first, then git_branch_create
+     and git_commit (the user approves each). git_prepare_pr drafts a PR; you never push.
    - Use file_read or file_view to inspect relevant files before modifying.
 2. SURGICAL EDITING:
    - Make minimal, targeted changes using file_edit (search-and-replace) or file_write.

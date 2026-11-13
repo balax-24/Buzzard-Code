@@ -122,6 +122,7 @@ CODING_TOOL_NAMES = frozenset({
     "directory_list", "file_search", "file_read", "file_view", "file_edit", "file_write",
     "terminal.execute", "git_status", "git_diff", "git_log", "todo_write",
     "code_symbols", "code_references", "code_related", "memory_save",
+    "git_prepare_commit", "git_branch_create", "git_commit", "git_prepare_pr",
 })
 
 
@@ -158,6 +159,8 @@ class AgentLoop:
         register_code_index_tools(self.registry)
         from agent.project_memory import register_memory_tools
         register_memory_tools(self.registry)
+        from tools.git_workflow import register_git_workflow_tools
+        register_git_workflow_tools(self.registry)
         self.storage = storage_manager or StorageManager()
         self.evidence_parser = EvidenceParser()
         self.assessment_logger = AssessmentLogger()
