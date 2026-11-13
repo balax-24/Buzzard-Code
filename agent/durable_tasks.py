@@ -46,6 +46,7 @@ class TaskJournal:
     turn: int = 0
     updated_at: float = 0.0
     messages: List[Dict[str, Any]] = field(default_factory=list)
+    processes: List[Dict[str, Any]] = field(default_factory=list)  # background processes running at the last save
 
     @property
     def unfinished(self) -> bool:
@@ -87,6 +88,7 @@ def save_journal(journal: TaskJournal) -> Path:
         "turn": journal.turn,
         "updated_at": time.time(),
         "messages": _bounded(journal.messages),
+        "processes": list(journal.processes),
     }
     handle, temporary = tempfile.mkstemp(dir=path.parent, prefix=f".{journal.session_id}-", suffix=".tmp")
     try:
@@ -119,6 +121,7 @@ def load_journal(session_id: str) -> TaskJournal:
         turn=int(data.get("turn", 0)),
         updated_at=float(data.get("updated_at", 0.0)),
         messages=[message for message in data["messages"] if isinstance(message, dict)],
+        processes=[item for item in data.get("processes") or [] if isinstance(item, dict)],
     )
 
 
@@ -144,7 +147,19 @@ def list_journals(workspace: Optional[Path] = None, unfinished_only: bool = Fals
 
 
 def continuation_goal(journal: TaskJournal) -> str:
-    return (
+    """
+    The request for a resumed run. Background processes are not restarted automatically, since
+    that would run commands without approval; the agent is told what was running instead.
+    """
+    text = (
         "Continue the interrupted task from where it stopped. The conversation above is what was done so far; "
-        "files may have changed since, so re-read before editing. Original request: " + journal.goal
+        "files may have changed since, so re-read before editing."
     )
+    if journal.processes:
+        listed = "; ".join(
+            f"`{' '.join(str(part) for part in item.get('command') or [])}` in {item.get('cwd') or '.'}"
+            for item in journal.processes[:10]
+        )
+        text += (f" These background processes were running and have stopped: {listed}. "
+                 "Start any you still need with process_start.")
+    return text + " Original request: " + journal.goal

@@ -28,6 +28,8 @@ _LOCK = threading.RLock()
 class _ManagedProcess:
     process: subprocess.Popen[bytes]
     session_id: str
+    command: list[str] = field(default_factory=list)
+    cwd: str = ""
     log_buffer: bytearray = field(default_factory=bytearray)
     log_lock: threading.Lock = field(default_factory=threading.Lock)
     reader: threading.Thread | None = None
@@ -96,7 +98,7 @@ def process_start(command: list[str], cwd: str = ".", session_id: str = "") -> s
                 start_new_session=os.name != "nt",
             )
             process_id = f"proc-{uuid.uuid4().hex[:12]}"
-            managed = _ManagedProcess(process=process, session_id=session_id)
+            managed = _ManagedProcess(process=process, session_id=session_id, command=list(command), cwd=str(cwd))
             reader = threading.Thread(
                 target=_read_output,
                 args=(managed,),
@@ -183,6 +185,13 @@ def process_stop(process_id: str, session_id: str = "") -> str:
     except (OSError, psutil.Error, subprocess.SubprocessError) as error:
         return f"TOOL ERROR: Could not stop process {process_id}: {error}"
     return f"Stopped process {process_id} (exit code {managed.process.poll()})."
+
+
+def running_processes(session_id: str) -> list[dict[str, Any]]:
+    """Command and folder of each process this task started that is still running (for resume)."""
+    with _LOCK:
+        owned = [managed for managed in _PROCESSES.values() if managed.session_id == session_id]
+    return [{"command": managed.command, "cwd": managed.cwd} for managed in owned if managed.process.poll() is None]
 
 
 def cleanup_session_processes(session_id: str) -> int:

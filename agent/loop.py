@@ -1078,8 +1078,11 @@ class AgentLoop:
                 from agent.durable_tasks import TaskJournal, save_journal
                 from tools.filesystem import get_active_workspace
 
+                from tools.process_manager import running_processes
+
                 save_journal(TaskJournal(session_id, task_goal, target, list(scope), str(get_active_workspace()),
-                                         status=state, turn=turn_number, messages=conversation))
+                                         status=state, turn=turn_number, messages=conversation,
+                                         processes=running_processes(session_id)))
             except (OSError, ValueError, TypeError) as error:
                 journaling_enabled = False
                 logger.warning("Task journal disabled for %s: %s", session_id, error)

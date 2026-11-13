@@ -239,3 +239,30 @@ def test_exec_without_a_task_explains_what_to_give():
 
     result = CliRunner().invoke(main, ["exec"])
     assert result.exit_code == 2 and "--list" in result.output
+
+
+def test_running_processes_are_saved_and_named_on_resume(home, tmp_path):
+    import sys
+
+    from agent.durable_tasks import continuation_goal
+    from tools.process_manager import cleanup_session_processes, process_start, running_processes
+
+    previous = get_active_workspace()
+    set_active_workspace(str(tmp_path))
+    try:
+        command = [sys.executable, "-c", "import time; time.sleep(30)"]
+        assert "proc-" in process_start(command, session_id="task-proc")
+        running = running_processes("task-proc")
+        assert running == [{"command": command, "cwd": "."}]
+        assert running_processes("task-other") == []
+        save_journal(TaskJournal("task-proc", "Serve the app", "localhost", ["localhost"], str(tmp_path),
+                                 status="failed", processes=running))
+    finally:
+        cleanup_session_processes("task-proc")
+        set_active_workspace(previous)
+    assert running_processes("task-proc") == []
+    loaded = load_journal("task-proc")
+    assert loaded.processes == [{"command": command, "cwd": "."}]
+    goal = continuation_goal(loaded)
+    assert "time.sleep(30)" in goal and "process_start" in goal and goal.endswith("Original request: Serve the app")
+    assert "background processes" not in continuation_goal(journal("task-none", tmp_path, "failed"))
