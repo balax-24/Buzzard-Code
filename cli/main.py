@@ -171,6 +171,38 @@ def exec_cmd(task, workspace, allow_edits, allow_commands, allow_all, plan, atte
     click.echo(json_module.dumps(result, indent=2) if as_json else render_text(result))
     raise click.exceptions.Exit(result["exitCode"])
 
+@main.command(name="parallel")
+@click.argument("tasks", nargs=-1, required=True)
+@click.option("--workspace", type=click.Path(exists=True, file_okay=False, path_type=Path), default=None,
+              help="Project folder (defaults to the current directory).")
+@click.option("--allow-edits", is_flag=True, help="Let the subtasks edit files without asking.")
+@click.option("--allow-commands", is_flag=True, help="Let the subtasks and the final gate run commands without asking.")
+@click.option("--model", default=None, help="Model override for every subtask.")
+@click.option("--json", "as_json", is_flag=True, help="Print the result as JSON.")
+def parallel_cmd(tasks, workspace, allow_edits, allow_commands, model, as_json):
+    """
+    Run 2-6 independent subtasks at the same time, each in its own git worktree, then merge their
+    changes, run the completion gate on the merge, and apply it only if the gate passes.
+    Example: buzzard parallel "Add input validation to cart.py" "Add a --verbose flag to cli.py" --allow-edits --allow-commands
+    """
+    import json as json_module
+    from agent.parallel import ParallelError, default_worker_command, render, run_parallel
+    from verification.coding_verifier import CodingVerifier
+
+    goal = "Implement these changes: " + "; ".join(tasks)
+
+    def verify(merged: Path):
+        approver = None if allow_commands else (lambda command: False)
+        return CodingVerifier(workspace=str(merged), command_approver=approver).verify_task(goal)
+
+    try:
+        result = run_parallel(workspace or Path.cwd(), list(tasks),
+                              default_worker_command(allow_edits, allow_commands, model), verify)
+    except ParallelError as error:
+        raise click.UsageError(str(error))
+    click.echo(json_module.dumps(result.to_dict(), indent=2) if as_json else render(result))
+    raise click.exceptions.Exit(0 if result.applied else 1)
+
 @main.command(name="gate")
 @click.option("--base", required=True, help="Branch or commit the changes are compared with, such as origin/main.")
 @click.option("--workspace", type=click.Path(exists=True, file_okay=False, path_type=Path), default=None,
