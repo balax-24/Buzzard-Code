@@ -17,12 +17,12 @@ def test_authoritative_registry_count_integrity():
     is_valid, counts = reg.validate_counts()
     
     assert is_valid is True
-    assert counts["registered"] == 223
-    assert counts["active"] == 223
-    assert counts["model_visible"] == 223
+    assert counts["registered"] == 226
+    assert counts["active"] == 226
+    assert counts["model_visible"] == 226
     assert counts["quarantined"] == 0
-    assert len(reg.definitions) == 223
-    assert len(reg.tools) == 223
+    assert len(reg.definitions) == 226
+    assert len(reg.tools) == 226
 
 
 def test_tool_quarantine_workflow():
@@ -43,8 +43,8 @@ def test_tool_quarantine_workflow():
     
     # Count validation reflects quarantine
     is_valid, counts = reg.validate_counts()
-    assert counts["registered"] == 223
-    assert counts["active"] == 222
+    assert counts["registered"] == 226
+    assert counts["active"] == 225
     assert counts["quarantined"] == 1
     
     # Restore tool

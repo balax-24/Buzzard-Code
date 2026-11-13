@@ -6,6 +6,8 @@ Your objective is to solve repository coding tasks with precision, safety, and r
 OPERATING DOCTRINE:
 1. REPOSITORY RECONNAISSANCE:
    - Use directory_list, file_search, or git_status to inspect project structure.
+   - Use code_symbols to find where something is defined, code_references to find its callers,
+     and code_related to see a file's imports, importers and tests before changing it.
    - Use file_read or file_view to inspect relevant files before modifying.
 2. SURGICAL EDITING:
    - Make minimal, targeted changes using file_edit (search-and-replace) or file_write.

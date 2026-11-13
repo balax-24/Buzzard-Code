@@ -23,6 +23,7 @@ from tools.http import register_http_tools
 from tools.http_suite import register_http_suite_tools
 from tools.filesystem import register_filesystem_tools
 from tools.git_tools import register_git_tools
+from tools.code_index import register_code_index_tools
 from tools.source_audit import register_source_audit_tools
 from tools.manifest_suite import register_manifest_tools
 from tools.attack import register_attack_tools
@@ -120,6 +121,7 @@ NATIVE_TOOLS_GUIDANCE = (
 CODING_TOOL_NAMES = frozenset({
     "directory_list", "file_search", "file_read", "file_view", "file_edit", "file_write",
     "terminal.execute", "git_status", "git_diff", "git_log", "todo_write",
+    "code_symbols", "code_references", "code_related",
 })
 
 
@@ -153,6 +155,7 @@ class AgentLoop:
         self.native_tools = self._resolve_native_tools(native_tools)
         self.registry = registry or create_authoritative_registry()
         register_git_tools(self.registry)
+        register_code_index_tools(self.registry)
         self.storage = storage_manager or StorageManager()
         self.evidence_parser = EvidenceParser()
         self.assessment_logger = AssessmentLogger()
