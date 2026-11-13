@@ -9,12 +9,45 @@ from tools.filesystem import set_active_workspace, get_active_workspace
 from verification.coding_verifier import (
     detect_project_test_runner,
     check_code_syntax,
+    list_changed_files,
     CodingVerifier,
     CodingVerificationResult,
     detect_lint_command,
     load_project_settings,
     resolve_test_timeout,
 )
+
+
+def test_changed_files_omit_only_untracked_generated_caches(tmp_path):
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.name", "Test"], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.email", "test@test.local"], cwd=tmp_path, check=True, capture_output=True)
+    source = tmp_path / "app.py"
+    source.write_text("value = 1\n", encoding="utf-8")
+    subprocess.run(["git", "add", "app.py"], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "init"], cwd=tmp_path, check=True, capture_output=True)
+
+    for cache_path in (
+        tmp_path / "__pycache__" / "test_generated.pyc",
+        tmp_path / ".pytest_cache" / "v" / "cache" / "nodeids",
+        tmp_path / ".mypy_cache" / "3.14" / "cache.db",
+        tmp_path / ".ruff_cache" / "content" / "entry",
+        tmp_path / ".coverage",
+    ):
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+        cache_path.write_bytes(b"generated")
+    assert list_changed_files(tmp_path) == []
+
+    source.write_text("value = 2\n", encoding="utf-8")
+    (tmp_path / "new_module.py").write_text("value = 3\n", encoding="utf-8")
+    assert list_changed_files(tmp_path) == ["app.py", "new_module.py"]
+
+    tracked_cache = tmp_path / "__pycache__" / "tracked.pyc"
+    tracked_cache.write_bytes(b"tracked")
+    subprocess.run(["git", "add", "app.py", "new_module.py", str(tracked_cache)], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "track cache fixture"], cwd=tmp_path, check=True, capture_output=True)
+    tracked_cache.write_bytes(b"modified")
+    assert list_changed_files(tmp_path) == ["__pycache__/tracked.pyc"]
 
 
 def test_detect_project_test_runner(tmp_path):
