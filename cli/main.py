@@ -203,6 +203,41 @@ def parallel_cmd(tasks, workspace, allow_edits, allow_commands, model, as_json):
     click.echo(json_module.dumps(result.to_dict(), indent=2) if as_json else render(result))
     raise click.exceptions.Exit(0 if result.applied else 1)
 
+@main.command(name="team")
+@click.argument("goal")
+@click.option("--workspace", type=click.Path(exists=True, file_okay=False, path_type=Path), default=None,
+              help="Project folder (defaults to the current directory).")
+@click.option("--allow-edits", is_flag=True, help="Let the workers edit files without asking.")
+@click.option("--allow-commands", is_flag=True, help="Let the workers and the gate run commands without asking.")
+@click.option("--no-review", is_flag=True, help="Skip the reviewer; the gate still decides.")
+@click.option("--model", default=None, help="Model override for the planner, workers and reviewer.")
+@click.option("--json", "as_json", is_flag=True, help="Print the result as JSON.")
+def team_cmd(goal, workspace, allow_edits, allow_commands, no_review, model, as_json):
+    """
+    Plan GOAL into independent subtasks, run them in parallel worktrees, then gate and review the
+    merged changes; they are applied only if both pass.
+    """
+    import json as json_module
+    from agent.parallel import ParallelError, default_worker_command
+    from agent.team import render, run_team
+    from core.config import load_merged_config
+    from model.factory import get_model_provider
+    from verification.coding_verifier import CodingVerifier
+
+    provider = get_model_provider(model_name=model, config=load_merged_config())
+
+    def gate(merged: Path):
+        approver = None if allow_commands else (lambda command: False)
+        return CodingVerifier(workspace=str(merged), command_approver=approver).verify_task(goal)
+
+    try:
+        result = run_team(workspace or Path.cwd(), goal, provider,
+                          default_worker_command(allow_edits, allow_commands, model), gate, review=not no_review)
+    except ParallelError as error:
+        raise click.UsageError(str(error))
+    click.echo(json_module.dumps(result.to_dict(), indent=2) if as_json else render(result))
+    raise click.exceptions.Exit(0 if result.applied else 1)
+
 @main.command(name="gate")
 @click.option("--base", required=True, help="Branch or commit the changes are compared with, such as origin/main.")
 @click.option("--workspace", type=click.Path(exists=True, file_okay=False, path_type=Path), default=None,

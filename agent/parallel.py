@@ -109,6 +109,7 @@ def run_parallel(
     worker_command: WorkerCommand,
     verify: Callable[[Path], Any],
     timeout: float = WORKER_TIMEOUT_SECONDS,
+    minimum: int = 2,
 ) -> ParallelResult:
     """
     Runs `tasks` concurrently in worktrees, merges their diffs, gates the merge with
@@ -116,8 +117,8 @@ def run_parallel(
     merge to `workspace` only if the gate passed.
     """
     tasks = [task.strip() for task in tasks if task and task.strip()]
-    if not 2 <= len(tasks) <= MAX_SUBTASKS:
-        raise ParallelError(f"give between 2 and {MAX_SUBTASKS} subtasks")
+    if not minimum <= len(tasks) <= MAX_SUBTASKS:
+        raise ParallelError(f"give between {minimum} and {MAX_SUBTASKS} subtasks")
     root = Path(workspace).resolve()
     if _git(root, "rev-parse", "--is-inside-work-tree", check=False).returncode != 0:
         raise ParallelError("parallel subtasks need the project to be a git repository")

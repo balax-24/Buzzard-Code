@@ -161,6 +161,7 @@ The two highlighted boxes are deterministic code. The model cannot talk its way 
 - Subagents (explore, review, test, code), optionally on a cheaper model
 - Best-of-N attempts: run a task several times in separate worktrees and keep the best verified result
 - `buzzard parallel`: independent subtasks at the same time in separate worktrees, merged and gated before anything is applied
+- `buzzard team`: a planner splits the goal, workers run in parallel, and a reviewer checks the merged diff after the gate
 - `buzzard exec` for scripts and CI, with nothing approved unless a flag allows it
 - Durable tasks: every turn is saved, so a crash or closed laptop does not lose the work; resume with `/tasks resume <id>`
 - Task budgets for tokens, money, time or turns, with a clear stop that can be resumed
