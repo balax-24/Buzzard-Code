@@ -11,7 +11,6 @@
 <p align="center">
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-8b5cf6"></a>
   <img alt="Python 3.12+" src="https://img.shields.io/badge/python-3.12%2B-8b5cf6">
-  <img alt="Runs on Muse Glimmer" src="https://img.shields.io/badge/runs%20on-Muse%20Glimmer-8b5cf6">
 </p>
 
 <p align="center"><img src="docs/assets/welcome.png" alt="Buzzard Code welcome screen" width="760"></p>
@@ -26,7 +25,7 @@
 - [Architecture](#architecture)
 - [Features](#features)
 - [Plug and play](#plug-and-play)
-- [Results on Meta models](#results-on-meta-models)
+- [Verified on a real model](#verified-on-a-real-model)
 - [Quick start](#quick-start)
 - [Commands](#commands)
 - [Configuration](#configuration)
@@ -153,7 +152,7 @@ The two highlighted boxes are deterministic code. The model cannot talk its way 
 - Native tool calling, including streaming and parallel calls, with retries for rate limits and server errors
 - MCP client for stdio servers
 
-**Since the hackathon**
+**Verification, intelligence and scale**
 - Stronger proof at the gate: for a bug fix, a test must fail on the original code and pass with the fix (reproduce-first); changed-line coverage for pytest, Go, Node (c8) and Rust; an optional mutation check (Python, JavaScript, TypeScript, Go) that breaks each changed line on purpose and reports what no test caught
 - `related_tests` finds the tests that import the changed code, so the agent can test a change quickly before the full suite
 - Language-server tools (`lsp_definition`, `lsp_references`, `lsp_diagnostics`, `lsp_rename`) when gopls, Pyright, typescript-language-server or another server is installed, with a fallback to the built-in code index
@@ -170,11 +169,11 @@ The two highlighted boxes are deterministic code. The model cannot talk its way 
 - Hooks before and after tool calls and at task end, custom slash commands, permission rules
 - Prompt caching for Anthropic models, and cached-token reporting for all providers in `/usage`
 
-## Results on Meta models
+## Verified on a real model
 
 The acceptance scenario runs on a disposable repository. The agent explains the code, finds a deliberate bug, fixes it, recovers from a test failure introduced mid-run, and leaves audit records. **Outcomes are verified independently with git and pytest, not taken from the agent's word.**
 
-| Run on Muse Glimmer (`meta/muse-glimmer-30b`) | Result |
+| Run on a local model (`meta/muse-glimmer-30b` via an OpenAI-compatible host) | Result |
 |---|---|
 | First run | 13/17: exposed a real defect, where the agent reported `completed` while tests failed |
 | After fixing that defect | **17/17** |
@@ -350,9 +349,9 @@ Buzzard began as a security assessment agent, and that tooling remains in `tools
 
 ## How it was built
 
-**Built during the Meta Global AI Developer Hackathon.** The final days of the event turned Buzzard into the coding agent you see here:
+Buzzard grew from a controlled execution core into the coding agent you see here:
 
-- Live testing on Muse Glimmer, and the fixes that testing led to
+- Live testing on a real model, and the fixes that testing led to
 - A completion gate that cannot be bypassed, and approval for every edit and command
 - Native tool calling across providers, automatic failover and shared retries
 - The terminal UI: transcript, diffs, approval dialog, token and cost meter, and commands
@@ -393,11 +392,14 @@ Buzzard began as a security assessment agent, and that tooling remains in `tools
 
 ## Roadmap
 
+Built since: repository indexing and semantic search, subagents with isolated permissions, best-of-N, parallel subtasks and a planner/workers/reviewer team, durable tasks and budgets, hooks and custom commands, a richer MCP client, and the completion gate's reproduce-first, changed-line coverage and mutation checks.
+
+Next:
+
 1. **Requirement-first verification:** the agent writes a failing test for your request, you approve it, and it must make that test pass
-2. Running gate tests in Docker when available
-3. Repository indexing and symbol navigation
-4. A richer MCP client
-5. Subagents with isolated permissions
+2. Browser-based checks for UI changes, and image input
+3. A self-honesty benchmark and a release regression suite
+4. More editor clients
 
 ## Tests
 
