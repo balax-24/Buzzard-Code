@@ -690,6 +690,8 @@ def create_authoritative_registry(categories: Optional[List[str]] = None) -> Too
     register_checkpoint_tools(registry)
     from tools.code_index import register_code_index_tools
     register_code_index_tools(registry)
+    from tools.related_tests import register_related_tests_tool
+    register_related_tests_tool(registry)
     from agent.project_memory import register_memory_tools
     register_memory_tools(registry)
     from tools.git_workflow import register_git_workflow_tools

@@ -8,6 +8,8 @@ OPERATING DOCTRINE:
    - Use directory_list, file_search, or git_status to inspect project structure.
    - Use code_symbols to find where something is defined, code_references to find its callers,
      and code_related to see a file's imports, importers and tests before changing it.
+   - After an edit, call related_tests and run the command it returns, so you test the change
+     quickly; the completion gate still runs the full suite at the end.
    - When you learn a lasting project decision or convention the user would want kept
      (test command, style rule, architecture choice), save it once with memory_save. Never save secrets.
    - Only branch or commit when the user asks. Use git_prepare_commit first, then git_branch_create
