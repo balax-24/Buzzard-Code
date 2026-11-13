@@ -58,7 +58,33 @@ def build_evidence_report(verification: Any, workspace: str, approved: int, deni
     if source_changed and not any(TEST_FILE.search(path) for path in changed):
         lines.append("- ⚠ No test changed: the gate only proves what existing tests check")
 
+    coverage = getattr(verification, "changed_line_coverage", None)
+    if command and isinstance(coverage, dict):
+        lines.append(f"- {_coverage_mark(coverage)} Changed-line coverage: {_coverage_text(coverage)}")
+
     lint_status = getattr(verification, "lint_status", "not configured")
     lint_mark = {"passed": "✓", "issues found": "⚠"}.get(lint_status, "○")
     lines.append(f"- {lint_mark} Lint: {lint_status}")
     return "\n".join(lines)
+
+
+def _coverage_mark(coverage: dict) -> str:
+    if not coverage.get("measured"):
+        return "○"
+    return "✓" if not coverage.get("uncovered") else "⚠"
+
+
+def _coverage_text(coverage: dict) -> str:
+    """Renders the gate's changed-line coverage record; see verification/changed_coverage.py."""
+    if not coverage.get("measured"):
+        return f"not measured ({coverage.get('reason') or 'unknown reason'})"
+    total = int(coverage.get("total") or 0)
+    if total == 0:
+        return "no executable non-test Python lines changed"
+    text = f"{coverage.get('covered', 0)}/{total} changed lines run by tests ({coverage.get('percent')}%)"
+    uncovered = coverage.get("uncovered") or {}
+    if uncovered:
+        text += "; not run: " + "; ".join(
+            f"`{path}` {', '.join(str(line) for line in lines)}" for path, lines in sorted(uncovered.items())
+        )
+    return text
