@@ -664,6 +664,8 @@ def create_authoritative_registry(categories: Optional[List[str]] = None) -> Too
     register_memory_tools(registry)
     from tools.git_workflow import register_git_workflow_tools
     register_git_workflow_tools(registry)
+    from agent.subagents import register_subagent_tools
+    register_subagent_tools(registry)
 
     # 6. Source Audit & SAST tools
     from tools.source_audit import register_source_audit_tools

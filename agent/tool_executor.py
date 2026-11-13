@@ -86,6 +86,7 @@ WORKSPACE_STATE_TOOLS = frozenset({
     "directory_list", "todo_write", "git_status", "git.status", "git_diff", "git.diff", "git_log", "git.log",
     "code_symbols", "code_references", "code_related",
     "git_prepare_commit", "git_branch_create", "git_commit", "git_prepare_pr",
+    "delegate_task",
 })
 
 

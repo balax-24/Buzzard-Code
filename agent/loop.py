@@ -123,6 +123,7 @@ CODING_TOOL_NAMES = frozenset({
     "terminal.execute", "git_status", "git_diff", "git_log", "todo_write",
     "code_symbols", "code_references", "code_related", "memory_save",
     "git_prepare_commit", "git_branch_create", "git_commit", "git_prepare_pr",
+    "delegate_task",
 })
 
 
@@ -155,12 +156,19 @@ class AgentLoop:
         self.config = config or {}
         self.native_tools = self._resolve_native_tools(native_tools)
         self.registry = registry or create_authoritative_registry()
-        register_git_tools(self.registry)
-        register_code_index_tools(self.registry)
-        from agent.project_memory import register_memory_tools
-        register_memory_tools(self.registry)
-        from tools.git_workflow import register_git_workflow_tools
-        register_git_workflow_tools(self.registry)
+        # A subagent's registry is its permission boundary, so nothing may be added to it
+        self.subagent_role: Optional[str] = self.config.get("subagent_role")
+        if not self.subagent_role:
+            register_git_tools(self.registry)
+            register_code_index_tools(self.registry)
+            from agent.project_memory import register_memory_tools
+            register_memory_tools(self.registry)
+            from tools.git_workflow import register_git_workflow_tools
+            register_git_workflow_tools(self.registry)
+            from agent.subagents import register_subagent_tools
+            register_subagent_tools(self.registry)
+        self.run_target: Optional[str] = None
+        self.run_scope: Optional[List[str]] = None
         self.storage = storage_manager or StorageManager()
         self.evidence_parser = EvidenceParser()
         self.assessment_logger = AssessmentLogger()
@@ -410,7 +418,14 @@ class AgentLoop:
 
     def _verify_coding_task(self, task_goal: str, policy_engine: PolicyEngine) -> Any:
         """Runs the completion gate; its test command needs approval like any other command."""
-        from verification.coding_verifier import CodingVerifier
+        from verification.coding_verifier import CodingVerificationResult, CodingVerifier
+
+        if self.subagent_role:
+            # The main agent's gate verifies the combined result once the subagent reports back
+            self.last_verification = CodingVerificationResult(
+                passed=True, requires_action=False, message="Subagent report; verified by the main agent's gate."
+            )
+            return self.last_verification
 
         def approve_command(command: str) -> bool:
             permitted, _ = policy_engine.evaluate_tool_call("terminal.execute", {"command": command})
@@ -787,6 +802,25 @@ class AgentLoop:
         """
         Executes the agent loop until completion or max iterations.
         """
+        self.run_target, self.run_scope = target, scope or [target]
+        if self.subagent_role:
+            return self._run(task_goal, target, scope, session_id, conversation_history, attached_context)
+        from agent.subagents import set_parent_loop
+        set_parent_loop(self)
+        try:
+            return self._run(task_goal, target, scope, session_id, conversation_history, attached_context)
+        finally:
+            set_parent_loop(None)
+
+    def _run(
+        self,
+        task_goal: str,
+        target: str,
+        scope: Optional[List[str]] = None,
+        session_id: Optional[str] = None,
+        conversation_history: Optional[List[Dict[str, Any]]] = None,
+        attached_context: str = "",
+    ) -> Dict[str, Any]:
         scope = scope or [target]
         if not session_id:
             session_id = f"session-{uuid.uuid4().hex[:8]}"
@@ -934,7 +968,7 @@ class AgentLoop:
             skills_prompt += "---------------------------------\n"
 
         # Initialize conversation messages
-        is_coding = is_coding_task(task_goal)
+        is_coding = bool(self.subagent_role) or is_coding_task(task_goal)
         self._is_coding_task = is_coding
         prompt_mode = self.config.get("prompt_mode", "baseline")
         if is_coding and prompt_mode == "baseline":
@@ -958,7 +992,10 @@ class AgentLoop:
             prompt_mode = "canonical"
 
         coding_tools = CODING_TOOL_NAMES
-        if is_coding:
+        if self.subagent_role:
+            from agent.subagents import role_tool_names
+            coding_tools = role_tool_names(self.subagent_role)
+        elif is_coding:
             from tools.mcp_client import get_mcp_manager
             coding_tools = CODING_TOOL_NAMES | frozenset(get_mcp_manager().register_tools(self.registry))
         tools_description = self.registry.get_tools_description(only=coding_tools if is_coding else None)
