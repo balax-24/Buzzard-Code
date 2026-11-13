@@ -24,6 +24,13 @@ from typing import Callable, Dict, Any, List, Optional, Tuple
 
 from tools.filesystem import get_active_workspace
 from sandbox.container import ControlledHostSandbox
+from verification.docker_tests import (
+    IsolationConfigError,
+    container_command,
+    docker_available,
+    resolve_isolation,
+    run_tests_in_docker,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -43,6 +50,7 @@ class CodingVerificationResult:
     syntax_errors: List[str] = field(default_factory=list)
     lint_command: Optional[str] = None
     lint_status: str = "not configured"
+    test_environment: str = "host"
 
 
 _EDIT_REQUEST = re.compile(
@@ -375,11 +383,44 @@ class CodingVerifier:
         settings = load_project_settings(workspace_path)
         test_info = detect_project_test_runner(self.workspace)
         configured_command = settings.get("test_command")
-        if isinstance(configured_command, str) and configured_command.strip():
+        configured = isinstance(configured_command, str) and bool(configured_command.strip())
+        if configured:
             test_info = {"detected": True, "runner": "configured", "command": configured_command.strip()}
         if test_info["detected"] and auto_run_tests:
             runner = test_info["runner"]
             cmd = test_info["command"]
+            detected_runner = detect_project_test_runner(self.workspace).get("runner")
+
+            try:
+                isolation = resolve_isolation(settings, detected_runner)
+            except IsolationConfigError as error:
+                return CodingVerificationResult(
+                    passed=False,
+                    requires_action=True,
+                    message=f"COMPLETION GATE REJECTED: Invalid test isolation settings in .buzzard/project.json: {error}",
+                    runner_detected=runner,
+                    test_command=cmd,
+                )
+            use_docker = isolation.mode == "docker" or (isolation.mode == "auto" and docker_available())
+            if isolation.mode == "docker" and not docker_available():
+                return CodingVerificationResult(
+                    passed=False,
+                    requires_action=True,
+                    message=(
+                        "COMPLETION GATE REJECTED: This project requires tests to run in Docker "
+                        "(test_isolation is 'docker'), but Docker is not reachable. Start Docker, or set "
+                        "test_isolation to 'auto' or 'host' in .buzzard/project.json if you trust this repository."
+                    ),
+                    runner_detected=runner,
+                    test_command=cmd,
+                    test_environment="docker (unavailable)",
+                )
+            if use_docker:
+                container_test = container_command(detected_runner, cmd, configured)
+                cmd = f"{isolation.setup} && {container_test}" if isolation.setup else container_test
+                environment = isolation.describe()
+            else:
+                environment = "host (Docker not reachable)" if isolation.mode == "auto" else "host"
 
             if self.command_approver is not None and not self.command_approver(cmd):
                 return CodingVerificationResult(
@@ -394,8 +435,12 @@ class CodingVerifier:
                     diff_summary=diff_text[:800] if diff_text else None,
                 )
 
-            # Execute test command in ControlledHostSandbox
-            res = self.sandbox.execute(cmd, timeout=resolve_test_timeout(settings))
+            if use_docker:
+                res = run_tests_in_docker(
+                    workspace_path, container_test, isolation, timeout=resolve_test_timeout(settings)
+                )
+            else:
+                res = self.sandbox.execute(cmd, timeout=resolve_test_timeout(settings))
             if isinstance(res, dict):
                 exit_code = res.get("exit_code", 1)
                 stdout = res.get("stdout", "")
@@ -414,6 +459,7 @@ class CodingVerifier:
                     message=(
                         f"COMPLETION GATE REJECTED: Test suite failed (exit code {exit_code}).\n"
                         f"Command: `{cmd}`\n"
+                        f"Ran in: {environment}\n"
                         f"Test Failure Output:\n```\n{truncated_output}\n```\n"
                         "Please inspect the test failure, modify the code to fix the issue, and re-test."
                     ),
@@ -422,6 +468,7 @@ class CodingVerifier:
                     test_exit_code=exit_code,
                     test_output=output,
                     diff_summary=diff_text[:800] if diff_text else None,
+                    test_environment=environment,
                 )
 
             # Test suite passed!
@@ -431,7 +478,8 @@ class CodingVerifier:
                 lint_status=lint_status,
                 passed=True,
                 requires_action=False,
-                message=f"All verification gates passed: Test suite `{cmd}` passed with exit code 0.",
+                message=f"All verification gates passed: Test suite `{cmd}` passed with exit code 0 ({environment}).",
+                test_environment=environment,
                 runner_detected=runner,
                 test_command=cmd,
                 test_exit_code=0,

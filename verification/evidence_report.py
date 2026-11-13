@@ -47,6 +47,10 @@ def build_evidence_report(verification: Any, workspace: str, approved: int, deni
     else:
         lines.append("- ○ Tests: not checked (no test runner found)")
 
+    environment = getattr(verification, "test_environment", "host")
+    if command and isinstance(environment, str) and environment != "host":
+        lines.append(f"- {'✓' if environment.startswith('Docker') else '⚠'} Test environment: {environment}")
+
     lines.append("- ✓ Changed: " + ", ".join(_change_lines(root, changed)) if changed else "- ○ Changed: no files")
     lines.append(f"- ✓ Approvals: {approved} approved, {denied} denied")
 
