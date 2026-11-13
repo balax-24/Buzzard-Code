@@ -20,6 +20,7 @@ import fnmatch
 import re
 import stat
 import tempfile
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -29,8 +30,18 @@ _ACTIVE_WORKSPACE: Optional[str] = None
 MAX_EDIT_HISTORY = 50
 MAX_PATCH_BYTES = 1_000_000
 _PATCH_HUNK_HEADER = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
-# (path, bytes before the edit or None for a new file, bytes the edit wrote)
-_edit_history: List[Tuple[str, Optional[bytes], Optional[bytes]]] = []
+@dataclass(frozen=True)
+class _MoveHistory:
+    source: str
+    destination: str
+    content: bytes
+
+
+_EditHistoryEntry = Tuple[str, Optional[bytes], Optional[bytes]] | _MoveHistory
+# Edit entries are (path, bytes before, bytes after); moves keep source, destination and bytes.
+_edit_history: List[_EditHistoryEntry] = []
+
+
 
 
 def set_active_workspace(path: Optional[str]) -> str:
@@ -248,7 +259,17 @@ def undo_last_edit() -> str:
     """Reverts the agent's latest edit, unless the file has changed since it was made."""
     if not _edit_history:
         return "Nothing to undo."
-    safe_path, previous, written = _edit_history[-1]
+    entry = _edit_history[-1]
+    if isinstance(entry, _MoveHistory):
+        if os.path.lexists(entry.source) or _read_bytes_or_none(entry.destination) != entry.content:
+            return f"Cannot undo: '{entry.destination}' has changed since it was moved. Nothing was modified."
+        try:
+            os.replace(entry.destination, entry.source)
+        except OSError as error:
+            return f"Cannot undo move: {error}"
+        _edit_history.pop()
+        return f"Undid move: restored '{entry.source}'."
+    safe_path, previous, written = entry
     if _read_bytes_or_none(safe_path) != written:
         return f"Cannot undo: '{safe_path}' has changed since the agent edited it. Nothing was modified."
     _edit_history.pop()
@@ -258,6 +279,38 @@ def undo_last_edit() -> str:
     with open(safe_path, "wb") as file:
         file.write(previous)
     return f"Undid edit: restored '{safe_path}'."
+
+
+def file_move(source: str, destination: str) -> str:
+    """Move one regular workspace file to a new, unused workspace path."""
+    valid_source = isinstance(source, str) and bool(source.strip())
+    valid_destination = isinstance(destination, str) and bool(destination.strip())
+    if not valid_source or not valid_destination:
+        return "TOOL ERROR: source and destination must be non-empty paths."
+    try:
+        safe_source = get_safe_path(source)
+        safe_destination = get_safe_path(destination)
+        normalized_source = os.path.normcase(os.path.abspath(safe_source))
+        normalized_destination = os.path.normcase(os.path.abspath(safe_destination))
+        if normalized_source == normalized_destination:
+            return "TOOL ERROR: source and destination refer to the same path."
+        if os.path.islink(safe_source) or not os.path.isfile(safe_source):
+            return f"TOOL ERROR: source '{source}' must be an existing regular file, not a symlink."
+        if os.path.lexists(safe_destination):
+            return f"TOOL ERROR: destination '{destination}' already exists."
+        if not os.path.isdir(os.path.dirname(safe_destination)):
+            return f"TOOL ERROR: destination parent for '{destination}' does not exist."
+
+        with open(safe_source, "rb") as file:
+            content = file.read()
+        if os.path.lexists(safe_destination) or _read_bytes_or_none(safe_source) != content:
+            return "TOOL ERROR: source or destination changed while the move was being prepared."
+        os.replace(safe_source, safe_destination)
+        _edit_history.append(_MoveHistory(safe_source, safe_destination, content))
+        del _edit_history[:-MAX_EDIT_HISTORY]
+        return f"Successfully moved '{source}' to '{destination}'."
+    except (OSError, ValueError) as error:
+        return f"TOOL ERROR: Failed to move '{source}' to '{destination}': {error}"
 
 
 def file_write(path: str, content: str) -> str:
@@ -791,6 +844,24 @@ def register_filesystem_tools(registry):
         scope_required=True,
         approval_required=False,
         timeout=15
+    )
+    registry.register(
+        name="file_move",
+        description="Moves one existing regular file to an unused path inside the workspace. The move requires approval and can be undone if the moved file is unchanged. Arguments: source (str), destination (str).",
+        func=file_move,
+        category=ToolCategory.AUTOMATION,
+        risk_level="MEDIUM",
+        read_only=False,
+        destructive=True,
+        sandbox_required=False,
+        scope_required=True,
+        approval_required=True,
+        timeout=15,
+        schema={
+            "type": "object",
+            "properties": {"source": {"type": "string"}, "destination": {"type": "string"}},
+            "required": ["source", "destination"],
+        },
     )
     registry.register(
         name="apply_patch",

@@ -85,6 +85,32 @@ def test_compaction_retains_goal_ledger_and_recent_valid_tool_pairs() -> None:
     assert "result 0" not in str(compacted)
 
 
+def test_task_ledger_tracks_patch_paths_and_both_move_paths() -> None:
+    messages = [{
+        "role": "assistant",
+        "content": "",
+        "tool_calls": [
+            {
+                "id": "patch",
+                "function": {
+                    "name": "apply_patch",
+                    "arguments": "{\"patch\": \"--- a/src/old.py\\n+++ b/src/old.py\\n@@ -1 +1 @@\\n-a\\n+b\\n--- /dev/null\\n+++ b/src/new.py\\n@@ -0,0 +1 @@\\n+x\\n\"}",
+                },
+            },
+            {
+                "id": "move",
+                "function": {
+                    "name": "file_move",
+                    "arguments": {"source": "src/old.py", "destination": "src/renamed.py"},
+                },
+            },
+        ],
+    }]
+    ledger = TaskLedger.from_history("Refactor the files.", [], messages)
+
+    assert ledger.files_touched == ["src/old.py", "src/new.py", "src/renamed.py"]
+
+
 def test_task_ledger_tracks_unanswered_question_and_bounds_rendering() -> None:
     messages = [
         {"role": "system", "content": "System"},

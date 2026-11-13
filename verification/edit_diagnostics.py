@@ -12,7 +12,7 @@ from typing import Any
 from tools.filesystem import get_safe_path
 
 
-EDIT_TOOLS = frozenset({"file_edit", "file_write", "multi_edit", "apply_patch"})
+EDIT_TOOLS = frozenset({"file_edit", "file_write", "file_move", "multi_edit", "apply_patch"})
 _PATCH_FILE_HEADER = re.compile(r"^\+\+\+ (.+?)(?:\t.*)?$")
 
 
@@ -21,6 +21,9 @@ def edited_paths(tool_name: str, arguments: dict[str, Any]) -> list[str]:
     if tool_name in {"file_edit", "file_write", "multi_edit"}:
         path = arguments.get("path")
         return [path] if isinstance(path, str) and path else []
+    if tool_name == "file_move":
+        destination = arguments.get("destination")
+        return [destination] if isinstance(destination, str) and destination else []
     if tool_name != "apply_patch":
         return []
 

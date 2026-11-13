@@ -15,7 +15,7 @@ MAX_ACTIONS = 80
 MAX_DECISIONS = 8
 MAX_QUESTIONS = 8
 MAX_COMMAND_OUTPUT_CHARS = 240
-_FILE_WRITE_TOOLS = frozenset({"file_edit", "file_write", "multi_edit", "apply_patch"})
+_FILE_WRITE_TOOLS = frozenset({"file_edit", "file_write", "file_move", "multi_edit"})
 _QUESTION_PATTERN = re.compile(r"(?:^|\n)[^\n?]{3,240}\?\s*$")
 
 
@@ -101,7 +101,12 @@ class TaskLedger:
         decision = f"Selected {tool}" + (f" ({label})" if label else "")
         if decision not in self.decisions:
             self.decisions.append(decision)
-        if tool in _FILE_WRITE_TOOLS:
+        if tool == "file_move":
+            for key in ("source", "destination"):
+                path = arguments.get(key)
+                if isinstance(path, str) and path.strip() and path not in self.files_touched:
+                    self.files_touched.append(path)
+        elif tool in _FILE_WRITE_TOOLS:
             path = arguments.get("path") or arguments.get("file_path")
             if isinstance(path, str) and path.strip() and path not in self.files_touched:
                 self.files_touched.append(path)
