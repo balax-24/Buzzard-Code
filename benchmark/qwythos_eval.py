@@ -193,8 +193,9 @@ QWYTHOS_TEST_SUITE: List[QwythosEvalCase] = [
 
 class MockEvalSandbox:
     """
-    Benchmark evaluation sandbox for running safe compute test cases (e.g. math/primes)
-    when live Docker daemon is not active.
+    Deterministic harness for the fixed math/primes scripts in this evaluation suite.
+
+    This is not an isolation boundary and must not be used for model-provided code.
     """
     sandboxed = True
     blocked = False
@@ -231,11 +232,9 @@ class QwythosEvaluator:
 
     def __init__(self, registry: Optional[ToolRegistry] = None, sandbox: Optional[Any] = None):
         self.registry = registry or create_authoritative_registry()
-        if sandbox is not None:
-            self.sandbox = sandbox
-        else:
-            from sandbox.container import is_docker_active
-            self.sandbox = None if is_docker_active() else MockEvalSandbox()
+        # These benchmark inputs are fixed source strings, not model-provided code. Keep their
+        # result independent of whether the developer happens to have Docker or the project image.
+        self.sandbox = sandbox if sandbox is not None else MockEvalSandbox()
 
     def run_case(self, case: QwythosEvalCase) -> QwythosEvalResult:
         """
