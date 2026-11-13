@@ -141,10 +141,10 @@ def verify_cmd(bundle: Path, workspace: Path | None):
 
     result = verify_evidence_bundle(bundle, workspace or Path.cwd())
     if result["valid"]:
-        console.print(f"[bold green]✓ {result['reason']}[/bold green]")
-        console.print(f"Bundle SHA-256: {result['bundle_sha256']}")
+        click.secho(f"✓ {result['reason']}", fg="green", bold=True)
+        click.echo(f"Bundle SHA-256: {result['bundle_sha256']}")
         return
-    console.print(f"[bold red]✗ {result['reason']}[/bold red]")
+    click.secho(f"✗ {result['reason']}", fg="red", bold=True)
     raise click.exceptions.Exit(1)
 
 @main.command()
