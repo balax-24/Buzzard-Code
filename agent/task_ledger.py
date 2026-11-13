@@ -15,7 +15,7 @@ MAX_ACTIONS = 80
 MAX_DECISIONS = 8
 MAX_QUESTIONS = 8
 MAX_COMMAND_OUTPUT_CHARS = 240
-_FILE_WRITE_TOOLS = frozenset({"file_edit", "file_write", "file_move", "multi_edit"})
+_FILE_WRITE_TOOLS = frozenset({"file_edit", "file_write", "file_move", "multi_edit", "lsp_rename"})
 _QUESTION_PATTERN = re.compile(r"(?:^|\n)[^\n?]{3,240}\?\s*$")
 
 

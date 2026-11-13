@@ -12,13 +12,13 @@ from typing import Any
 from tools.filesystem import get_safe_path
 
 
-EDIT_TOOLS = frozenset({"file_edit", "file_write", "file_move", "multi_edit", "apply_patch"})
+EDIT_TOOLS = frozenset({"file_edit", "file_write", "file_move", "multi_edit", "apply_patch", "lsp_rename"})
 _PATCH_FILE_HEADER = re.compile(r"^\+\+\+ (.+?)(?:\t.*)?$")
 
 
 def edited_paths(tool_name: str, arguments: dict[str, Any]) -> list[str]:
     """Extract file paths changed by a supported editing tool call."""
-    if tool_name in {"file_edit", "file_write", "multi_edit"}:
+    if tool_name in {"file_edit", "file_write", "multi_edit", "lsp_rename"}:
         path = arguments.get("path")
         return [path] if isinstance(path, str) and path else []
     if tool_name == "file_move":

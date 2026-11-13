@@ -126,7 +126,7 @@ CODING_TOOL_NAMES = frozenset({
     "shell_execute",
     "checkpoint_list", "workspace_rewind",
     "terminal.execute", "git_status", "git_diff", "git_log", "todo_write",
-    "code_symbols", "code_references", "code_related", "related_tests", "lsp_definition", "lsp_references", "lsp_diagnostics", "memory_save",
+    "code_symbols", "code_references", "code_related", "related_tests", "lsp_definition", "lsp_references", "lsp_diagnostics", "lsp_rename", "memory_save",
     "git_prepare_commit", "git_branch_create", "git_commit", "git_prepare_pr",
     "delegate_task",
 })

@@ -39,6 +39,8 @@ while True:
     method = message.get("method")
     if method == "initialize":
         caps = {"definitionProvider": True, "referencesProvider": True}
+        if mode != "norename":
+            caps["renameProvider"] = True
         if mode == "pull":
             caps["diagnosticProvider"] = {"interFileDependencies": False, "workspaceDiagnostics": False}
         send({"jsonrpc": "2.0", "id": message["id"], "result": {"capabilities": caps}})
@@ -62,6 +64,23 @@ while True:
         uri = message["params"]["textDocument"]["uri"]
         send({"jsonrpc": "2.0", "id": message["id"], "result": [
             {"uri": uri, "range": {"start": {"line": 2, "character": 0}, "end": {"line": 2, "character": 5}}}]})
+    elif method == "textDocument/rename":
+        uri = message["params"]["textDocument"]["uri"]
+        lib = uri.replace("app.py", "lib.py")
+        name = message["params"]["newName"]
+        if mode == "outside":
+            result = {"changes": {lib: [{"range": {"start": {"line": 0, "character": 4}, "end": {"line": 0, "character": 9}}, "newText": name}],
+                                  "file:///C:/Windows/outside.py": [{"range": {"start": {"line": 0, "character": 0}, "end": {"line": 0, "character": 1}}, "newText": name}]}}
+        elif mode == "create":
+            result = {"documentChanges": [{"kind": "create", "uri": lib.replace("lib.py", "new.py")}]}
+        else:
+            result = {"documentChanges": [
+                {"textDocument": {"uri": lib, "version": None}, "edits": [
+                    {"range": {"start": {"line": 0, "character": 4}, "end": {"line": 0, "character": 9}}, "newText": name}]},
+                {"textDocument": {"uri": uri, "version": None}, "edits": [
+                    {"range": {"start": {"line": 0, "character": 16}, "end": {"line": 0, "character": 21}}, "newText": name},
+                    {"range": {"start": {"line": 2, "character": 8}, "end": {"line": 2, "character": 13}}, "newText": name}]}]}
+        send({"jsonrpc": "2.0", "id": message["id"], "result": result})
     elif method == "textDocument/diagnostic":
         send({"jsonrpc": "2.0", "id": message["id"], "result": {"kind": "full", "items": [
             {"range": {"start": {"line": 0, "character": 0}, "end": {"line": 0, "character": 1}}, "severity": 2, "message": "pulled"}]}})
@@ -176,3 +195,77 @@ def test_repository_settings_cannot_choose_a_server(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(lsp_client.shutil, "which", lambda name: None)
     assert server_command("go") is None
+
+
+# -- lsp_rename ---------------------------------------------------------------------------------
+
+def test_rename_changes_every_file_and_can_be_undone(project):
+    root, use = project
+    use("push")
+    result = lsp_tools.lsp_rename("app.py", 3, 9, "unit_price")
+    assert "in 2 file(s)" in result, result
+    assert (root / "lib.py").read_text(encoding="utf-8") == "def unit_price(x):\n    return x\n"
+    assert (root / "app.py").read_text(encoding="utf-8") == "from lib import unit_price\n\nTOTAL = unit_price(3)\n"
+    assert "-TOTAL = price(3)" in result and "+TOTAL = unit_price(3)" in result
+    from tools.filesystem import undo_last_edit
+
+    assert "Cannot undo" not in undo_last_edit()  # the newest file edit is undoable like any other
+
+
+def test_rename_outside_the_workspace_changes_nothing(project):
+    root, use = project
+    use("outside")
+    before = (root / "lib.py").read_text(encoding="utf-8")
+    result = lsp_tools.lsp_rename("app.py", 3, 9, "unit_price")
+    assert "outside the workspace" in result and "nothing was changed" in result
+    assert (root / "lib.py").read_text(encoding="utf-8") == before
+
+
+def test_rename_that_creates_files_is_refused(project):
+    root, use = project
+    use("create")
+    result = lsp_tools.lsp_rename("app.py", 3, 9, "unit_price")
+    assert "create a file" in result
+    assert not (root / "new.py").exists()
+
+
+def test_rename_without_server_support_or_with_a_bad_name(project):
+    root, use = project
+    use("norename")
+    assert "does not support rename" in lsp_tools.lsp_rename("app.py", 3, 9, "unit_price")
+    for bad in ("", "two words", "line\nbreak", "x" * 201):
+        assert lsp_tools.lsp_rename("app.py", 3, 9, bad).startswith("TOOL ERROR: new_name")
+
+
+def test_a_failed_write_restores_every_file(project, monkeypatch):
+    root, use = project
+    use("push")
+    before = {name: (root / name).read_text(encoding="utf-8") for name in ("lib.py", "app.py")}
+    from tools import filesystem
+
+    real_restore = filesystem._atomic_restore
+    calls = []
+
+    def flaky(path, content, mode):
+        calls.append(path)
+        if len(calls) == 2:
+            raise OSError("disk full")
+        real_restore(path, content, mode)
+
+    monkeypatch.setattr(filesystem, "_atomic_restore", flaky)
+    result = lsp_tools.lsp_rename("app.py", 3, 9, "unit_price")
+    assert "every file was restored" in result
+    assert {name: (root / name).read_text(encoding="utf-8") for name in before} == before
+
+
+def test_text_edits_use_utf16_columns_and_refuse_overlaps():
+    text = "x = '\U0001F600'; price = 1\r\nprice += 1\n"
+    # the emoji is 2 UTF-16 units, so "price" on line 0 starts at UTF-16 column 10 (Python index 9)
+    renamed = lsp_tools.apply_text_edits(text, [
+        {"range": {"start": {"line": 0, "character": 10}, "end": {"line": 0, "character": 15}}, "newText": "cost"},
+        {"range": {"start": {"line": 1, "character": 0}, "end": {"line": 1, "character": 5}}, "newText": "cost"}])
+    assert renamed == "x = '\U0001F600'; cost = 1\r\ncost += 1\n"
+    with pytest.raises(LspError, match="overlapping"):
+        lsp_tools.apply_text_edits("abcdef", [
+            {"range": {"start": {"line": 0, "character": 0}, "end": {"line": 0, "character": 4}}, "newText": "x"},
+            {"range": {"start": {"line": 0, "character": 2}, "end": {"line": 0, "character": 5}}, "newText": "y"}])

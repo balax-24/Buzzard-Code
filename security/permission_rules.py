@@ -12,7 +12,7 @@ from typing import Any
 
 EFFECTS = frozenset({"allow", "ask", "deny"})
 MODES = frozenset({"default", "ask", "accept_edits_ask_commands"})
-EDIT_TOOLS = frozenset({"file_edit", "file_write", "file_move", "multi_edit", "apply_patch"})
+EDIT_TOOLS = frozenset({"file_edit", "file_write", "file_move", "multi_edit", "apply_patch", "lsp_rename"})
 COMMAND_TOOLS = frozenset({"terminal.execute"})
 MAX_RULES = 1000
 MAX_CONFIG_BYTES = 1_000_000

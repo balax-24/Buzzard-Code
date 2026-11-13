@@ -64,7 +64,7 @@ ROLES: Dict[str, SubagentRole] = {
         "Report each command you ran, its exit code, and the failures with their causes.",
     ),
     "code": SubagentRole(
-        "code", "edits files; cannot run commands or use git", READ_TOOLS | {"file_edit", "file_write", "todo_write"},
+        "code", "edits files; cannot run commands or use git", READ_TOOLS | {"file_edit", "file_write", "lsp_rename", "todo_write"},
         "Make the requested change with minimal, surgical edits. You cannot run commands, so do "
         "not claim tests pass. Report each file you changed and why.",
     ),

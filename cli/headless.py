@@ -20,7 +20,7 @@ from typing import Any, Dict, List, Optional
 from agent.run_session import ALLOW, DENY, ApprovalRequest, RunOutcome, RunSession
 
 EDIT_TOOLS = frozenset({
-    "file_edit", "file.edit", "file_write", "file.write", "file_move", "multi_edit", "apply_patch", "workspace_rewind",
+    "file_edit", "file.edit", "file_write", "file.write", "file_move", "multi_edit", "apply_patch", "lsp_rename", "workspace_rewind",
 })
 COMMAND_TOOLS = frozenset({
     "terminal.execute", "terminal_execute", "shell_execute", "process_start", "process_stop",
