@@ -316,9 +316,22 @@ class AgentLoop:
         Prevents runaway token accumulation delegating to ContextManager.
         """
         # A coding task must remember its earlier reads and test runs, and assessment state
-        # would only mislead it, so it keeps its full history within the character budget.
+        # would only mislead it, so preserve the structured task ledger plus recent turns.
         if self._is_coding_task:
-            compacted = self.context_manager._enforce_character_budget(raw_messages)
+            from agent.task_ledger import TaskLedger, compact_coding_history
+
+            ledger = TaskLedger.from_history(
+                goal=getattr(self, "ui_task_goal", ""),
+                plan=self.plan,
+                messages=raw_messages,
+                current_plan_index=getattr(self, "ui_current_plan_index", 0),
+            )
+            compacted = compact_coding_history(
+                messages=raw_messages,
+                ledger=ledger,
+                max_recent_messages=self.context_manager.max_recent_turns,
+                max_total_chars=self.context_manager.max_total_history_chars,
+            )
         else:
             compacted = self.context_manager.compact_messages(
                 raw_messages=raw_messages,
