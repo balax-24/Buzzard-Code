@@ -131,6 +131,31 @@ def config(action):
     """
     run_config(action=action)
 
+@main.command(name="exec")
+@click.argument("task")
+@click.option("--workspace", type=click.Path(exists=True, file_okay=False, path_type=Path), default=None,
+              help="Project folder (defaults to the current directory).")
+@click.option("--allow-edits", is_flag=True, help="Allow file edits without asking.")
+@click.option("--allow-commands", is_flag=True, help="Allow shell commands without asking (the gate needs this to run tests).")
+@click.option("--yes", "allow_all", is_flag=True, help="Allow everything, including MCP and git tools.")
+@click.option("--plan", is_flag=True, help="Read and plan only; edits and commands are refused.")
+@click.option("--attempts", type=click.IntRange(1, 5), default=1, show_default=True,
+              help="Run the task several times and keep the best verified attempt.")
+@click.option("--model", default=None, help="Model override.")
+@click.option("--json", "as_json", is_flag=True, help="Print the result as JSON.")
+def exec_cmd(task, workspace, allow_edits, allow_commands, allow_all, plan, attempts, model, as_json):
+    """
+    Run one coding task without the terminal UI, for CI and scripts.
+    Nothing is approved unless a flag allows it. Exit code 0 means completed and verified.
+    """
+    import json as json_module
+    from cli.headless import HeadlessPolicy, render_text, run_headless
+
+    policy = HeadlessPolicy(allow_edits=allow_edits, allow_commands=allow_commands, allow_all=allow_all)
+    result = run_headless(task, workspace or Path.cwd(), policy, attempts=attempts, plan=plan, model=model)
+    click.echo(json_module.dumps(result, indent=2) if as_json else render_text(result))
+    raise click.exceptions.Exit(result["exitCode"])
+
 @main.command(name="verify")
 @click.argument("bundle", type=click.Path(exists=True, dir_okay=False, path_type=Path))
 @click.option("--workspace", type=click.Path(exists=True, file_okay=False, path_type=Path), default=None,
