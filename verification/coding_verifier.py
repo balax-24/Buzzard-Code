@@ -24,16 +24,7 @@ from typing import Callable, Dict, Any, List, Optional, Tuple
 
 from tools.filesystem import get_active_workspace
 from sandbox.container import ControlledHostSandbox
-from verification.changed_coverage import (
-    MIN_COVERAGE_VERSION,
-    ChangedLineCoverage,
-    coverage_data_path,
-    coverage_setting,
-    installed_coverage_version,
-    measure_changed_line_coverage,
-    not_measured,
-    wrap_pytest_command,
-)
+from verification.changed_coverage import CoveragePlan, not_measured, plan_coverage
 from verification.docker_tests import (
     IsolationConfigError,
     container_command,
@@ -338,33 +329,6 @@ class CodingVerifier:
         self.command_approver = command_approver
         self.sandbox = ControlledHostSandbox(workspace=self.workspace)
 
-    def _plan_coverage(
-        self, workspace: Path, command: str, settings: Dict[str, Any]
-    ) -> Tuple[str, ChangedLineCoverage, Optional[Path]]:
-        """Wraps a pytest command in coverage when the project can measure it; never changes other commands."""
-        setting, problem = coverage_setting(settings)
-        if problem:
-            return command, not_measured(problem), None
-        if setting == "off":
-            return command, not_measured("turned off in .buzzard/project.json"), None
-        version = installed_coverage_version(workspace, project_python(workspace))
-        if version is None:
-            return command, not_measured("coverage.py is not installed in the project's virtual environment"), None
-        if version < MIN_COVERAGE_VERSION:
-            return command, not_measured("coverage.py 6.3 or newer is needed"), None
-        # Outside the repository, so the data file never shows up as a changed file, and at a fixed
-        # path per workspace, so the command text stays the same and "allow for session" keeps working
-        data_file = coverage_data_path(workspace)
-        wrapped = wrap_pytest_command(command, data_file)
-        if wrapped is None:
-            return command, not_measured("only `<python> -m pytest` test commands are measured so far"), None
-        try:
-            data_file.parent.mkdir(parents=True, exist_ok=True)
-            data_file.unlink(missing_ok=True)  # never report a previous run's data
-        except OSError as error:
-            return command, not_measured(f"could not prepare the coverage data file: {error}"), None
-        return wrapped, not_measured("tests did not finish"), data_file
-
     def _run_lint(self, workspace: Path) -> Tuple[Optional[str], str]:
         """Reports lint results without blocking, so existing lint debt cannot stop a good fix."""
         command = detect_lint_command(workspace, list_changed_files(workspace))
@@ -464,18 +428,20 @@ class CodingVerifier:
                     test_command=cmd,
                     test_environment="docker (unavailable)",
                 )
-            coverage_plan: Optional[ChangedLineCoverage] = None
-            coverage_data_file: Optional[Path] = None
+            coverage_plan: Optional[CoveragePlan] = None
             if use_docker:
                 container_test = container_command(detected_runner, cmd, configured)
                 cmd = f"{isolation.setup} && {container_test}" if isolation.setup else container_test
                 environment = isolation.describe()
-                coverage_plan = not_measured("tests ran in Docker; coverage is measured on the host only")
+                coverage_plan = CoveragePlan(cmd, not_measured(
+                    "tests ran in Docker; the coverage tool would have to be installed in the container image"
+                ))
             else:
                 environment = "host (Docker not reachable)" if isolation.mode == "auto" else "host"
-                cmd, coverage_plan, coverage_data_file = self._plan_coverage(
-                    workspace_path, cmd, settings
+                coverage_plan = plan_coverage(
+                    workspace_path, cmd, detected_runner, settings, project_python(workspace_path)
                 )
+                cmd = coverage_plan.command
 
             if self.command_approver is not None and not self.command_approver(cmd):
                 return CodingVerificationResult(
@@ -496,9 +462,7 @@ class CodingVerifier:
                 )
             else:
                 res = self.sandbox.execute(cmd, timeout=resolve_test_timeout(settings))
-            if coverage_data_file is not None:
-                coverage_plan = measure_changed_line_coverage(workspace_path, coverage_data_file)
-            coverage_result = coverage_plan.to_dict() if coverage_plan is not None else None
+            coverage_result = coverage_plan.result().to_dict() if coverage_plan is not None else None
             if isinstance(res, dict):
                 exit_code = res.get("exit_code", 1)
                 stdout = res.get("stdout", "")

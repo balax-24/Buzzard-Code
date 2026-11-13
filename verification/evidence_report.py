@@ -76,15 +76,20 @@ def _coverage_mark(coverage: dict) -> str:
 
 def _coverage_text(coverage: dict) -> str:
     """Renders the gate's changed-line coverage record; see verification/changed_coverage.py."""
+    tool = coverage.get("tool") or "coverage tool"
     if not coverage.get("measured"):
         return f"not measured ({coverage.get('reason') or 'unknown reason'})"
     total = int(coverage.get("total") or 0)
     if total == 0:
-        return "no executable non-test Python lines changed"
-    text = f"{coverage.get('covered', 0)}/{total} changed lines run by tests ({coverage.get('percent')}%)"
+        text = "no executable non-test lines changed"
+    else:
+        text = f"{coverage.get('covered', 0)}/{total} changed lines run by tests ({coverage.get('percent')}%)"
     uncovered = coverage.get("uncovered") or {}
     if uncovered:
         text += "; not run: " + "; ".join(
             f"`{path}` {', '.join(str(line) for line in lines)}" for path, lines in sorted(uncovered.items())
         )
-    return text
+    unmeasured = coverage.get("unmeasured_files") or []
+    if unmeasured:
+        text += "; not in the coverage report: " + ", ".join(f"`{path}`" for path in unmeasured)
+    return f"{text} ({tool})"
