@@ -84,7 +84,7 @@ class ToolExecutionResult:
 WORKSPACE_STATE_TOOLS = frozenset({
     "terminal.execute", "file_read", "file.read", "file_view", "file.view", "file_search", "file.search",
     "directory_list", "todo_write", "git_status", "git.status", "git_diff", "git.diff", "git_log", "git.log",
-    "code_symbols", "code_references", "code_related",
+    "code_symbols", "code_references", "code_related", "multi_edit",
     "git_prepare_commit", "git_branch_create", "git_commit", "git_prepare_pr",
     "delegate_task",
 })

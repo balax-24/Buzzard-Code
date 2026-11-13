@@ -2,7 +2,7 @@ import os
 import unittest
 import tempfile
 import shutil
-from tools.filesystem import file_list, file_read, file_write, file_search, get_safe_path, set_active_workspace
+from tools.filesystem import file_list, file_read, file_write, file_search, get_safe_path, multi_edit, set_active_workspace
 from tools.registry import ToolRegistry
 
 class TestFilesystemTools(unittest.TestCase):
@@ -58,6 +58,30 @@ class TestFilesystemTools(unittest.TestCase):
         res = file_read("doesnotexist.txt")
         self.assertIn("Error", res)
 
+    def test_multi_edit_applies_multiple_replacements_in_one_write(self):
+        file_write("multi.py", "first = 1\nsecond = 2\n")
+        result = multi_edit("multi.py", [
+            {"old_str": "first = 1", "new_str": "first = 10"},
+            {"old_str": "second = 2", "new_str": "second = 20"},
+        ])
+        self.assertIn("Successfully applied 2 edits", result)
+        self.assertEqual(file_read("multi.py"), "first = 10\nsecond = 20\n")
+
+    def test_multi_edit_preflight_failure_leaves_file_unchanged(self):
+        file_write("multi.py", "first = 1\nsecond = 2\n")
+        result = multi_edit("multi.py", [
+            {"old_str": "first = 1", "new_str": "first = 10"},
+            {"old_str": "missing", "new_str": "value"},
+        ])
+        self.assertIn("no changes were written", result)
+        self.assertEqual(file_read("multi.py"), "first = 1\nsecond = 2\n")
+
+    def test_multi_edit_rejects_ambiguous_match_without_partial_write(self):
+        file_write("multi.py", "value = 1\nvalue = 1\n")
+        result = multi_edit("multi.py", [{"old_str": "value = 1", "new_str": "value = 2"}])
+        self.assertIn("ambiguous", result)
+        self.assertEqual(file_read("multi.py"), "value = 1\nvalue = 1\n")
+
     def test_file_list(self):
         file_write("a.txt", "content a")
         file_write("sub/b.txt", "content b")
@@ -106,6 +130,8 @@ class TestFilesystemTools(unittest.TestCase):
         self.assertIn("file.read", registry.tools)
         self.assertIn("file.write", registry.tools)
         self.assertIn("file.search", registry.tools)
+        self.assertIn("multi_edit", registry.tools)
+        self.assertTrue(registry.definitions["multi_edit"].approval_required)
 
     def test_file_write_fallback(self):
         from unittest.mock import patch, mock_open

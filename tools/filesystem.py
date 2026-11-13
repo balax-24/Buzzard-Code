@@ -17,8 +17,10 @@ from __future__ import annotations
 import os
 import difflib
 import fnmatch
+import stat
+import tempfile
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 _ACTIVE_WORKSPACE: Optional[str] = None
 
@@ -351,6 +353,78 @@ def file_edit(path: str, old_str: str, new_str: str, replace_all: bool = False) 
         return f"TOOL ERROR: Failed to edit file: {e}"
 
 
+def multi_edit(path: str, edits: List[Dict[str, Any]]) -> str:
+    """Apply several validated exact replacements to one file with one atomic write."""
+    if not isinstance(path, str) or not path.strip():
+        return "Error: path must be a non-empty string."
+    if not isinstance(edits, list) or not edits or len(edits) > 100:
+        return "Error: edits must contain between 1 and 100 replacements."
+
+    try:
+        safe_path = get_safe_path(path)
+        if not os.path.isfile(safe_path):
+            return f"Error: File '{path}' does not exist or is not a regular file."
+        if os.path.islink(safe_path):
+            return f"Error: Refusing to edit symlink '{path}'."
+        with open(safe_path, "rb") as file:
+            previous = file.read()
+        original = previous.decode("utf-8")
+        updated = original
+        summaries = []
+
+        for index, edit in enumerate(edits, start=1):
+            if not isinstance(edit, dict):
+                return f"Error: edits[{index - 1}] must be an object."
+            old_str = edit.get("old_str")
+            new_str = edit.get("new_str")
+            replace_all = edit.get("replace_all", False)
+            if not isinstance(old_str, str) or not old_str:
+                return f"Error: edits[{index - 1}].old_str must be a non-empty string."
+            if not isinstance(new_str, str):
+                return f"Error: edits[{index - 1}].new_str must be a string."
+            if not isinstance(replace_all, bool):
+                return f"Error: edits[{index - 1}].replace_all must be a boolean."
+            match_count = updated.count(old_str)
+            if match_count == 0:
+                return f"Error: edits[{index - 1}] original text was not found; no changes were written."
+            if match_count > 1 and not replace_all:
+                return f"Error: edits[{index - 1}] is ambiguous ({match_count} matches); no changes were written."
+            updated = updated.replace(old_str, new_str, -1 if replace_all else 1)
+            summaries.append(f"{index}: {match_count} replacement(s)")
+
+        if updated == original:
+            return f"No changes needed for '{path}'."
+
+        if _read_bytes_or_none(safe_path) != previous:
+            return f"Error: '{path}' changed while edits were being prepared; no changes were written."
+
+        temporary_path = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                mode="wb", prefix=".buzzard-edit-", suffix=".tmp",
+                dir=os.path.dirname(safe_path), delete=False,
+            ) as temporary_file:
+                temporary_path = temporary_file.name
+                temporary_file.write(updated.encode("utf-8"))
+                temporary_file.flush()
+                os.fsync(temporary_file.fileno())
+            os.chmod(temporary_path, stat.S_IMODE(os.stat(safe_path).st_mode))
+            os.replace(temporary_path, safe_path)
+            temporary_path = None
+        finally:
+            if temporary_path and os.path.exists(temporary_path):
+                os.unlink(temporary_path)
+
+        _record_edit(safe_path, previous)
+        diff = "".join(difflib.unified_diff(
+            original.splitlines(keepends=True), updated.splitlines(keepends=True),
+            fromfile=f"a/{path}", tofile=f"b/{path}", n=3,
+        ))
+        return f"Successfully applied {len(edits)} edits to '{path}'.\n{'; '.join(summaries)}\n\nDiff:\n{diff}"
+    except (OSError, UnicodeDecodeError, PermissionError) as error:
+        return f"TOOL ERROR: Failed to apply multi_edit to '{path}': {error}"
+
+
 def file_search(query: str, path: str = ".") -> str:
     """
     Searches for files by name matching the query pattern, or containing the query text.
@@ -459,6 +533,38 @@ def register_filesystem_tools(registry):
         scope_required=True,
         approval_required=False,
         timeout=15
+    )
+    registry.register(
+        name="multi_edit",
+        description="Applies multiple validated exact text replacements to one file in a single atomic write. Arguments: path (str), edits (list of {old_str, new_str, replace_all?}).",
+        func=multi_edit,
+        category=ToolCategory.AUTOMATION,
+        risk_level="MEDIUM",
+        read_only=False,
+        destructive=False,
+        sandbox_required=False,
+        scope_required=True,
+        approval_required=True,
+        timeout=30,
+        schema={
+            "type": "object",
+            "properties": {
+                "path": {"type": "string"},
+                "edits": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "old_str": {"type": "string"},
+                            "new_str": {"type": "string"},
+                            "replace_all": {"type": "boolean"},
+                        },
+                        "required": ["old_str", "new_str"],
+                    },
+                },
+            },
+            "required": ["path", "edits"],
+        },
     )
     registry.register(
         name="file_edit",
