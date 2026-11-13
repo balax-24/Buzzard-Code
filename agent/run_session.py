@@ -139,6 +139,9 @@ class RunSession:
     ) -> RunOutcome:
         """Runs one task to completion on the calling thread. Only one task runs at a time."""
         session_id = session_id or f"task-{uuid.uuid4().hex[:8]}"
+        from core.project import expand_custom_command
+
+        goal = expand_custom_command(goal) or goal  # `/name args` from .buzzard/commands or ~/.buzzard/commands
         if not self._run_lock.acquire(blocking=False):
             return RunOutcome(session_id, "rejected", error="A task is already running in this session.")
         try:

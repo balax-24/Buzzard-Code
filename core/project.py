@@ -155,29 +155,46 @@ def parse_markdown_command(content: str) -> Dict[str, Any]:
         "template": body
     }
 
+MAX_COMMAND_BYTES = 20_000
+_COMMAND_NAME = re.compile(r"^[a-z0-9][a-z0-9_-]{0,40}$")
+
+
+def _user_commands_directory() -> Path:
+    import os
+
+    return Path(os.environ.get("BUZZARD_HOME") or Path.home() / ".buzzard") / "commands"
+
+
 def load_custom_commands(project_dir: Optional[Union[str, Path]] = None) -> Dict[str, Dict[str, Any]]:
     """
-    Discovers and parses custom markdown commands from .buzzard/commands/*.md.
+    Discovers custom markdown commands: the project's .buzzard/commands/*.md, then the user's
+    ~/.buzzard/commands/*.md (which win on a name clash). The project folder defaults to the
+    active workspace. A command is only prompt text; it runs nothing by itself.
     """
-    root = Path(project_dir) if project_dir else Path.cwd()
-    cmd_dir = root / ".buzzard" / "commands"
+    if project_dir is None:
+        from tools.filesystem import get_active_workspace
+
+        project_dir = get_active_workspace()
     commands: Dict[str, Dict[str, Any]] = {}
-
-    if not cmd_dir.is_dir():
-        return commands
-
-    for md_file in cmd_dir.glob("*.md"):
-        cmd_name = md_file.stem.lower()
-        try:
-            content = md_file.read_text(encoding="utf-8", errors="replace")
-            parsed = parse_markdown_command(content)
+    for cmd_dir, source in ((Path(project_dir) / ".buzzard" / "commands", "project"), (_user_commands_directory(), "user")):
+        if not cmd_dir.is_dir() or cmd_dir.is_symlink():
+            continue
+        for md_file in sorted(cmd_dir.glob("*.md")):
+            cmd_name = md_file.stem.lower()
+            if not _COMMAND_NAME.match(cmd_name) or md_file.is_symlink():
+                continue
+            try:
+                if md_file.stat().st_size > MAX_COMMAND_BYTES:
+                    continue
+                parsed = parse_markdown_command(md_file.read_text(encoding="utf-8", errors="replace"))
+            except (OSError, ValueError):
+                continue
             parsed["name"] = cmd_name
             parsed["file_path"] = str(md_file)
+            parsed["source"] = source
             commands[cmd_name] = parsed
-        except Exception:
-            continue
-
     return commands
+
 
 def render_custom_command_prompt(
     cmd_def: Dict[str, Any],
@@ -188,6 +205,8 @@ def render_custom_command_prompt(
     """
     template = cmd_def.get("template", "")
     declared_args = cmd_def.get("args", [])
+    if "$ARGUMENTS" in template:
+        return template.replace("$ARGUMENTS", " ".join(provided_args))
 
     # Replace declared positional args
     for i, arg_name in enumerate(declared_args):
@@ -200,3 +219,20 @@ def render_custom_command_prompt(
         template += f"\nAdditional context: {extra}"
 
     return template
+
+
+def expand_custom_command(
+    text: str, project_dir: Optional[Union[str, Path]] = None, reserved: Optional[List[str]] = None
+) -> Optional[str]:
+    """The task text for `/name arguments` when `name` is a custom command (not a built-in), else None."""
+    stripped = (text or "").strip()
+    if not stripped.startswith("/"):
+        return None
+    name, *arguments = stripped[1:].split()
+    name = name.lower()
+    if reserved and name in {item.lstrip("/").lower() for item in reserved}:
+        return None
+    command = load_custom_commands(project_dir).get(name)
+    if command is None:
+        return None
+    return render_custom_command_prompt(command, arguments)

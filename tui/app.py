@@ -131,6 +131,7 @@ BUZZARD_COMMANDS: List[tuple[str, str]] = [
     ("/failover", "Show backup models; /failover test rehearses an outage"),
     ("/plan", "Toggle plan mode: no edits or commands run"),
     ("/attempts", "Run each coding task N times (1-5); the gate keeps the best"),
+    ("/commands", "List custom commands from .buzzard/commands and ~/.buzzard/commands"),
     ("/continue", "Restore the last conversation in this workspace"),
     ("/version", "Buzzard Code version"),
     ("/providers", "Supported model providers"),
@@ -1001,6 +1002,19 @@ class BuzzardTUIApp(App[None]):
                 "keeps the best verified attempt. Each attempt asks for its own approvals."
                 if int(value) > 1 else "✓ Each coding task runs once."
             )
+            return
+
+        elif command == "/commands":
+            available = load_custom_commands()
+            if not available:
+                self._system_note(
+                    "No custom commands. Save a prompt as `.buzzard/commands/<name>.md` (this project) or "
+                    "`~/.buzzard/commands/<name>.md` (yours), then type `/<name>`. `$ARGUMENTS` is replaced with "
+                    "what you type after the name."
+                )
+            else:
+                rows = [f"- `/{name}` — {item['description']} ({item.get('source', 'project')})" for name, item in sorted(available.items())]
+                self._system_note("### Custom commands\n" + "\n".join(rows))
             return
 
         elif command == "/continue":
