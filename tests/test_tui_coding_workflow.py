@@ -145,7 +145,10 @@ def test_full_fix_with_approvals_in_real_tui(repo, tmp_path):
                 screenshot(app, f"2_approval_{len(previews)}")
 
             modals = await approve_until_idle(pilot, app, on_modal=on_modal)
-            await pilot.pause(0.2)
+            # The final reply and status note are posted from the worker thread after the run ends
+            await wait_for(pilot, lambda: any(
+                "concluded" in bubble.message.content for bubble in app.chat_view.query(MessageBubble)
+            ), timeout=10)
             assert {modal.tool_name for modal in modals} >= {"file_edit", "terminal.execute"}
 
             cards = list(app.chat_view.query(ToolActivityCard))
@@ -492,7 +495,9 @@ def test_failed_task_is_not_shown_with_a_success_mark(repo, tmp_path):
             app.MAX_AGENT_TURNS = 2
             await submit(pilot, app, "Fix the bug in calc.py")
             await approve_until_idle(pilot, app, key="n")
-            await pilot.pause(0.2)
+            await wait_for(pilot, lambda: any(
+                "concluded" in bubble.message.content for bubble in app.chat_view.query(MessageBubble)
+            ), timeout=10)
             notes = [b.message.content for b in app.chat_view.query(MessageBubble) if "concluded" in b.message.content]
             assert notes and notes[-1].startswith("✕"), notes
 
