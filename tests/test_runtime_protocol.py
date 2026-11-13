@@ -239,6 +239,24 @@ def test_plan_mode_refuses_apply_patch_without_asking(tmp_path, project):
         client.close()
 
 
+def test_plan_mode_refuses_process_start_and_stop_without_asking(tmp_path, project):
+    script = [{"tool_calls": [
+        call("process_start", command=[
+            sys.executable, "-c", "open('plan-mode-process-marker', 'w').write('started')",
+        ]),
+        call("process_stop", process_id="proc-does-not-exist"),
+    ]}]
+    client = start(tmp_path, script)
+    try:
+        initialize(client, project)
+        client.request("run/start", {"goal": "Fix the bug in calc.py", "planMode": True})
+        client.notification("run/finished")
+        assert not any(message.get("method") == "approval/requested" for message in client.seen)
+        assert not (project / "plan-mode-process-marker").exists()
+    finally:
+        client.close()
+
+
 def test_cancel_while_waiting_denies_and_finishes(tmp_path, project):
     client = start(tmp_path, FIX_SCRIPT)
     try:

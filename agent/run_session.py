@@ -140,6 +140,12 @@ class RunSession:
         try:
             return self._run(goal, target, scope, session_id)
         finally:
+            try:
+                from tools.process_manager import cleanup_session_processes
+
+                cleanup_session_processes(session_id)
+            except Exception:
+                logger.exception("Could not clean up processes for %s", session_id)
             self.current_loop = None
             self._run_lock.release()
 

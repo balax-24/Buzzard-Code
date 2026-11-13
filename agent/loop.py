@@ -120,6 +120,7 @@ NATIVE_TOOLS_GUIDANCE = (
 # permission boundary, since dispatch still goes through the full registry and PolicyEngine.
 CODING_TOOL_NAMES = frozenset({
     "directory_list", "file_search", "file_read", "file_view", "file_edit", "file_write", "file_move", "multi_edit", "apply_patch",
+    "process_start", "process_logs", "process_stop",
     "terminal.execute", "git_status", "git_diff", "git_log", "todo_write",
     "code_symbols", "code_references", "code_related", "memory_save",
     "git_prepare_commit", "git_branch_create", "git_commit", "git_prepare_pr",
@@ -165,6 +166,8 @@ class AgentLoop:
             register_memory_tools(self.registry)
             from tools.git_workflow import register_git_workflow_tools
             register_git_workflow_tools(self.registry)
+            from tools.process_manager import register_process_tools
+            register_process_tools(self.registry)
             from agent.subagents import register_subagent_tools
             register_subagent_tools(self.registry)
         self.run_target: Optional[str] = None
@@ -815,15 +818,25 @@ class AgentLoop:
         """
         Executes the agent loop until completion or max iterations.
         """
+        session_id = session_id or f"session-{uuid.uuid4().hex[:8]}"
         self.run_target, self.run_scope = target, scope or [target]
-        if self.subagent_role:
-            return self._run(task_goal, target, scope, session_id, conversation_history, attached_context)
-        from agent.subagents import set_parent_loop
-        set_parent_loop(self)
         try:
-            return self._run(task_goal, target, scope, session_id, conversation_history, attached_context)
+            if self.subagent_role:
+                return self._run(task_goal, target, scope, session_id, conversation_history, attached_context)
+            from agent.subagents import set_parent_loop
+
+            set_parent_loop(self)
+            try:
+                return self._run(task_goal, target, scope, session_id, conversation_history, attached_context)
+            finally:
+                set_parent_loop(None)
         finally:
-            set_parent_loop(None)
+            try:
+                from tools.process_manager import cleanup_session_processes
+
+                cleanup_session_processes(session_id)
+            except Exception:
+                logger.exception("Could not clean up processes for %s", session_id)
 
     def _run(
         self,

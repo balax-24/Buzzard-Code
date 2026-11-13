@@ -656,8 +656,10 @@ def create_authoritative_registry(categories: Optional[List[str]] = None) -> Too
     # 5. Filesystem tools
     from tools.filesystem import register_filesystem_tools
     from tools.git_tools import register_git_tools
+    from tools.process_manager import register_process_tools
     register_filesystem_tools(registry)
     register_git_tools(registry)
+    register_process_tools(registry)
     from tools.code_index import register_code_index_tools
     register_code_index_tools(registry)
     from agent.project_memory import register_memory_tools

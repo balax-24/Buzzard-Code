@@ -120,8 +120,9 @@ class TaskLedger:
                             path = path[2:]
                         if path and path != "/dev/null" and path not in self.files_touched:
                             self.files_touched.append(path)
-        if tool == "terminal.execute":
-            command = str(arguments.get("command", ""))
+        if tool in {"terminal.execute", "process_start"}:
+            raw_command = arguments.get("command", "")
+            command = " ".join(raw_command) if isinstance(raw_command, list) else str(raw_command)
             result = sanitize_untrusted_data(raw_result)
             self.commands.append(TaskAction(
                 tool=tool,

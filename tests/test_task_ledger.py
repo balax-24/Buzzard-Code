@@ -111,6 +111,23 @@ def test_task_ledger_tracks_patch_paths_and_both_move_paths() -> None:
     assert ledger.files_touched == ["src/old.py", "src/new.py", "src/renamed.py"]
 
 
+def test_task_ledger_retains_process_start_command() -> None:
+    messages = [
+        {
+            "role": "assistant",
+            "content": "",
+            "tool_calls": [{
+                "id": "process",
+                "function": {"name": "process_start", "arguments": {"command": ["npm", "run", "dev"]}},
+            }],
+        },
+        {"role": "tool", "tool_call_id": "process", "content": "Started process proc-abc123."},
+    ]
+    ledger = TaskLedger.from_history("Start the dev server.", [], messages)
+
+    assert "npm run dev" in ledger.render()
+
+
 def test_task_ledger_tracks_unanswered_question_and_bounds_rendering() -> None:
     messages = [
         {"role": "system", "content": "System"},
