@@ -243,6 +243,16 @@ class PolicyEngine:
         if not arguments:
             return True, "Scope valid."
 
+        # A tool that explicitly opts out of pentest scope (scope_required=False) governs its own
+        # reach by other means (for example the web tools' SSRF and allow/deny checks), so its
+        # host/url argument is not matched against the authorized testing scope. terminal.execute
+        # command inspection below still applies, as it is keyed on the tool name.
+        from security.risk import _get_registry_definition
+
+        definition = _get_registry_definition(tool_name)
+        if definition is not None and not getattr(definition, "scope_required", True):
+            return True, "Scope not required for this tool."
+
         # 1. Direct target arguments
         host_param = (
             arguments.get("host")

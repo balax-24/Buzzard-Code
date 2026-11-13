@@ -86,6 +86,7 @@ WORKSPACE_STATE_TOOLS = frozenset({
     "directory_list", "todo_write", "git_status", "git.status", "git_diff", "git.diff", "git_log", "git.log",
     "code_symbols", "code_references", "code_related", "code_search", "related_tests", "lsp_definition", "lsp_references", "lsp_diagnostics", "lsp_rename", "file_move", "multi_edit", "apply_patch",
     "process_start", "process_logs", "process_stop",
+    "web_lookup", "web_read",
     "shell_execute",
     "checkpoint_list", "workspace_rewind",
     "git_prepare_commit", "git_branch_create", "git_commit", "git_prepare_pr",

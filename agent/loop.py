@@ -126,7 +126,7 @@ CODING_TOOL_NAMES = frozenset({
     "shell_execute",
     "checkpoint_list", "workspace_rewind",
     "terminal.execute", "git_status", "git_diff", "git_log", "todo_write",
-    "code_symbols", "code_references", "code_related", "code_search", "related_tests", "lsp_definition", "lsp_references", "lsp_diagnostics", "lsp_rename", "memory_save",
+    "code_symbols", "code_references", "code_related", "code_search", "web_lookup", "web_read", "related_tests", "lsp_definition", "lsp_references", "lsp_diagnostics", "lsp_rename", "memory_save",
     "git_prepare_commit", "git_branch_create", "git_commit", "git_prepare_pr",
     "delegate_task",
 })
@@ -173,6 +173,8 @@ class AgentLoop:
         if not self.subagent_role:
             register_git_tools(self.registry)
             register_code_index_tools(self.registry)
+            from tools.web_tools import register_web_tools
+            register_web_tools(self.registry)
             from tools.related_tests import register_related_tests_tool
             register_related_tests_tool(self.registry)
             from tools.lsp_tools import register_lsp_tools
