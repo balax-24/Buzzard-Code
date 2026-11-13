@@ -24,7 +24,7 @@ from typing import Callable, Dict, Any, List, Optional, Tuple
 
 from tools.filesystem import get_active_workspace
 from sandbox.container import ControlledHostSandbox
-from verification.changed_coverage import CoveragePlan, changed_python_lines, not_measured, plan_coverage
+from verification.changed_coverage import CoveragePlan, not_measured, plan_coverage
 from verification import mutation_check
 from verification.reproduce_first import (
     ReproductionResult,
@@ -381,7 +381,7 @@ class CodingVerifier:
         if use_docker:
             return mutation_check.not_checked("tests ran in Docker; the mutation check runs on the host only")
         return mutation_check.check_mutations(
-            workspace, test_command, project_python(workspace), changed_python_lines(workspace),
+            workspace, test_command, project_python(workspace), mutation_check.changed_source_lines(workspace),
             list_changed_files(workspace), limit, self.command_approver,
             self._run_in_directory(resolve_test_timeout(settings)),
         )

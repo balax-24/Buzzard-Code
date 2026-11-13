@@ -140,3 +140,54 @@ def test_invalid_setting_is_shown_not_ignored(repo):
     result = CodingVerifier(workspace=str(repo)).verify_task("Fix the add function in calc.py")
     assert result.passed and result.mutation["status"] == "not_checked"
     assert "mutation_check must be" in result.mutation["reason"]
+
+
+# -- JavaScript, TypeScript and Go ------------------------------------------------------------
+
+def test_text_mutations_skip_strings_comments_and_arrows():
+    from verification.mutation_check import generate_text_mutants
+
+    source = ('const big = (x) => x > 10 && x !== 0; // x > 5\n'
+              'const s = "a == b";\n'
+              'if (a === b) { total = a + b; }\n'
+              'func ok() bool { return true }\n')
+    mutants = generate_text_mutants("a.js", source, {1, 2, 3, 4}, limit=30)
+    changes = sorted((m.line, m.description) for m in mutants)
+    assert changes == [(1, "`!==` -> `===`"), (1, "`&&` -> `||`"), (1, "`>` -> `<=`"),
+                       (3, "`+` -> `-`"), (3, "`===` -> `!==`"), (4, "`true` -> `false`")]
+    assert all("=>" in m.source for m in mutants)  # the arrow is never touched
+    assert all('"a == b"' in m.source for m in mutants)
+    assert generate_text_mutants("a.js", source, {2}, limit=30) == []
+
+
+@pytest.mark.skipif(shutil.which("go") is None or shutil.which("git") is None, reason="needs go and git")
+def test_go_project_reports_the_untested_line(tmp_path, monkeypatch):
+    root = tmp_path / "shop"
+    root.mkdir()
+
+    def git(*args):
+        subprocess.run(["git", *args], cwd=root, check=True, capture_output=True)
+
+    git("init", "-q")
+    git("config", "user.email", "t@t")
+    git("config", "user.name", "T")
+    (root / "go.mod").write_text("module shop\n\ngo 1.21\n", encoding="utf-8")
+    (root / "calc.go").write_text("package shop\n\nfunc Add(a, b int) int {\n\treturn a - b\n}\n", encoding="utf-8")
+    (root / "calc_test.go").write_text(
+        'package shop\n\nimport "testing"\n\nfunc TestAdd(t *testing.T) {\n\tif Add(2, 3) != 5 {\n\t\tt.Fatal("bad")\n\t}\n}\n',
+        encoding="utf-8")
+    git("add", ".")
+    git("commit", "-qm", "start")
+    (root / "calc.go").write_text(
+        "package shop\n\nfunc Add(a, b int) int {\n\treturn a + b\n}\n\nfunc IsBig(x int) bool {\n\treturn x > 10\n}\n",
+        encoding="utf-8")
+    monkeypatch.setenv("BUZZARD_HOME", str(tmp_path / "home"))
+    (root / ".buzzard").mkdir()
+    (root / ".buzzard" / "project.json").write_text(json.dumps({
+        "test_command": "go test ./...", "coverage": "off", "mutation_check": "warn"}), encoding="utf-8")
+    result = CodingVerifier(workspace=str(root)).verify_task("Fix the Add function in calc.go")
+    assert result.passed, result.message
+    mutation = result.mutation
+    assert mutation["status"] == "checked", mutation
+    assert mutation["killed"] >= 1  # `+` -> `-` in Add breaks TestAdd
+    assert {item["line"] for item in mutation["survived"]} == {8}  # IsBig has no test

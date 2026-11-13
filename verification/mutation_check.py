@@ -18,11 +18,14 @@ import ast
 import copy
 import hashlib
 import os
+import re
 import subprocess
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Callable, Dict, Iterator, List, Optional, Set, Tuple
 
+from verification.changed_coverage import JS_EXTENSIONS, _GO_TEST_FILE, _JS_TEST_FILE, changed_lines
+from verification.changed_coverage import changed_python_lines
 from verification.reproduce_first import BaseCheckout, split_pytest_command
 
 MUTATION_MODES = ("off", "warn", "require")
@@ -65,6 +68,77 @@ class MutationResult:
         data = asdict(self)
         data["score"] = self.score
         return data
+
+
+# Text mutations for JavaScript, TypeScript and Go: (pattern, replacement for each matched text).
+# Spaced forms for < > + - avoid generics, arrows, ++ and unary minus.
+_TEXT_SWAPS = {
+    "===": "!==", "!==": "===", "==": "!=", "!=": "==", " <= ": " > ", " >= ": " < ", " < ": " >= ",
+    " > ": " <= ", "&&": "||", "||": "&&", " + ": " - ", " - ": " + ", "true": "false", "false": "true",
+}
+_TEXT_OPERATOR = re.compile(
+    r"(?<![=!<>])(===|!==|==|!=)(?![=])|( <= | >= | < | > | \+ | - )|(&&|\|\|)|\b(true|false)\b"
+)
+TEXT_EXTENSIONS = (*JS_EXTENSIONS, ".go")
+
+
+def _code_spans(line: str) -> List[Tuple[int, int]]:
+    """Index ranges of a line that are code: outside string literals and before a // comment."""
+    spans, start, quote, index = [], 0, "", 0
+    while index < len(line):
+        char = line[index]
+        if quote:
+            if char == "\\":
+                index += 2
+                continue
+            if char == quote:
+                quote, start = "", index + 1
+        elif char in "\"'`":
+            spans.append((start, index))
+            quote = char
+        elif line.startswith("//", index):
+            spans.append((start, index))
+            return spans
+        index += 1
+    if not quote:
+        spans.append((start, len(line)))
+    return spans
+
+
+def generate_text_mutants(relative_path: str, source: str, lines: Set[int], limit: int) -> List[Mutant]:
+    """Operator swaps on changed lines of JavaScript, TypeScript or Go, outside strings and comments."""
+    source_lines = source.splitlines(keepends=True)
+    found: List[Tuple[int, int, int, str, str]] = []  # line, start, end, old, new
+    for number in sorted(lines):
+        if not 1 <= number <= len(source_lines):
+            continue
+        text = source_lines[number - 1]
+        if text.lstrip().startswith(("//", "/*", "*", "import ", "package ")):
+            continue
+        for begin, end in _code_spans(text):
+            for match in _TEXT_OPERATOR.finditer(text, begin, end):
+                old = match.group(0)
+                found.append((number, match.start(), match.end(), old, _TEXT_SWAPS[old]))
+    seen: Set[int] = set()
+    first, rest = [], []
+    for item in found:
+        (first if item[0] not in seen else rest).append(item)
+        seen.add(item[0])
+    mutants = []
+    for number, start, end, old, new in (first + rest)[:limit]:
+        mutated = list(source_lines)
+        line = mutated[number - 1]
+        mutated[number - 1] = line[:start] + new + line[end:]
+        mutants.append(Mutant(relative_path, number, f"`{old.strip()}` -> `{new.strip()}`", "".join(mutated)))
+    return mutants
+
+
+def changed_source_lines(root: Path) -> Dict[str, Set[int]]:
+    """Changed non-test lines of every language the mutation check can mutate."""
+    lines = dict(changed_python_lines(root))
+    lines.update(changed_lines(root, JS_EXTENSIONS, lambda path: bool(_JS_TEST_FILE.search(path))))
+    lines.update(changed_lines(root, (".go",), lambda path: bool(_GO_TEST_FILE.search(path))))
+    return lines
 
 
 def not_checked(reason: str) -> MutationResult:
@@ -216,15 +290,16 @@ def check_mutations(
     """
     mutants: List[Mutant] = []
     for relative, lines in sorted(changed_lines.items()):
-        if not relative.endswith(".py") or len(mutants) >= limit:
+        if not relative.endswith((".py", *TEXT_EXTENSIONS)) or len(mutants) >= limit:
             continue
         try:
             source = (root / relative).read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError):
             continue
-        mutants.extend(generate_mutants(relative, source, lines, limit - len(mutants)))
+        generate = generate_mutants if relative.endswith(".py") else generate_text_mutants
+        mutants.extend(generate(relative, source, lines, limit - len(mutants)))
     if not mutants:
-        return not_checked("no changed Python line has anything to mutate")
+        return not_checked("no changed Python, JavaScript, TypeScript or Go line has anything to mutate")
     command = _checkout_command(root, test_command, python)
     if approve is not None and not approve(command):
         return not_checked("running the tests on mutated code was not approved")
