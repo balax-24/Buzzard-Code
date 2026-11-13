@@ -59,12 +59,11 @@ from tui.widgets.modals import (
 )
 
 from core.config import load_merged_config, save_global_config
+from agent.run_session import ALLOW, ALLOW_SESSION, DENY, ApprovalRequest, RunSession
 from agent.project_context import (
-    build_mention_context,
     complete_file_mention,
     has_file_mention,
     load_conversation,
-    save_conversation,
 )
 from core.usage import SessionUsage, budget_limit_usd, context_window_for
 from model.factory import (
@@ -430,15 +429,21 @@ class BuzzardTUIApp(App[None]):
         self.mode = mode or "Autonomous"
         self.current_session_id: Optional[str] = None
         self.is_running_operation: bool = False
+        # Approval rules, plan mode, cancellation and conversation live in the shared RunSession
+        self.session = RunSession(
+            provider=None,
+            registry=self.registry,
+            storage=self.storage,
+            config=self.buzzard_config,
+            ask_approval=self._ask_approval_modal,
+            on_delta=lambda token: self.app.call_from_thread(self.chat_view.append_streaming_token, token),
+            event_bus=self.event_bus,
+            max_iterations=self.MAX_AGENT_TURNS,
+        )
         # Earlier user and assistant turns, so follow-up requests have their context
-        self.conversation: List[Dict[str, str]] = load_conversation() if resume or session_id else []
+        self.conversation = load_conversation() if resume or session_id else []
         self.usage = SessionUsage()
-        self.plan_mode: bool = False
-        self.session_rules: set = set()
-        self.approvals_granted: int = 0
-        self.approvals_denied: int = 0
         self._interrupt_count: int = 0
-        self._stop_event = threading.Event()
 
         # Active tool cards cache
         self.active_tool_cards: Dict[str, ToolActivityCard] = {}
@@ -680,9 +685,10 @@ class BuzzardTUIApp(App[None]):
             self.header_widget.update_state(status="READY")
 
         elif event.type == EventType.ASSESSMENT_COMPLETED:
+            # is_running_operation is cleared by the worker once the run has fully ended;
+            # clearing it here let a new task start while the old one was still finishing
             self.header_widget.update_state(status="COMPLETE")
             self.status_bar.update_metrics(session_id="idle")
-            self.is_running_operation = False
 
     def _find_active_card(self, payload: Dict[str, Any]) -> Optional[ToolActivityCard]:
         tool_call_id = payload.get("tool_call_id")
@@ -693,21 +699,53 @@ class BuzzardTUIApp(App[None]):
     # -------------------------------------------------------------------------
     # Approval Gate Callback (invoked by ApprovalGate from AgentLoop thread)
     # -------------------------------------------------------------------------
-    def _handle_approval_callback(self, tool_name: str, arguments: Dict[str, Any], metadata: Any) -> bool:
-        # Enforced here, not by the prompt, so a model cannot talk its way past plan mode
-        if self.plan_mode:
-            self.approvals_denied += 1
-            return False
-        from tools.mcp_client import is_mcp_auto_approved
-        if is_mcp_auto_approved(tool_name):
-            self.approvals_granted += 1
-            return True
-        from sandbox.container import is_docker_active
+    @property
+    def plan_mode(self) -> bool:
+        return self.session.plan_mode
 
-        session_rule = session_rule_for(tool_name, arguments)
-        if session_rule and session_rule in self.session_rules:
-            self.approvals_granted += 1
-            return True
+    @plan_mode.setter
+    def plan_mode(self, value: bool) -> None:
+        self.session.plan_mode = value
+
+    @property
+    def session_rules(self) -> set:
+        return self.session.session_rules
+
+    @property
+    def approvals_granted(self) -> int:
+        return self.session.approvals_granted
+
+    @approvals_granted.setter
+    def approvals_granted(self, value: int) -> None:
+        self.session.approvals_granted = value
+
+    @property
+    def approvals_denied(self) -> int:
+        return self.session.approvals_denied
+
+    @approvals_denied.setter
+    def approvals_denied(self, value: int) -> None:
+        self.session.approvals_denied = value
+
+    @property
+    def conversation(self) -> List[Dict[str, str]]:
+        return self.session.conversation
+
+    @conversation.setter
+    def conversation(self, value: List[Dict[str, str]]) -> None:
+        self.session.conversation = value
+
+    @property
+    def _stop_event(self) -> threading.Event:
+        return self.session.stop_event
+
+    def _handle_approval_callback(self, tool_name: str, arguments: Dict[str, Any], metadata: Any) -> bool:
+        # Plan mode, MCP auto-approve and session rules are enforced by RunSession, in code
+        return self.session.approve(tool_name, arguments, metadata)
+
+    def _ask_approval_modal(self, request: "ApprovalRequest") -> str:
+        """Shows the approval modal and waits for the user; no answer within 120s denies."""
+        from sandbox.container import is_docker_active
 
         done_event = threading.Event()
         decision_box = [False]
@@ -718,32 +756,24 @@ class BuzzardTUIApp(App[None]):
             done_event.set()
 
         def open_modal() -> None:
-            risk_val = getattr(metadata, "risk_class", None)
-            risk_str = getattr(risk_val, "value", str(metadata)) if risk_val else "HIGH"
-            target_str = str(arguments.get("target") or "localhost")
             modal = ApprovalModal(
-                tool_name=tool_name,
-                arguments=arguments,
-                target=target_str,
+                tool_name=request.tool_name,
+                arguments=request.arguments,
+                target=str(request.arguments.get("target") or "localhost"),
                 policy_reason="confirmation required",
                 scope_status="authorized network",
                 sandbox_env="Docker Sandbox" if is_docker_active() else "Host (no isolation)",
-                risk_class=risk_str,
-                session_rule=session_rule,
+                risk_class=request.risk_class,
+                session_rule=request.session_rule,
             )
             modal_box.append(modal)
             self.push_screen(modal, on_decision)
 
         self.call_from_thread(open_modal)
-        # Wait for operator decision (120s timeout before fail-closed)
         done_event.wait(timeout=120.0)
-        if decision_box[0]:
-            self.approvals_granted += 1
-            if modal_box and modal_box[0].allow_for_session and session_rule:
-                self.session_rules.add(session_rule)
-        else:
-            self.approvals_denied += 1
-        return decision_box[0]
+        if not decision_box[0]:
+            return DENY
+        return ALLOW_SESSION if modal_box and modal_box[0].allow_for_session else ALLOW
 
     # -------------------------------------------------------------------------
     # Input Submission & Slash Commands
@@ -1236,23 +1266,8 @@ class BuzzardTUIApp(App[None]):
         self._remember_turn(user_text, "".join(full_content))
         self.is_running_operation = False
 
-    def _show_evidence_report(self, loop: Any) -> None:
-        if loop.last_verification is None:
-            return
-        from tools.filesystem import get_active_workspace
-        from verification.evidence_report import build_evidence_report
-
-        report = build_evidence_report(
-            loop.last_verification, get_active_workspace(), self.approvals_granted, self.approvals_denied
-        )
-        if report:
-            self.app.call_from_thread(self._system_note, report)
-
     def _remember_turn(self, user_text: str, answer: str) -> None:
-        self.conversation.append({"role": "user", "content": user_text})
-        if answer.strip():
-            self.conversation.append({"role": "assistant", "content": answer})
-        save_conversation(self.conversation)
+        self.session.remember_turn(user_text, answer)
 
     # -------------------------------------------------------------------------
     # Security Assessment Task Execution (AgentLoop)
@@ -1260,9 +1275,6 @@ class BuzzardTUIApp(App[None]):
     @work(exclusive=True, thread=True)
     def _run_security_task(self, task_goal: str) -> None:
         self.is_running_operation = True
-        self._stop_event.clear()
-        self.approvals_granted = 0
-        self.approvals_denied = 0
 
         # Enforce KillSwitch
         ks = KillSwitch.get_instance()
@@ -1307,55 +1319,28 @@ class BuzzardTUIApp(App[None]):
         user_msg = ChatMessage(role=MessageRole.USER, content=task_goal)
         self.app.call_from_thread(self.chat_view.add_message, user_msg)
 
-        # Construct AgentLoop with TUI bindings
-        from agent.loop import AgentLoop
-        loop = AgentLoop(
-            provider=self.provider,
-            storage_manager=self.storage,
-            registry=self.registry,
-            max_iterations=self.MAX_AGENT_TURNS,
-            config=self.buzzard_config,
-            event_bus=self.event_bus,
-            approval_callback=self._handle_approval_callback,
-            on_stream_delta=lambda token: self.app.call_from_thread(self.chat_view.append_streaming_token, token),
-            stop_event=self._stop_event,
-            quiet=True,
-        )
-        loop.ui_active = True
-        loop.embedded_ui = True
-
-        try:
-            result = loop.run(
-                task_goal=f"{task_goal} Do not change any files; produce a plan." if self.plan_mode else task_goal,
-                target=primary_target,
-                scope=self.scope,
-                session_id=session_id,
-                conversation_history=self.conversation[-self.MAX_CONVERSATION_MESSAGES:],
-                attached_context=build_mention_context(task_goal),
-            )
-            status_val = result.get("status", "completed") if isinstance(result, dict) else "completed"
-            if loop.last_error:
-                self.app.call_from_thread(
-                    self.chat_view.add_message,
-                    ChatMessage(role=MessageRole.ERROR, content=loop.last_error),
-                )
-            answers = [m.get("content") or "" for m in result.get("messages", []) if m.get("role") == "assistant"]
-            final_answer = next((text for text in reversed(answers) if text.strip()), "")
-            self._remember_turn(task_goal, final_answer)
-            self._show_evidence_report(loop)
-            if final_answer and not self.chat_view.has_streamed_since_last_tool():
-                self.app.call_from_thread(
-                    self.chat_view.add_message,
-                    ChatMessage(role=MessageRole.ASSISTANT, content=final_answer),
-                )
+        # The session runs the task; this method only renders what happened
+        self.session.provider = self.provider
+        self.session.config = self.buzzard_config
+        self.session.registry = self.registry
+        outcome = self.session.run(task_goal, target=primary_target, scope=self.scope, session_id=session_id)
+        if outcome.error:
             self.app.call_from_thread(
                 self.chat_view.add_message,
-                ChatMessage(role=MessageRole.SYSTEM, content=f"{'✓' if status_val == 'completed' else '✕'} Task `{session_id}` concluded with status: {status_val}.")
+                ChatMessage(role=MessageRole.ERROR, content=outcome.error),
             )
-        except Exception as e:
+        if outcome.evidence_report:
+            self.app.call_from_thread(self._system_note, outcome.evidence_report)
+        if outcome.final_answer and not self.chat_view.has_streamed_since_last_tool():
             self.app.call_from_thread(
                 self.chat_view.add_message,
-                ChatMessage(role=MessageRole.ERROR, content=f"Agent loop error: {e}")
+                ChatMessage(role=MessageRole.ASSISTANT, content=outcome.final_answer),
+            )
+        if outcome.status != "failed" or not outcome.error or outcome.messages:
+            mark = "✓" if outcome.status == "completed" else "✕"
+            self.app.call_from_thread(
+                self.chat_view.add_message,
+                ChatMessage(role=MessageRole.SYSTEM, content=f"{mark} Task `{session_id}` concluded with status: {outcome.status}."),
             )
 
         self.app.call_from_thread(self.header_widget.update_state, status="READY")

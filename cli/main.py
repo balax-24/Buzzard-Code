@@ -147,6 +147,16 @@ def toolchain(force_rebuild):
     manager = ToolchainManager()
     manager.run_cli(force_rebuild=force_rebuild)
 
+@main.command(name="serve")
+@click.option("--stdio", "use_stdio", is_flag=True, required=True, help="Speak the runtime protocol on stdin and stdout.")
+def serve(use_stdio):
+    """
+    Run Buzzard Code headless for an editor extension or the desktop app.
+    The client starts this process and talks JSON-RPC over stdio; there is no network listener.
+    """
+    from runtime.stdio_server import serve_stdio
+    serve_stdio()
+
 @main.command(name="server")
 def server():
     """

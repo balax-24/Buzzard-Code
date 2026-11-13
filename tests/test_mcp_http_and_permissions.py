@@ -172,8 +172,10 @@ def test_tui_runs_auto_approved_tools_but_plan_mode_refuses_them(monkeypatch):
     manager = McpManager()
     manager.auto_approved.add("mcp.docs.search")
     monkeypatch.setattr(mcp_client, "_manager", manager)
+    from agent.run_session import RunSession
+
     app = object.__new__(BuzzardTUIApp)
-    app.approvals_granted = app.approvals_denied = 0
+    app.session = RunSession(None, None, None, {}, ask_approval=lambda request: "deny")
     app.plan_mode = False
     assert app._handle_approval_callback("mcp.docs.search", {}, None) is True
     app.plan_mode = True
