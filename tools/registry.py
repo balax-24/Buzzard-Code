@@ -531,6 +531,12 @@ class ToolRegistry:
             self.tools[canonical_name].definition.quarantine_details = None
         return defn
 
+    def list_tools(self) -> List[Tool]:
+        """
+        Returns all registered Tool instances.
+        """
+        return list(self.tools.values())
+
     def get_active_tools(self) -> Dict[str, Tool]:
         """
         Returns all healthy (non-quarantined) tools.
