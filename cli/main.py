@@ -629,5 +629,16 @@ def bench_release_cmd(input_file, min_solve_rate, max_turns):
         for r in report.reasons:
             console.print(f"    [red]✗ {r}[/red]")
 
+@main.command(name="client")
+@click.argument("goal")
+@click.option("--workspace", "-w", default=".", help="Workspace folder to target.")
+@click.option("--auto-approve", is_flag=True, default=False, help="Automatically approve actions without prompting.")
+def client_cmd(goal, workspace, auto_approve):
+    """
+    Run a task by driving the headless runtime over stdio JSON-RPC (roadmap F6).
+    """
+    from runtime.client import run_client_cli
+    sys.exit(run_client_cli(goal=goal, workspace=workspace, auto_approve=auto_approve))
+
 if __name__ == "__main__":
     main()
