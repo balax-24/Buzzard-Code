@@ -125,6 +125,16 @@ def test_default_worker_runs_buzzard_exec_with_only_the_given_permissions(tmp_pa
     assert "--json" in argv and str(tmp_path) in argv
 
 
+def test_default_worker_runs_frozen_executable_directly(tmp_path, monkeypatch):
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setattr(sys, "executable", "C:\\Program Files\\Buzzard\\buzzard.exe")
+    argv = default_worker_command(allow_edits=True, allow_commands=True, model="gemini/x")("Add a flag", tmp_path)
+    assert argv[0:3] == ["C:\\Program Files\\Buzzard\\buzzard.exe", "exec", "Add a flag"]
+    assert argv[3:5] == ["--workspace", str(tmp_path)]
+    assert "--json" in argv and "--allow-edits" in argv and "--allow-commands" in argv
+    assert argv[-2:] == ["--model", "gemini/x"]
+
+
 def test_the_real_worker_entry_point_starts():
     ran = subprocess.run([sys.executable, "-m", "cli.main", "exec", "--help"],
                          cwd=str(Path(__file__).resolve().parent.parent), capture_output=True, text=True, timeout=120)

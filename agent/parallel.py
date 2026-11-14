@@ -68,7 +68,10 @@ WorkerCommand = Callable[[str, Path], List[str]]
 def default_worker_command(allow_edits: bool, allow_commands: bool, model: Optional[str] = None) -> WorkerCommand:
     """`buzzard exec` in the worktree, with the caller's approval flags."""
     def command(task: str, workspace: Path) -> List[str]:
-        argv = [sys.executable, "-m", "cli.main", "exec", task, "--workspace", str(workspace), "--json"]
+        if getattr(sys, "frozen", False):
+            argv = [sys.executable, "exec", task, "--workspace", str(workspace), "--json"]
+        else:
+            argv = [sys.executable, "-m", "cli.main", "exec", task, "--workspace", str(workspace), "--json"]
         if allow_edits:
             argv.append("--allow-edits")
         if allow_commands:
