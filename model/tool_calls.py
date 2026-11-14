@@ -69,14 +69,30 @@ def normalize_openai_tool_calls(raw_tool_calls: Optional[List[Dict[str, Any]]]) 
 
 
 def serialize_openai_messages(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """Re-encodes dict tool arguments as the JSON strings Chat Completions requires."""
+    """Re-encodes dict tool arguments as the JSON strings Chat Completions requires, and formats images."""
     serialized = []
     for message in messages:
-        if not message.get("tool_calls"):
-            serialized.append(message)
+        msg = dict(message)
+        images = msg.get("images") or []
+        if images and msg.get("role") == "user":
+            from model.images import format_openai_image_part, resolve_image_path, encode_image
+            parts: List[Dict[str, Any]] = []
+            if msg.get("content"):
+                parts.append({"type": "text", "text": str(msg["content"])})
+            for img in images:
+                if isinstance(img, tuple) and len(img) == 2:
+                    mime, b64 = img
+                else:
+                    path = resolve_image_path(img)
+                    mime, b64 = encode_image(path)
+                parts.append(format_openai_image_part(mime, b64))
+            msg["content"] = parts
+
+        if not msg.get("tool_calls"):
+            serialized.append(msg)
             continue
         wire_calls = []
-        for call in message["tool_calls"]:
+        for call in msg["tool_calls"]:
             function = call.get("function") or {}
             arguments = function.get("arguments") or {}
             wire_calls.append({
@@ -88,7 +104,7 @@ def serialize_openai_messages(messages: List[Dict[str, Any]]) -> List[Dict[str, 
                     "arguments": arguments if isinstance(arguments, str) else json.dumps(arguments),
                 },
             })
-        serialized.append({**message, "tool_calls": wire_calls})
+        serialized.append({**msg, "tool_calls": wire_calls})
     return serialized
 
 
@@ -230,7 +246,18 @@ def to_gemini_contents(messages: List[Dict[str, Any]]) -> Tuple[Optional[Dict[st
             if parts:
                 add("model", parts)
         else:
-            add("user", [{"text": content}])
+            parts = [{"text": content}] if content else []
+            images = message.get("images") or []
+            if images:
+                from model.images import format_gemini_image_part, resolve_image_path, encode_image
+                for img in images:
+                    if isinstance(img, tuple) and len(img) == 2:
+                        mime, b64 = img
+                    else:
+                        path = resolve_image_path(img)
+                        mime, b64 = encode_image(path)
+                    parts.append(format_gemini_image_part(mime, b64))
+            add("user", parts)
     return system_instruction, contents
 
 
@@ -301,7 +328,22 @@ def to_anthropic_messages(messages: List[Dict[str, Any]]) -> Tuple[Optional[str]
                 })
             converted.append({"role": "assistant", "content": blocks})
         else:
-            converted.append({"role": "assistant" if role == "assistant" else "user", "content": content})
+            images = message.get("images") or []
+            if images and role == "user":
+                from model.images import format_anthropic_image_block, resolve_image_path, encode_image
+                blocks: List[Dict[str, Any]] = []
+                if content:
+                    blocks.append({"type": "text", "text": str(content)})
+                for img in images:
+                    if isinstance(img, tuple) and len(img) == 2:
+                        mime, b64 = img
+                    else:
+                        path = resolve_image_path(img)
+                        mime, b64 = encode_image(path)
+                    blocks.append(format_anthropic_image_block(mime, b64))
+                converted.append({"role": "user", "content": blocks})
+            else:
+                converted.append({"role": "assistant" if role == "assistant" else "user", "content": content})
     return system_prompt, converted
 
 
