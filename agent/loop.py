@@ -126,7 +126,7 @@ CODING_TOOL_NAMES = frozenset({
     "shell_execute",
     "checkpoint_list", "workspace_rewind",
     "terminal.execute", "git_status", "git_diff", "git_log", "todo_write",
-    "code_symbols", "code_references", "code_related", "code_search", "web_lookup", "web_read", "related_tests", "lsp_definition", "lsp_references", "lsp_diagnostics", "lsp_rename", "memory_save",
+    "code_symbols", "code_references", "code_related", "code_search", "web_lookup", "web_read", "page_open", "page_read", "page_click", "page_type", "page_screenshot", "page_console", "related_tests", "lsp_definition", "lsp_references", "lsp_diagnostics", "lsp_rename", "memory_save",
     "git_prepare_commit", "git_branch_create", "git_commit", "git_prepare_pr",
     "delegate_task",
 })
@@ -175,6 +175,8 @@ class AgentLoop:
             register_code_index_tools(self.registry)
             from tools.web_tools import register_web_tools
             register_web_tools(self.registry)
+            from tools.browser_tools import register_browser_tools
+            register_browser_tools(self.registry)
             from tools.related_tests import register_related_tests_tool
             register_related_tests_tool(self.registry)
             from tools.lsp_tools import register_lsp_tools
@@ -905,6 +907,11 @@ class AgentLoop:
                 cleanup_session_shells(session_id)
             except Exception:
                 logger.exception("Could not clean up shell for %s", session_id)
+            try:
+                from tools.browser_tools import cleanup_session_browsers
+                cleanup_session_browsers(session_id)
+            except Exception:
+                logger.exception("Could not clean up browser for %s", session_id)
 
     def _run(
         self,

@@ -37,10 +37,10 @@ def test_authoritative_registry_live_counts():
     alias_map = getattr(reg, "TOOL_ALIASES", {})
     canonical_defs = {k: v for k, v in reg.definitions.items() if k not in alias_map}
 
-    assert len(reg.definitions) == 249, f"Expected 249 definitions, got {len(reg.definitions)}"
-    assert len(reg.tools) == 249, f"Expected 249 tools, got {len(reg.tools)}"
+    assert len(reg.definitions) == 255, f"Expected 255 definitions, got {len(reg.definitions)}"
+    assert len(reg.tools) == 255, f"Expected 255 tools, got {len(reg.tools)}"
     assert len(alias_map) == 47, f"Expected 47 aliases, got {len(alias_map)}"
-    assert len(canonical_defs) == 233, f"Expected 233 canonical tools, got {len(canonical_defs)}"
+    assert len(canonical_defs) == 239, f"Expected 239 canonical tools, got {len(canonical_defs)}"
 
     # Check 78 canonical tools across the 9 primary tool suites
     assert len(CANONICAL_TEST_TOOLS) == 43
@@ -57,8 +57,8 @@ def test_tui_registry_initialization_not_stale():
     app = BuzzardTUIApp(fake=True)
     assert hasattr(app, "registry"), "app must store live registry instance"
     assert app.registry is not None
-    assert len(app.registry.definitions) == 249
-    assert len(app.registry.tools) == 249
+    assert len(app.registry.definitions) == 255
+    assert len(app.registry.tools) == 255
     assert len(app.registry.definitions) > 14, "FATAL REGRESSION: TUI is using legacy <= 14 tool registry"
 
 
@@ -262,8 +262,8 @@ def test_tui_slash_tools_responsive_widths():
         res = build_tools_view(width=width, registry=reg)
         assert res is not None
         assert "BUZZARD TOOL REGISTRY" in res.clean_text
-        assert "249 definitions" in res.clean_text
-        assert "233 canonical" in res.clean_text
+        assert "255 definitions" in res.clean_text
+        assert "239 canonical" in res.clean_text
         assert "47 aliases" in res.clean_text
 
         # Ensure no pipe syntax or bold delimiters

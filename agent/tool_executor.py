@@ -87,6 +87,7 @@ WORKSPACE_STATE_TOOLS = frozenset({
     "code_symbols", "code_references", "code_related", "code_search", "related_tests", "lsp_definition", "lsp_references", "lsp_diagnostics", "lsp_rename", "file_move", "multi_edit", "apply_patch",
     "process_start", "process_logs", "process_stop",
     "web_lookup", "web_read",
+    "page_open", "page_read", "page_click", "page_type", "page_screenshot", "page_console",
     "shell_execute",
     "checkpoint_list", "workspace_rewind",
     "git_prepare_commit", "git_branch_create", "git_commit", "git_prepare_pr",

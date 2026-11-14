@@ -156,6 +156,7 @@ The two highlighted boxes are deterministic code. The model cannot talk its way 
 - Stronger proof at the gate: for a bug fix, a test must fail on the original code and pass with the fix (reproduce-first); changed-line coverage for pytest, Go, Node (c8) and Rust; an optional mutation check (Python, JavaScript, TypeScript, Go) that breaks each changed line on purpose and reports what no test caught
 - `related_tests` finds the tests that import the changed code, so the agent can test a change quickly before the full suite
 - Language-server tools (`lsp_definition`, `lsp_references`, `lsp_diagnostics`, `lsp_rename`) when gopls, Pyright, typescript-language-server or another server is installed, with a fallback to the built-in code index
+- Browser checks (`page_open`, `page_read`, `page_click`, `page_type`, `page_screenshot`, `page_console`): drive a headless Chromium browser to verify a UI change; approval-gated, public hosts only
 - Web search and documentation fetch (`web_lookup`, `web_read`): approval-gated, results marked untrusted, public hosts only (SSRF-guarded), with `web.allow` / `web.deny` domain lists
 - Semantic code search (`code_search`): find code by what it does, with a local Ollama embedding model or a built-in lexical fallback; nothing leaves your machine by default
 - Repository index, project memory, git branch and commit tools, background processes and a persistent shell, workspace checkpoints with rewind
@@ -323,6 +324,7 @@ Nothing is approved unless a flag allows it. Exit code 0 means the task complete
 | `task_budget` in your config | Limits for a coding task: `max_tokens`, `max_usd`, `max_minutes`, `max_turns` |
 | `model.subagent` in your config | A different `provider/model` for subagents |
 | `model.prompt_caching` in your config | `false` turns off Anthropic prompt caching |
+| `browser` in your config | `allow` / `deny` domain lists and `allow_private` for the browser-check tools |
 | `web` in your config | `allow` / `deny` domain lists for the web tools, and `allow_private` to permit non-public hosts |
 | `semantic_search` in your config | `embedder` (`auto`/`ollama`/`lexical`), `model` (default `nomic-embed-text`), `url` (local Ollama); a remote `url` needs `allow_remote: true` |
 | `durable_tasks` in your config | `false` stops saving tasks for resume |
