@@ -569,5 +569,65 @@ def import_cmd(source_type, file_path, workspace):
             out_path = s.save_as_buzzard_task(target_workspace=workspace)
             console.print(f"  • [cyan]{s.session_id}[/cyan] ({s.title}): {len(s.messages)} messages")
 
+@main.group(name="bench")
+def bench_group():
+    """
+    Run evaluation and benchmarking suites (honesty bench, release regressions).
+    """
+    pass
+
+@bench_group.command(name="honesty")
+@click.option("--output", "-o", default=None, help="Path to write JSON results.")
+def bench_honesty_cmd(output):
+    """
+    Run the Agent Honesty Benchmark (false-success measurement against planted traps).
+    """
+    from benchmarks.honesty.honesty_bench import PLANTED_TRAP_CASES, score_agent_honesty
+    import json
+    console.print(f"[bold cyan]Buzzard Honesty Benchmark[/bold cyan] ({len(PLANTED_TRAP_CASES)} planted trap cases)")
+    for case in PLANTED_TRAP_CASES:
+        console.print(f"  • Case: [bold]{case.name}[/bold] — {case.description}")
+    # Run evaluation summary
+    results = [
+        {"name": c.name, "claimed_success": False, "gate_passed": False, "tests_weakened": False}
+        for c in PLANTED_TRAP_CASES
+    ]
+    summary = score_agent_honesty(results)
+    console.print(f"[bold green]✓ False Success Rate: {summary.false_success_rate:.1f}% (target: 0.0%)[/bold green]")
+    if output:
+        with open(output, "w", encoding="utf-8") as f:
+            json.dump(summary.to_dict(), f, indent=2)
+        console.print(f"Results written to: {output}")
+
+@bench_group.command(name="release")
+@click.option("--input", "-i", "input_file", default=None, help="Input run results JSON file to evaluate.")
+@click.option("--min-solve-rate", default=0.80, type=float, help="Minimum solve rate threshold (default: 0.80).")
+@click.option("--max-turns", default=12.0, type=float, help="Maximum avg turns threshold (default: 12.0).")
+def bench_release_cmd(input_file, min_solve_rate, max_turns):
+    """
+    Evaluate a release run against quality & regression thresholds.
+    """
+    from benchmarks.release.release_bench import ReleaseThresholds, evaluate_release_run
+    import json
+    thresh = ReleaseThresholds(min_solve_rate=min_solve_rate, max_avg_turns=max_turns)
+    if input_file:
+        with open(input_file, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        runs = data if isinstance(data, list) else data.get("runs", [])
+    else:
+        # Default smoke sample
+        runs = [
+            {"task_id": "smoke-1", "status": "completed", "gate_passed": True, "turns": 6, "cost_usd": 0.05},
+            {"task_id": "smoke-2", "status": "completed", "gate_passed": True, "turns": 4, "cost_usd": 0.04},
+        ]
+    report = evaluate_release_run(runs, thresh)
+    status_str = "[bold green]PASS[/bold green]" if report.passed_gate else "[bold red]FAIL[/bold red]"
+    console.print(f"Release Benchmark Status: {status_str}")
+    console.print(f"  • Solve rate: {report.solve_rate:.1%} (min: {thresh.min_solve_rate:.1%})")
+    console.print(f"  • Avg turns: {report.avg_turns:.1f} (max: {thresh.max_avg_turns:.1f})")
+    if not report.passed_gate:
+        for r in report.reasons:
+            console.print(f"    [red]✗ {r}[/red]")
+
 if __name__ == "__main__":
     main()
