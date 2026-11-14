@@ -44,7 +44,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["agent", "benchmark", "browser", "cli", "core", "events", "intelligence", "model", "persistence", "range", "remediation", "reports", "runtime", "sandbox", "security", "state", "storage", "system", "toolchain", "tools", "training", "tui", "verification"]
+packages = ["agent", "benchmark", "browser", "cli", "core", "events", "importers", "intelligence", "model", "persistence", "range", "remediation", "reports", "runtime", "sandbox", "security", "state", "storage", "system", "toolchain", "tools", "training", "tui", "verification"]
 
 [dependency-groups]
 dev = [

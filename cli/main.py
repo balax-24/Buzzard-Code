@@ -519,5 +519,55 @@ def uninstall_cmd(purge_data, yes):
 
     click.echo("Buzzard Code uninstallation completed.")
 
+@main.command(name="import")
+@click.argument("source_type", type=click.Choice(["claude", "codex", "antigravity", "chatgpt"], case_sensitive=False))
+@click.argument("file_path", type=click.Path(exists=True, dir_okay=False))
+@click.option("--workspace", "-w", default=None, help="Target workspace path for the imported session.")
+def import_cmd(source_type, file_path, workspace):
+    """
+    Import an external agent transcript (Claude Code, Codex, Antigravity, ChatGPT).
+    Saves it as a resumable Buzzard task session.
+    """
+    from pathlib import Path
+    from cli.renderer import console
+    from importers import (
+        import_claude_session,
+        import_codex_session,
+        import_antigravity_session,
+        import_chatgpt_conversations,
+    )
+
+    path = Path(file_path)
+    source = source_type.lower()
+    if source == "claude":
+        session = import_claude_session(path)
+        out_path = session.save_as_buzzard_task(target_workspace=workspace)
+        console.print(f"[bold green]✓ Imported Claude Code session:[/bold green] {session.session_id}")
+        console.print(f"  • Title: {session.title}")
+        console.print(f"  • Messages: {len(session.messages)}")
+        console.print(f"  • Saved as task journal: {out_path}")
+        console.print(f"  • Resume with: [cyan]buzzard exec --resume {session.session_id}[/cyan]")
+    elif source == "codex":
+        session = import_codex_session(path)
+        out_path = session.save_as_buzzard_task(target_workspace=workspace)
+        console.print(f"[bold green]✓ Imported Codex session:[/bold green] {session.session_id}")
+        console.print(f"  • Title: {session.title}")
+        console.print(f"  • Messages: {len(session.messages)}")
+        console.print(f"  • Saved as task journal: {out_path}")
+        console.print(f"  • Resume with: [cyan]buzzard exec --resume {session.session_id}[/cyan]")
+    elif source == "antigravity":
+        session = import_antigravity_session(path)
+        out_path = session.save_as_buzzard_task(target_workspace=workspace)
+        console.print(f"[bold green]✓ Imported Antigravity session:[/bold green] {session.session_id}")
+        console.print(f"  • Messages: {len(session.messages)}")
+        console.print(f"  • Saved as task journal: {out_path}")
+        console.print(f"  • Resume with: [cyan]buzzard exec --resume {session.session_id}[/cyan]")
+    elif source == "chatgpt":
+        sessions = import_chatgpt_conversations(path)
+        console.print(f"[bold green]✓ Found {len(sessions)} ChatGPT conversation(s)[/bold green]")
+        for s in sessions:
+            out_path = s.save_as_buzzard_task(target_workspace=workspace)
+            console.print(f"  • [cyan]{s.session_id}[/cyan] ({s.title}): {len(s.messages)} messages")
+
 if __name__ == "__main__":
     main()
