@@ -28,6 +28,7 @@ def repo(tmp_path, monkeypatch):
     git(root, "init", "-q", "-b", "main")
     git(root, "config", "user.email", "t@t")
     git(root, "config", "user.name", "T")
+    (root / ".gitignore").write_text("__pycache__/\n*.pyc\n", encoding="utf-8")
     (root / "calc.py").write_text("def add(a, b):\n    return a - b\n", encoding="utf-8")
     (root / ".buzzard").mkdir()
     (root / ".buzzard" / "project.json").write_text(json.dumps({

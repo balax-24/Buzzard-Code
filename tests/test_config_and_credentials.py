@@ -23,7 +23,10 @@ from core.credentials import (
     list_configured_credentials,
 )
 
-def test_default_config_structure():
+def test_default_config_structure(tmp_path, monkeypatch):
+    fake_global_dir = tmp_path / "global"
+    fake_global_dir.mkdir()
+    monkeypatch.setattr("core.config.get_global_config_dir", lambda: fake_global_dir)
     cfg = load_merged_config()
     assert cfg["version"] == "1.0.0"
     assert "model" in cfg
