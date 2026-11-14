@@ -214,3 +214,25 @@ def test_rust_mutations():
     assert (6, "`==` -> `!=`") in changes
     assert (6, "`&&` -> `||`") in changes
     assert (6, "`>` -> `<=`") in changes
+
+
+def test_parallel_mutation_check(repo, monkeypatch, tmp_path):
+    from verification.mutation_check import check_mutations
+    monkeypatch.setenv("BUZZARD_HOME", str(tmp_path / "home"))
+    cmd = f'"{sys.executable}" -m pytest -q -p no:cacheprovider'
+    lines = {"calc.py": {2, 6}}
+    files = ["calc.py"]
+    res_parallel = check_mutations(
+        root=repo,
+        test_command=cmd,
+        python=sys.executable,
+        changed_lines=lines,
+        changed_files=files,
+        limit=10,
+        approve=lambda c: True,
+        run_in=lambda d, c: subprocess.run(c, cwd=d, shell=True, capture_output=True).returncode,
+        workers=2,
+    )
+    assert res_parallel.status == "checked"
+    assert res_parallel.mutants >= 1
+

@@ -284,10 +284,12 @@ def check_mutations(
     limit: int,
     approve: Optional[Callable[[str], bool]],
     run_in: Callable[[Path, str], int],
+    workers: int = 1,
 ) -> MutationResult:
     """
-    Runs the tests once per mutant in a checkout of HEAD plus the current changes.
+    Runs the tests once per mutant in checkouts of HEAD plus the current changes.
     run_in(directory, command) runs a command and returns its exit code.
+    workers: bounded parallelism (1-4) across mutant evaluations.
     """
     mutants: List[Mutant] = []
     for relative, lines in sorted(changed_lines.items()):
@@ -305,27 +307,83 @@ def check_mutations(
     if approve is not None and not approve(command):
         return not_checked("running the tests on mutated code was not approved")
     result = MutationResult(status="checked", mutants=len(mutants))
+
+    workers = max(1, min(workers, len(mutants), 4))
+    if workers == 1:
+        try:
+            with BaseCheckout(root, mutation_directory(root) / "checkout") as checkout:
+                present = [path for path in changed_files if (root / path).is_file()]
+                checkout.copy_in(present)
+                for path in changed_files:
+                    if not (root / path).exists():
+                        (checkout.path / path).unlink(missing_ok=True)  # deleted in the working tree
+                if run_in(checkout.path, command) != 0:
+                    return not_checked("the tests do not pass in a clean checkout of the changes")
+                for mutant in mutants:
+                    target = checkout.path / mutant.path
+                    original = target.read_bytes()
+                    try:
+                        target.write_text(mutant.source, encoding="utf-8")
+                        caught = run_in(checkout.path, command) != 0
+                    finally:
+                        target.write_bytes(original)
+                    if caught:
+                        result.killed += 1
+                    else:
+                        result.survived.append({"path": mutant.path, "line": mutant.line, "change": mutant.description})
+        except (RuntimeError, OSError, subprocess.SubprocessError) as error:
+            return not_checked(str(error))
+        return result
+
+    import queue
+    from concurrent.futures import ThreadPoolExecutor
+
     try:
-        with BaseCheckout(root, mutation_directory(root) / "checkout") as checkout:
-            present = [path for path in changed_files if (root / path).is_file()]
-            checkout.copy_in(present)
+        checkouts: List[BaseCheckout] = []
+        present = [path for path in changed_files if (root / path).is_file()]
+        for i in range(workers):
+            co = BaseCheckout(root, mutation_directory(root) / f"checkout_{i}")
+            co.__enter__()
+            checkouts.append(co)
+            co.copy_in(present)
             for path in changed_files:
                 if not (root / path).exists():
-                    (checkout.path / path).unlink(missing_ok=True)  # deleted in the working tree
-            if run_in(checkout.path, command) != 0:
+                    (co.path / path).unlink(missing_ok=True)
+            if run_in(co.path, command) != 0:
+                for c in checkouts:
+                    c.__exit__(None, None, None)
                 return not_checked("the tests do not pass in a clean checkout of the changes")
-            for mutant in mutants:
-                target = checkout.path / mutant.path
+
+        checkout_queue: "queue.Queue[BaseCheckout]" = queue.Queue()
+        for co in checkouts:
+            checkout_queue.put(co)
+
+        def run_single_mutant(m: Mutant) -> Tuple[bool, Mutant]:
+            co = checkout_queue.get()
+            try:
+                target = co.path / m.path
                 original = target.read_bytes()
                 try:
-                    target.write_text(mutant.source, encoding="utf-8")
-                    caught = run_in(checkout.path, command) != 0
+                    target.write_text(m.source, encoding="utf-8")
+                    caught = run_in(co.path, command) != 0
                 finally:
                     target.write_bytes(original)
-                if caught:
-                    result.killed += 1
-                else:
-                    result.survived.append({"path": mutant.path, "line": mutant.line, "change": mutant.description})
+                return (caught, m)
+            finally:
+                checkout_queue.put(co)
+
+        try:
+            with ThreadPoolExecutor(max_workers=workers) as executor:
+                for caught, m in executor.map(run_single_mutant, mutants):
+                    if caught:
+                        result.killed += 1
+                    else:
+                        result.survived.append({"path": m.path, "line": m.line, "change": m.description})
+        finally:
+            for c in checkouts:
+                c.__exit__(None, None, None)
+
     except (RuntimeError, OSError, subprocess.SubprocessError) as error:
         return not_checked(str(error))
+
     return result
