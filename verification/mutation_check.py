@@ -24,7 +24,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Callable, Dict, Iterator, List, Optional, Set, Tuple
 
-from verification.changed_coverage import JS_EXTENSIONS, _GO_TEST_FILE, _JS_TEST_FILE, changed_lines
+from verification.changed_coverage import JS_EXTENSIONS, _GO_TEST_FILE, _JS_TEST_FILE, _RUST_TEST_FILE, changed_lines
 from verification.changed_coverage import changed_python_lines
 from verification.reproduce_first import BaseCheckout, split_pytest_command
 
@@ -79,7 +79,7 @@ _TEXT_SWAPS = {
 _TEXT_OPERATOR = re.compile(
     r"(?<![=!<>])(===|!==|==|!=)(?![=])|( <= | >= | < | > | \+ | - )|(&&|\|\|)|\b(true|false)\b"
 )
-TEXT_EXTENSIONS = (*JS_EXTENSIONS, ".go")
+TEXT_EXTENSIONS = (*JS_EXTENSIONS, ".go", ".rs")
 
 
 def _code_spans(line: str) -> List[Tuple[int, int]]:
@@ -138,6 +138,7 @@ def changed_source_lines(root: Path) -> Dict[str, Set[int]]:
     lines = dict(changed_python_lines(root))
     lines.update(changed_lines(root, JS_EXTENSIONS, lambda path: bool(_JS_TEST_FILE.search(path))))
     lines.update(changed_lines(root, (".go",), lambda path: bool(_GO_TEST_FILE.search(path))))
+    lines.update(changed_lines(root, (".rs",), lambda path: bool(_RUST_TEST_FILE.search(path))))
     return lines
 
 
@@ -299,7 +300,7 @@ def check_mutations(
         generate = generate_mutants if relative.endswith(".py") else generate_text_mutants
         mutants.extend(generate(relative, source, lines, limit - len(mutants)))
     if not mutants:
-        return not_checked("no changed Python, JavaScript, TypeScript or Go line has anything to mutate")
+        return not_checked("no changed Python, JavaScript, TypeScript, Go or Rust line has anything to mutate")
     command = _checkout_command(root, test_command, python)
     if approve is not None and not approve(command):
         return not_checked("running the tests on mutated code was not approved")

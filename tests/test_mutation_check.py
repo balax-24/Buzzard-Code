@@ -191,3 +191,26 @@ def test_go_project_reports_the_untested_line(tmp_path, monkeypatch):
     assert mutation["status"] == "checked", mutation
     assert mutation["killed"] >= 1  # `+` -> `-` in Add breaks TestAdd
     assert {item["line"] for item in mutation["survived"]} == {8}  # IsBig has no test
+
+
+def test_rust_mutations():
+    from verification.mutation_check import generate_text_mutants
+
+    source = (
+        "pub fn add(a: i32, b: i32) -> i32 {\n"
+        "    a + b\n"
+        "}\n\n"
+        "pub fn is_equal(a: i32, b: i32) -> bool {\n"
+        "    if a == b && a > 0 {\n"
+        "        true\n"
+        "    } else {\n"
+        "        false\n"
+        "    }\n"
+        "}\n"
+    )
+    mutants = generate_text_mutants("src/lib.rs", source, {2, 6}, limit=30)
+    changes = sorted((m.line, m.description) for m in mutants)
+    assert (2, "`+` -> `-`") in changes
+    assert (6, "`==` -> `!=`") in changes
+    assert (6, "`&&` -> `||`") in changes
+    assert (6, "`>` -> `<=`") in changes
