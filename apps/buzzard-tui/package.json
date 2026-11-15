@@ -1,0 +1,32 @@
+{
+  "name": "buzzard-tui",
+  "version": "1.0.0",
+  "description": "Clean and Beautiful React + TypeScript TUI for Buzzard Code",
+  "main": "dist/index.js",
+  "type": "module",
+  "bin": {
+    "buzzard-tui": "./bin/buzzard-tui.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.tsx"
+  },
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "cli-truncate": "^4.0.0",
+    "gradient-string": "^2.0.2",
+    "ink": "^4.4.1",
+    "ink-select-input": "^5.0.0",
+    "ink-spinner": "^5.0.0",
+    "ink-text-input": "^5.0.1",
+    "react": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/gradient-string": "^1.1.6",
+    "@types/node": "^20.11.24",
+    "@types/react": "^18.2.61",
+    "tsx": "^4.19.2",
+    "typescript": "^5.3.3"
+  }
+}
