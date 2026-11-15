@@ -108,13 +108,18 @@ async def wait_for(pilot, condition, timeout: float = 60.0) -> None:
 
 
 async def submit(pilot, app: BuzzardTUIApp, text: str) -> None:
+    app.chat_input.focus()
     app.chat_input.value = text
     await pilot.press("enter")
 
 
 async def approve_until_idle(pilot, app: BuzzardTUIApp, key: str = "y", on_modal=None) -> List[ApprovalModal]:
     seen: List[ApprovalModal] = []
-    await wait_for(pilot, lambda: app.is_running_operation or isinstance(app.screen, ApprovalModal))
+    await wait_for(pilot, lambda: (
+        app.is_running_operation
+        or isinstance(app.screen, ApprovalModal)
+        or any("concluded" in getattr(b.message, "content", "") for b in app.chat_view.query(MessageBubble))
+    ))
     while app.is_running_operation:
         if isinstance(app.screen, ApprovalModal):
             seen.append(app.screen)
