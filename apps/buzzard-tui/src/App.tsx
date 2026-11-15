@@ -298,6 +298,81 @@ export const App: React.FC<AppProps> = ({ workspace, brand = 'BUZZARD CODE' }) =
         return;
       }
 
+      // /outline: AST structural skeleton
+      if (cmd === '/outline') {
+        if (!arg) {
+          setMessages((prev) => [
+            ...prev,
+            { id: Date.now().toString(), sender: 'system', text: 'Usage: /outline <file>', timestamp: new Date().toLocaleTimeString() },
+          ]);
+          return;
+        }
+        try {
+          const res = await client.getOutline(arg);
+          setMessages((prev) => [
+            ...prev,
+            { id: Date.now().toString(), sender: 'system', text: res.rendered || JSON.stringify(res, null, 2), timestamp: new Date().toLocaleTimeString() },
+          ]);
+        } catch (e: any) {
+          setMessages((prev) => [
+            ...prev,
+            { id: Date.now().toString(), sender: 'system', text: `Outline failed: ${e.message}`, timestamp: new Date().toLocaleTimeString() },
+          ]);
+        }
+        return;
+      }
+
+      // /repl: evaluate code in warm persistent daemon
+      if (cmd === '/repl') {
+        if (!arg) {
+          setMessages((prev) => [
+            ...prev,
+            { id: Date.now().toString(), sender: 'system', text: 'Usage: /repl <code>', timestamp: new Date().toLocaleTimeString() },
+          ]);
+          return;
+        }
+        try {
+          const res = await client.evalRepl(arg);
+          const out = res.success
+            ? (res.output || res.result || '✔ Success') + ` (${res.executionTimeMs?.toFixed(1) || 0}ms warm)`
+            : `✖ Error: ${res.error || res.stderr}`;
+          setMessages((prev) => [
+            ...prev,
+            { id: Date.now().toString(), sender: 'system', text: out, timestamp: new Date().toLocaleTimeString() },
+          ]);
+        } catch (e: any) {
+          setMessages((prev) => [
+            ...prev,
+            { id: Date.now().toString(), sender: 'system', text: `REPL failed: ${e.message}`, timestamp: new Date().toLocaleTimeString() },
+          ]);
+        }
+        return;
+      }
+
+      // /probe: DAP-style frame & variable trace
+      if (cmd === '/probe') {
+        if (!arg) {
+          setMessages((prev) => [
+            ...prev,
+            { id: Date.now().toString(), sender: 'system', text: 'Usage: /probe <code>', timestamp: new Date().toLocaleTimeString() },
+          ]);
+          return;
+        }
+        try {
+          const res = await client.probeRuntime(arg);
+          setMessages((prev) => [
+            ...prev,
+            { id: Date.now().toString(), sender: 'system', text: res.report || JSON.stringify(res, null, 2), timestamp: new Date().toLocaleTimeString() },
+          ]);
+        } catch (e: any) {
+          setMessages((prev) => [
+            ...prev,
+            { id: Date.now().toString(), sender: 'system', text: `Probe failed: ${e.message}`, timestamp: new Date().toLocaleTimeString() },
+          ]);
+        }
+        return;
+      }
+
       // /cost: show telemetry
       if (cmd === '/cost') {
         const costStr = cost !== null ? `$${cost.toFixed(4)}` : 'N/A';

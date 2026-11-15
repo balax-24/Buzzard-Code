@@ -243,6 +243,26 @@ export class RuntimeClient {
     return this.sendRequest('engineering/plan', { goal, files });
   }
 
+  public async getOutline(file: string): Promise<any> {
+    return this.sendRequest('engineering/outline', { file });
+  }
+
+  public async unfoldSymbol(file: string, symbol: string): Promise<any> {
+    return this.sendRequest('engineering/unfold', { file, symbol });
+  }
+
+  public async evalRepl(code: string): Promise<any> {
+    return this.sendRequest('engineering/repl', { code });
+  }
+
+  public async probeRuntime(code: string): Promise<any> {
+    return this.sendRequest('engineering/probe', { code });
+  }
+
+  public async getCausalHistory(file: string, lines?: number[]): Promise<any> {
+    return this.sendRequest('engineering/causal', { file, lines });
+  }
+
   public async stop(): Promise<void> {
     try {
       if (this.proc && !this.proc.killed) {

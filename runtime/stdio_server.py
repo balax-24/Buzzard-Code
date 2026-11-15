@@ -152,6 +152,11 @@ class StdioRuntimeServer:
             "engineering/impact": self._engineering_impact,
             "engineering/testSelection": self._engineering_test_selection,
             "engineering/plan": self._engineering_plan,
+            "engineering/outline": self._engineering_outline,
+            "engineering/unfold": self._engineering_unfold,
+            "engineering/repl": self._engineering_repl,
+            "engineering/probe": self._engineering_probe,
+            "engineering/causal": self._engineering_causal,
             "shutdown": self._shutdown,
         }
         handler = handlers.get(method)
@@ -442,6 +447,65 @@ class StdioRuntimeServer:
             "selectedTests": plan.selected_tests.to_dict(),
             "modelRecommended": plan.model_recommended,
             "steps": plan.steps,
+        }
+
+    def _engineering_outline(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        file_path = params.get("file", "")
+        from agent.autonomous_engineer import AutonomousEngineer
+        engineer = AutonomousEngineer(Path(self.workspace))
+        outline = engineer.outline_file(file_path)
+        return {
+            "filePath": outline.file_path,
+            "totalLines": outline.total_lines,
+            "savingsPercent": outline.savings_percent,
+            "symbols": [s.to_dict() for s in outline.symbols],
+            "rendered": outline.render_skeleton(),
+        }
+
+    def _engineering_unfold(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        file_path = params.get("file", "")
+        symbol = params.get("symbol", "")
+        from agent.autonomous_engineer import AutonomousEngineer
+        engineer = AutonomousEngineer(Path(self.workspace))
+        return engineer.unfold_symbol(file_path, symbol)
+
+    def _engineering_repl(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        code = params.get("code", "")
+        from agent.autonomous_engineer import AutonomousEngineer
+        engineer = AutonomousEngineer(Path(self.workspace))
+        res = engineer.eval_repl(code)
+        return {
+            "success": res.success,
+            "output": res.output,
+            "result": res.result,
+            "error": res.error,
+            "executionTimeMs": res.execution_time_ms,
+        }
+
+    def _engineering_probe(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        code = params.get("code", "")
+        from agent.autonomous_engineer import AutonomousEngineer
+        engineer = AutonomousEngineer(Path(self.workspace))
+        res = engineer.probe_code(code)
+        return {
+            "success": res.success,
+            "returnValue": res.return_value,
+            "exceptionType": res.exception_type,
+            "exceptionMessage": res.exception_message,
+            "report": res.format_diagnostic_report(),
+        }
+
+    def _engineering_causal(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        file_path = params.get("file", "")
+        lines = params.get("lines", [1])
+        from agent.autonomous_engineer import AutonomousEngineer
+        engineer = AutonomousEngineer(Path(self.workspace))
+        report = engineer.causal_history(file_path, lines)
+        return {
+            "filePath": report.file_path,
+            "hasWorkarounds": report.has_historical_workarounds,
+            "warnings": report.warnings,
+            "summary": report.format_summary(),
         }
 
     def _shutdown(self, params: Dict[str, Any]) -> Dict[str, Any]:

@@ -18,12 +18,19 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from coding.ast_morph import AstMorphEngine
 from coding.atomic_editor import AtomicCodeEditor, EditOperation, TransactionResult
+from coding.hypothesis_racer import Hypothesis, HypothesisRacer, RaceOutcome
 from coding.impact_simulator import ChangeImpactSimulator, ImpactPrediction
 from coding.self_healing import AutonomousSelfHealingLoop, RepairPlan
 from hooks.hook_manager import HookManager
+from intelligence.ast_outliner import AstOutliner, FileOutline
+from intelligence.causal_history import CausalHistoryLinker, CausalReport
 from intelligence.memory_graph import EngineeringMemoryGraph
 from model.coding_router import CodingModelRouter
+from runtime.warm_repl import ReplEvalResult, WarmReplSession
+from system.pty_supervisor import PtySupervisor
+from verification.runtime_probe import RuntimeProbe, RuntimeSnapshot
 from verification.test_selector import SelectedTests, TestImpactSelector
 
 logger = logging.getLogger(__name__)
@@ -81,7 +88,32 @@ class AutonomousEngineer:
         self.healer = AutonomousSelfHealingLoop(self.workspace_root, self.graph)
         self.router = CodingModelRouter()
         self.hooks = HookManager(self.workspace_root)
+        self.outliner = AstOutliner(self.workspace_root)
+        self.morph = AstMorphEngine()
+        self.pty = PtySupervisor(self.workspace_root)
+        self.causal = CausalHistoryLinker(self.workspace_root)
         self._worktree_mgr = None
+        self._repl = None
+        self._racer = None
+        self._probe = None
+
+    @property
+    def repl(self) -> WarmReplSession:
+        if self._repl is None:
+            self._repl = WarmReplSession(self.workspace_root)
+        return self._repl
+
+    @property
+    def racer(self) -> HypothesisRacer:
+        if self._racer is None:
+            self._racer = HypothesisRacer(self.workspace_root)
+        return self._racer
+
+    @property
+    def probe(self) -> RuntimeProbe:
+        if self._probe is None:
+            self._probe = RuntimeProbe(self.workspace_root)
+        return self._probe
 
     @property
     def worktrees(self):
@@ -89,6 +121,30 @@ class AutonomousEngineer:
             from agent.worktree_manager import WorktreeManager
             self._worktree_mgr = WorktreeManager(self.workspace_root)
         return self._worktree_mgr
+
+    def outline_file(self, rel_path: str) -> FileOutline:
+        """Generates AST structural outline with token savings metric."""
+        return self.outliner.generate_outline(rel_path)
+
+    def unfold_symbol(self, rel_path: str, symbol_name: str) -> Dict[str, Any]:
+        """Selectively extracts target symbol snippet with zero 800-line context pollution."""
+        return self.outliner.unfold_symbol(rel_path, symbol_name)
+
+    def eval_repl(self, code: str) -> ReplEvalResult:
+        """Executes Python code inside warm persistent in-memory kernel."""
+        return self.repl.execute(code)
+
+    def race_hypotheses(self, hypotheses: List[Hypothesis], test_cmd: Optional[List[str]] = None) -> RaceOutcome:
+        """Races candidate patches across speculative worktrees and merges winner."""
+        return self.racer.race(hypotheses, test_cmd)
+
+    def probe_code(self, code: str) -> RuntimeSnapshot:
+        """Inspects runtime frames, locals, and exceptions without print statements."""
+        return self.probe.probe_code_snippet(code)
+
+    def causal_history(self, rel_path: str, line_numbers: List[int]) -> CausalReport:
+        """Traces lines back to commit rationale, PR intent, and bugfix warnings."""
+        return self.causal.analyze_file_lines(rel_path, line_numbers)
 
     def plan(self, task: str, target_files: Optional[List[str]] = None) -> WorkflowPlan:
         """
