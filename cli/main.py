@@ -25,8 +25,9 @@ from cli.renderer import console
 @click.option("--skip-toolchain", is_flag=True, default=False, help="Bypass mandatory toolchain bootstrap check (development only).")
 @click.option("--profile", is_flag=True, default=False, help="Enable detailed performance profiling breakdown.")
 @click.option("--no-tui", is_flag=True, default=False, help="Disable TUI and use legacy line-based interactive REPL.")
+@click.option("--react", is_flag=True, default=False, help="Launch the React + TypeScript Ink TUI instead of Python Textual.")
 @click.pass_context
-def main(ctx, skip_toolchain, profile, no_tui):
+def main(ctx, skip_toolchain, profile, no_tui, react):
     """
     Buzzard Code v1.0 — a terminal coding agent that must prove its work.
     If no command is provided, starts an interactive shell session.
@@ -34,7 +35,10 @@ def main(ctx, skip_toolchain, profile, no_tui):
     if ctx.invoked_subcommand is None:
         if is_first_run():
             run_first_run_wizard()
-        if sys.stdin.isatty() and not no_tui:
+        if react:
+            from cli.tui_launcher import launch_react_tui
+            sys.exit(launch_react_tui())
+        elif sys.stdin.isatty() and not no_tui:
             try:
                 from tui.app import BuzzardTUIApp
                 app = BuzzardTUIApp()
@@ -326,11 +330,16 @@ def server():
 @click.option("--session", "-s", default=None, help="Specific session ID to resume.")
 @click.option("--fake", is_flag=True, default=False, help="Run with deterministic FakeModelProvider.")
 @click.option("--legacy", is_flag=True, default=False, help="Launch legacy prototype TUI.")
-def tui_cmd(model, mode, resume, session, fake, legacy):
+@click.option("--react", is_flag=True, default=False, help="Launch the React + TypeScript Ink TUI.")
+def tui_cmd(model, mode, resume, session, fake, legacy, react):
     """
     Start the Terminal User Interface (TUI).
+    Defaults to Python Textual TUI; use --react for React/TypeScript Ink TUI.
     """
-    if legacy:
+    if react:
+        from cli.tui_launcher import launch_react_tui
+        sys.exit(launch_react_tui())
+    elif legacy:
         from tui.cli import main as tui_main
         ctx = click.get_current_context()
         ctx.invoke(tui_main, model=model, mode=mode, resume=resume, session=session, fake=fake)
@@ -338,6 +347,15 @@ def tui_cmd(model, mode, resume, session, fake, legacy):
         from tui.app import BuzzardTUIApp
         app = BuzzardTUIApp(model=model, mode=mode, resume=resume, session_id=session, fake=fake)
         app.run()
+
+@main.command(name="go")
+@click.option("--workspace", "-w", default=None, help="Workspace directory for Buzzard Go.")
+def go_cmd(workspace):
+    """
+    Launch the Buzzard Go autonomous engineering terminal (React + Ink TUI).
+    """
+    from cli.tui_launcher import launch_react_tui
+    sys.exit(launch_react_tui(workspace=workspace, brand="BUZZARD GO"))
 
 @main.command()
 @click.argument("task_id")
