@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Box, Text, useInput } from 'ink';
 import TextInput from 'ink-text-input';
 import Spinner from 'ink-spinner';
+import { CommandPalette, SLASH_COMMANDS } from './CommandPalette.js';
 
 interface ComposerProps {
   width: number;
@@ -12,16 +13,6 @@ interface ComposerProps {
   onPageUp: () => void;
   onPageDown: () => void;
 }
-
-const COMMAND_HINTS = [
-  { cmd: '/plan', desc: 'Toggle plan mode (read-only)' },
-  { cmd: '/tasks', desc: 'List unfinished saved tasks' },
-  { cmd: '/resume <id>', desc: 'Resume a saved task' },
-  { cmd: '/undo', desc: 'Revert last file edit' },
-  { cmd: '/clear', desc: 'Clear transcript' },
-  { cmd: '/help', desc: 'Show all commands and shortcuts' },
-  { cmd: '/exit', desc: 'Quit Buzzard TUI' },
-];
 
 export const Composer: React.FC<ComposerProps> = ({
   width,
@@ -35,6 +26,12 @@ export const Composer: React.FC<ComposerProps> = ({
   const [val, setVal] = useState('');
   const [history, setHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState<number>(-1);
+  const [paletteIndex, setPaletteIndex] = useState<number>(0);
+
+  const isCommandFilter = val.startsWith('/') && !val.includes(' ');
+  const matchingCommands = isCommandFilter
+    ? SLASH_COMMANDS.filter((c) => c.cmd.startsWith(val.toLowerCase())).slice(0, 5)
+    : [];
 
   useInput((input, key) => {
     // PageUp / PageDown for transcript scrolling
@@ -45,6 +42,25 @@ export const Composer: React.FC<ComposerProps> = ({
     if (key.pageDown) {
       onPageDown();
       return;
+    }
+
+    // Command palette selection
+    if (isCommandFilter && matchingCommands.length > 0) {
+      if (key.upArrow) {
+        setPaletteIndex((prev) => (prev > 0 ? prev - 1 : matchingCommands.length - 1));
+        return;
+      }
+      if (key.downArrow) {
+        setPaletteIndex((prev) => (prev < matchingCommands.length - 1 ? prev + 1 : 0));
+        return;
+      }
+      if (key.tab) {
+        const chosen = matchingCommands[paletteIndex];
+        if (chosen) {
+          setVal(chosen.cmd + (chosen.args ? ' ' : ''));
+        }
+        return;
+      }
     }
 
     // History navigation with Up/Down when input is empty
@@ -80,32 +96,25 @@ export const Composer: React.FC<ComposerProps> = ({
     setHistory((prev) => [...prev, trimmed]);
     setHistoryIndex(-1);
     setVal('');
+    setPaletteIndex(0);
     onSubmit(trimmed);
   };
 
   const isRunning = status === 'running';
-  const showCommands = val.startsWith('/') && !val.includes(' ');
-  const matchingCommands = showCommands
-    ? COMMAND_HINTS.filter((c) => c.cmd.startsWith(val.toLowerCase())).slice(0, 3)
-    : [];
-
   const divider = '─'.repeat(Math.max(10, width));
 
   return (
     <Box flexDirection="column" width={width}>
-      {/* Autocomplete hints */}
-      {matchingCommands.length > 0 && (
-        <Box flexDirection="column" borderStyle="single" borderColor="cyan" paddingX={1} marginBottom={0}>
-          {matchingCommands.map((c) => (
-            <Box key={c.cmd} gap={2}>
-              <Text bold color="cyan">{c.cmd}</Text>
-              <Text dimColor>{c.desc}</Text>
-            </Box>
-          ))}
-        </Box>
+      {/* Floating command palette if typing a slash command */}
+      {isCommandFilter && matchingCommands.length > 0 && (
+        <CommandPalette
+          width={width}
+          filterText={val}
+          selectedIndex={paletteIndex}
+        />
       )}
 
-      {/* Status / Activity Line */}
+      {/* Status & Activity Line */}
       <Box justifyContent="space-between" width={width}>
         <Box>
           {isRunning ? (
@@ -117,25 +126,28 @@ export const Composer: React.FC<ComposerProps> = ({
           )}
         </Box>
         <Box gap={1}>
-          <Text dimColor>Plan: </Text>
+          <Text dimColor>Plan Mode: </Text>
           <Text color={planMode ? 'yellowBright' : 'greenBright'} bold>
-            {planMode ? 'ON' : 'OFF'}
+            {planMode ? 'ENABLED (Read-Only)' : 'OFF (Act Mode)'}
           </Text>
         </Box>
       </Box>
 
-      {/* Input Prompt */}
+      {/* Input Prompt (Claude Code Composer Style) */}
       <Box width={width} marginTop={0}>
         <Text color="greenBright" bold>❯ </Text>
         <TextInput
           value={val}
-          onChange={setVal}
+          onChange={(newVal) => {
+            setVal(newVal);
+            setPaletteIndex(0);
+          }}
           onSubmit={handleSubmit}
-          placeholder={isRunning ? 'Task in progress... (type to queue)' : 'Ask Buzzard anything... (/help for commands)'}
+          placeholder={isRunning ? 'Task in progress... (type to queue prompt)' : 'Ask Buzzard anything... (/ for commands, \\ for multi-line)'}
         />
       </Box>
 
-      {/* Legend / Keybinding line */}
+      {/* Pinned Shortcut Legend */}
       <Text dimColor color="gray">{divider}</Text>
       <Box justifyContent="space-between" width={width}>
         <Box gap={1}>
@@ -148,8 +160,8 @@ export const Composer: React.FC<ComposerProps> = ({
           <Text color="cyanBright">[PgUp/Dn]</Text>
           <Text dimColor>Scroll</Text>
           <Text dimColor>│</Text>
-          <Text color="cyanBright">[/]</Text>
-          <Text dimColor>Commands</Text>
+          <Text color="cyanBright">[/diff]</Text>
+          <Text dimColor>Git Changes</Text>
         </Box>
         <Box>
           <Text color="cyanBright">[Ctrl+C]</Text>

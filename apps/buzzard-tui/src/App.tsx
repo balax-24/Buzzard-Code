@@ -7,6 +7,8 @@ import { Transcript } from './components/Transcript.js';
 import { Sidebar } from './components/Sidebar.js';
 import { Composer } from './components/Composer.js';
 import { ApprovalDialog } from './components/ApprovalDialog.js';
+import { DiffModal } from './components/DiffModal.js';
+import { getGitSummary, getFullGitDiff, GitSummary } from './workspace/gitStatus.js';
 import {
   MessageItem,
   ToolEvent,
@@ -37,12 +39,22 @@ export const App: React.FC<AppProps> = ({ workspace }) => {
   const [pendingApproval, setPendingApproval] = useState<ApprovalRequest | null>(null);
   const [evidenceReport, setEvidenceReport] = useState<string | null>(null);
 
+  // Git State
+  const [gitSummary, setGitSummary] = useState<GitSummary | undefined>(undefined);
+  const [diffModalText, setDiffModalText] = useState<string | null>(null);
+
+  // Viewport scrolling
   const [scrollOffset, setScrollOffset] = useState<number>(0);
   const [autoScroll, setAutoScroll] = useState<boolean>(true);
 
   const streamingRef = useRef<string>('');
 
+  const refreshGit = () => {
+    getGitSummary(workspace).then(setGitSummary).catch(() => {});
+  };
+
   useEffect(() => {
+    refreshGit();
     const runtime = new RuntimeClient(workspace);
 
     runtime.setEvents({
@@ -82,6 +94,7 @@ export const App: React.FC<AppProps> = ({ workspace }) => {
         setTools((prev) =>
           prev.map((t) => (t.tool === tool.tool && t.status === 'running' ? tool : t))
         );
+        refreshGit();
       },
 
       onApprovalRequest: (req) => {
@@ -93,6 +106,7 @@ export const App: React.FC<AppProps> = ({ workspace }) => {
       onEvidenceReport: (report) => {
         setEvidenceReport(report);
         setAutoScroll(true);
+        refreshGit();
       },
 
       onRunFinished: (res) => {
@@ -114,8 +128,8 @@ export const App: React.FC<AppProps> = ({ workspace }) => {
           prev.map((m) => (m.isStreaming ? { ...m, isStreaming: false } : m))
         );
 
-        // Refresh task list
         runtime.listTasks().then((r) => setTasks(r.tasks)).catch(() => {});
+        refreshGit();
       },
 
       onError: (err) => {
@@ -139,7 +153,7 @@ export const App: React.FC<AppProps> = ({ workspace }) => {
           {
             id: 'init',
             sender: 'system',
-            text: `Connected to Buzzard Engine 1.0 (${info.provider}/${info.model})`,
+            text: `Connected to Buzzard Engine 1.0 (${info.provider}/${info.model}) in ${workspace}`,
             timestamp: new Date().toLocaleTimeString(),
           },
         ]);
@@ -156,12 +170,18 @@ export const App: React.FC<AppProps> = ({ workspace }) => {
   }, [workspace]);
 
   useInput((input, key) => {
+    // Esc closes diff modal if open
+    if (key.escape && diffModalText !== null) {
+      setDiffModalText(null);
+      return;
+    }
+
     // Ctrl+C handling
     if (key.ctrl && input === 'c') {
       if (status === 'running' && client) {
         client.cancelRun().catch(() => {});
         setStatus('cancelled');
-        setStatusText('Cancelling current task...');
+        setStatusText('Cancelling task...');
         return;
       }
       if (client) client.stop();
@@ -170,7 +190,7 @@ export const App: React.FC<AppProps> = ({ workspace }) => {
     }
 
     // Tab key toggles Plan Mode
-    if (key.tab && !pendingApproval && client) {
+    if (key.tab && !pendingApproval && client && diffModalText === null) {
       const nextMode = !planMode;
       setPlanMode(nextMode);
       client.setPlanMode(nextMode).catch(() => {});
@@ -196,17 +216,47 @@ export const App: React.FC<AppProps> = ({ workspace }) => {
       const cmd = parts[0]?.toLowerCase();
       const arg = parts.slice(1).join(' ');
 
+      // /diff: open unified diff modal
+      if (cmd === '/diff') {
+        const fullDiff = await getFullGitDiff(workspace);
+        setDiffModalText(fullDiff || '(No uncommitted git changes in workspace)');
+        return;
+      }
+
+      // /plan: toggle plan mode
       if (cmd === '/plan') {
         const nextMode = arg === 'off' ? false : arg === 'on' ? true : !planMode;
         setPlanMode(nextMode);
         await client.setPlanMode(nextMode);
         setMessages((prev) => [
           ...prev,
-          { id: Date.now().toString(), sender: 'system', text: `Plan mode is now ${nextMode ? 'ON' : 'OFF'}`, timestamp: new Date().toLocaleTimeString() },
+          { id: Date.now().toString(), sender: 'system', text: `Plan mode is now ${nextMode ? 'ON (Read-Only)' : 'OFF (Act Mode)'}`, timestamp: new Date().toLocaleTimeString() },
         ]);
         return;
       }
 
+      // /cost: show telemetry
+      if (cmd === '/cost') {
+        const costStr = cost !== null ? `$${cost.toFixed(4)}` : 'N/A';
+        const costMsg = `Session Usage Breakdown:\n  • Total Tokens: ${tokens.toLocaleString()}\n  • Total Estimated Cost: ${costStr}\n  • Active Provider: ${initData?.provider || 'buzzard'}\n  • Model: ${initData?.model || 'default'}`;
+        setMessages((prev) => [
+          ...prev,
+          { id: Date.now().toString(), sender: 'system', text: costMsg, timestamp: new Date().toLocaleTimeString() },
+        ]);
+        return;
+      }
+
+      // /model: show active model
+      if (cmd === '/model') {
+        const modelMsg = `Active Model Configuration:\n  • Model: ${initData?.model || 'default'}\n  • Provider: ${initData?.provider || 'buzzard'}\n  • Protocol: JSON-RPC 2.0 (v${initData?.protocolVersion || '1.0'})\n  • Workspace: ${workspace}`;
+        setMessages((prev) => [
+          ...prev,
+          { id: Date.now().toString(), sender: 'system', text: modelMsg, timestamp: new Date().toLocaleTimeString() },
+        ]);
+        return;
+      }
+
+      // /clear: clear transcript
       if (cmd === '/clear') {
         setMessages([]);
         setTools([]);
@@ -214,12 +264,13 @@ export const App: React.FC<AppProps> = ({ workspace }) => {
         return;
       }
 
+      // /tasks: list durable tasks
       if (cmd === '/tasks') {
         const { tasks: currentTasks } = await client.listTasks();
         setTasks(currentTasks);
         const text = currentTasks.length === 0
-          ? 'No unfinished tasks in this workspace.'
-          : 'Saved unfinished tasks:\n' + currentTasks.map((t) => `  • [${t.taskId.slice(0, 8)}] turn ${t.turn}: ${t.goal}`).join('\n');
+          ? 'No unfinished durable tasks in this workspace.'
+          : 'Saved unfinished durable tasks:\n' + currentTasks.map((t) => `  • [${t.taskId.slice(0, 8)}] turn ${t.turn}: ${t.goal}`).join('\n');
         setMessages((prev) => [
           ...prev,
           { id: Date.now().toString(), sender: 'system', text, timestamp: new Date().toLocaleTimeString() },
@@ -227,6 +278,7 @@ export const App: React.FC<AppProps> = ({ workspace }) => {
         return;
       }
 
+      // /resume: resume durable task
       if (cmd === '/resume') {
         if (!arg) {
           setMessages((prev) => [
@@ -241,32 +293,39 @@ export const App: React.FC<AppProps> = ({ workspace }) => {
         return;
       }
 
+      // /undo: rollback edit
       if (cmd === '/undo') {
         const { message } = await client.undoEdit();
         setMessages((prev) => [
           ...prev,
           { id: Date.now().toString(), sender: 'system', text: message, timestamp: new Date().toLocaleTimeString() },
         ]);
+        refreshGit();
         return;
       }
 
+      // /exit or /quit
       if (cmd === '/exit' || cmd === '/quit') {
         await client.stop();
         exit();
         return;
       }
 
+      // /help
       if (cmd === '/help') {
         const helpText = [
-          'Buzzard TUI Commands:',
-          '  /plan [on|off]  - Toggle plan mode (read-only)',
-          '  /tasks          - List unfinished durable tasks',
-          '  /resume <id>    - Resume a saved task',
-          '  /undo           - Revert last file edit',
-          '  /clear          - Clear transcript',
-          '  /exit           - Quit Buzzard TUI',
+          'Buzzard Code TUI Commands (Claude Code / OpenCode Standard):',
+          '  /diff           - Open live uncommitted git diff inspector',
+          '  /plan [on|off]  - Toggle plan mode (blocks edits & commands)',
+          '  /tasks          - List unfinished durable tasks in this workspace',
+          '  /resume <id>    - Resume a durable task from disk',
+          '  /undo           - Revert the last applied file edit',
+          '  /cost           - Display session token accounting and cost estimate',
+          '  /model          - Show active model and provider routing info',
+          '  /clear          - Clear transcript feed',
+          '  /exit           - Exit TUI cleanly',
           'Shortcuts:',
-          '  [Tab] Toggle Plan Mode  •  [PgUp/PgDn] Scroll Transcript  •  [Ctrl+C] Cancel/Quit',
+          '  [Tab] Toggle Plan Mode  •  [PgUp/PgDn] Scroll  •  [Ctrl+C] Cancel / Quit',
         ].join('\n');
         setMessages((prev) => [
           ...prev,
@@ -310,9 +369,9 @@ export const App: React.FC<AppProps> = ({ workspace }) => {
     setScrollOffset((prev) => prev + 5);
   };
 
-  // Responsive Layout Calculations
+  // Dual-Pane Responsive Grid (Claude Code Standard: OPEN_MIN_COLUMNS = 110)
   const isWide = columns >= 110;
-  const sidebarWidth = isWide ? 34 : 0;
+  const sidebarWidth = isWide ? 36 : 0;
   const chatWidth = isWide ? columns - sidebarWidth - 1 : columns;
 
   const headerHeight = 3;
@@ -333,28 +392,38 @@ export const App: React.FC<AppProps> = ({ workspace }) => {
         status={status}
       />
 
-      {/* Middle Viewport (Chat + Docked Sidebar when wide) */}
-      <Box flexDirection="row" width={columns} height={middleHeight} overflow="hidden">
-        <Transcript
-          width={chatWidth}
+      {/* Middle Viewport: Diff Modal OR (Transcript + Docked Sidebar) */}
+      {diffModalText !== null ? (
+        <DiffModal
+          width={columns}
           height={middleHeight}
-          messages={messages}
-          tools={tools}
-          evidenceReport={evidenceReport}
-          scrollOffset={scrollOffset}
-          autoScroll={autoScroll}
+          diffText={diffModalText}
+          onClose={() => setDiffModalText(null)}
         />
-
-        {isWide && (
-          <Sidebar
-            width={sidebarWidth}
+      ) : (
+        <Box flexDirection="row" width={columns} height={middleHeight} overflow="hidden">
+          <Transcript
+            width={chatWidth}
             height={middleHeight}
-            tasks={tasks}
+            messages={messages}
             tools={tools}
-            planMode={planMode}
+            evidenceReport={evidenceReport}
+            scrollOffset={scrollOffset}
+            autoScroll={autoScroll}
           />
-        )}
-      </Box>
+
+          {isWide && (
+            <Sidebar
+              width={sidebarWidth}
+              height={middleHeight}
+              tasks={tasks}
+              tools={tools}
+              planMode={planMode}
+              gitSummary={gitSummary}
+            />
+          )}
+        </Box>
+      )}
 
       {/* Pinned Bottom Area */}
       {pendingApproval ? (
