@@ -2,31 +2,21 @@ import { render, Instance } from 'ink';
 import React from 'react';
 
 /**
- * Runs a React Ink application inside the terminal's Alternate Screen Buffer.
+ * Runs a React Ink application cleanly in standard terminal interactive mode,
+ * matching the architecture of Claude Code and Gemini CLI.
  * 
- * This completely eliminates:
- * 1. Screen flickering & jumping
- * 2. Duplicate header / box re-rendering on Windows cmd / PowerShell / Terminal
- * 3. Terminal scrollback pollution
- * 
- * On exit, it cleanly restores the user's original terminal screen and cursor.
+ * - Preserves standard terminal scrollback
+ * - Zero alternate buffer scrolling glitches on Windows cmd.exe / PowerShell
+ * - Restores cursor cleanly on exit
  */
-export function runFullScreenApp(element: React.ReactElement): Instance {
-  const isInteractive = Boolean(process.stdout.isTTY && process.stdin.isTTY);
-
-  // Enter alternate screen buffer & clear display only in interactive TTY sessions
-  if (isInteractive) {
-    process.stdout.write('\x1b[?1049h\x1b[H\x1b[2J');
-  }
-
+export function runCliApp(element: React.ReactElement): Instance {
   let cleanedUp = false;
   const cleanup = () => {
     if (cleanedUp) return;
     cleanedUp = true;
     try {
-      if (isInteractive) {
-        // Show cursor & restore main screen buffer
-        process.stdout.write('\x1b[?25h\x1b[?1049l');
+      if (process.stdout.isTTY) {
+        process.stdout.write('\x1b[?25h'); // Ensure cursor is visible
       }
     } catch {
       // Ignore errors on process shutdown
@@ -58,3 +48,5 @@ export function runFullScreenApp(element: React.ReactElement): Instance {
 
   return instance;
 }
+
+export const runFullScreenApp = runCliApp;

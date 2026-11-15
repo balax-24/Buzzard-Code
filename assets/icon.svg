@@ -1,0 +1,66 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Background Gradient -->
+    <radialGradient id="bg-glow" cx="50%" cy="30%" r="70%" fx="50%" fy="20%">
+      <stop offset="0%" stopColor="#162032" />
+      <stop offset="60%" stopColor="#0B0F17" />
+      <stop offset="100%" stopColor="#06090E" />
+    </radialGradient>
+
+    <!-- Outer Rim Neon Gradient -->
+    <linearGradient id="rim-glow" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stopColor="#00F2FE" />
+      <stop offset="50%" stopColor="#0072FF" />
+      <stop offset="100%" stopColor="#00F2FE" stopOpacity="0.3" />
+    </linearGradient>
+
+    <!-- Raptor Facet Gradients -->
+    <linearGradient id="upper-wing" x1="160" y1="140" x2="300" y2="280" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stopColor="#1E2A3C" />
+      <stop offset="100%" stopColor="#0F1724" />
+    </linearGradient>
+    <linearGradient id="lower-wing" x1="170" y1="190" x2="260" y2="350" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stopColor="#151E2E" />
+      <stop offset="100%" stopColor="#0A0E17" />
+    </linearGradient>
+    <linearGradient id="body-core" x1="240" y1="240" x2="320" y2="300" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stopColor="#25354C" />
+      <stop offset="100%" stopColor="#141C29" />
+    </linearGradient>
+    <linearGradient id="head-facet" x1="280" y1="230" x2="350" y2="260" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stopColor="#2F425E" />
+      <stop offset="100%" stopColor="#1A2536" />
+    </linearGradient>
+
+    <!-- Sharp Accent Highlights -->
+    <linearGradient id="cyan-edge" x1="150" y1="140" x2="350" y2="260" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stopColor="#00F2FE" />
+      <stop offset="60%" stopColor="#4FACFE" />
+      <stop offset="100%" stopColor="#0072FF" />
+    </linearGradient>
+
+    <!-- Subtle Drop Shadow -->
+    <filter id="raptor-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#000000" flood-opacity="0.7" />
+      <feDropShadow dx="0" dy="0" stdDeviation="8" flood-color="#00F2FE" flood-opacity="0.25" />
+    </filter>
+  </defs>
+
+  <!-- Modern Developer Squircle Tile -->
+  <rect x="24" y="24" width="464" height="464" rx="108" fill="url(#bg-glow)" stroke="url(#rim-glow)" stroke-width="4" />
+
+  <!-- Origami Geometric Stealth Raptor -->
+  <g filter="url(#raptor-shadow)">
+    <!-- Upper Main Sweep Wing -->
+    <path d="M156 150 L274 212 L304 266 L254 246 L174 192 Z" fill="url(#upper-wing)" stroke="url(#cyan-edge)" stroke-width="2" stroke-linejoin="round" />
+
+    <!-- Trailing Lower Fin / Wing -->
+    <path d="M174 192 L254 246 L242 312 L182 350 L238 274 Z" fill="url(#lower-wing)" stroke="url(#cyan-edge)" stroke-width="1.5" stroke-linejoin="round" />
+
+    <!-- Core Body Keel -->
+    <path d="M254 246 L304 266 L294 308 L242 312 Z" fill="url(#body-core)" stroke="#384D6B" stroke-width="1.5" stroke-linejoin="round" />
+
+    <!-- Razor Raptor Head / Beak -->
+    <path d="M304 266 L338 238 L352 248 L348 260 L334 264 L308 296 L294 308 Z" fill="url(#head-facet)" stroke="url(#cyan-edge)" stroke-width="2" stroke-linejoin="round" />
+  </g>
+</svg>

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Box, Text, useInput } from 'ink';
 import TextInput from 'ink-text-input';
-import Spinner from 'ink-spinner';
+import { BuzzardSpinner } from './BuzzardLogo.js';
 import { CommandPalette, SLASH_COMMANDS } from './CommandPalette.js';
 
 interface ComposerProps {
@@ -114,16 +114,10 @@ export const Composer: React.FC<ComposerProps> = ({
         />
       )}
 
-      {/* Status & Activity Line */}
+      {/* Status & Activity Line with Official Buzzard Raptor Animation */}
       <Box justifyContent="space-between" width={width}>
         <Box>
-          {isRunning ? (
-            <Text color="yellowBright">
-              <Spinner type="dots" /> <Text dimColor>{statusText}</Text>
-            </Text>
-          ) : (
-            <Text dimColor color="gray">{statusText}</Text>
-          )}
+          <BuzzardSpinner active={isRunning} label={statusText} />
         </Box>
         <Box gap={1}>
           <Text dimColor>Plan Mode: </Text>

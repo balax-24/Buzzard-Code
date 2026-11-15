@@ -313,8 +313,11 @@ export const App: React.FC<AppProps> = ({ workspace, brand = 'BUZZARD CODE' }) =
         return;
       }
 
-      // /clear: clear transcript
+      // /clear: clear transcript & screen
       if (cmd === '/clear') {
+        if (process.stdout.isTTY) {
+          process.stdout.write('\x1b[2J\x1b[H');
+        }
         setMessages([]);
         setTools([]);
         setEvidenceReport(null);
@@ -433,12 +436,15 @@ export const App: React.FC<AppProps> = ({ workspace, brand = 'BUZZARD CODE' }) =
   const sidebarWidth = isWide ? 36 : 0;
   const chatWidth = isWide ? columns - sidebarWidth - 1 : columns;
 
+  // Safe vertical bounds: Always leave at least 2 rows of buffer at the bottom
+  // to completely eliminate Windows cmd.exe / conhost terminal auto-scroll on newline.
+  const safeRows = Math.max(12, rows - 2);
   const headerHeight = 3;
   const bottomHeight = pendingApproval ? 5 : 4;
-  const middleHeight = Math.max(6, rows - headerHeight - bottomHeight);
+  const middleHeight = Math.max(4, safeRows - headerHeight - bottomHeight);
 
   return (
-    <Box flexDirection="column" width={columns} height={rows} overflow="hidden">
+    <Box flexDirection="column" width={columns} height={safeRows} overflow="hidden">
       {/* Pinned Top Bar */}
       <Header
         width={columns}

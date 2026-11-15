@@ -1,7 +1,6 @@
 import React from 'react';
 import { Box, Text } from 'ink';
-import Spinner from 'ink-spinner';
-import { BRAND_GLYPH, buzzardGradient } from './BuzzardLogo.js';
+import { BRAND_GLYPH, buzzardGradient, BuzzardSpinner } from './BuzzardLogo.js';
 
 interface HeaderProps {
   width: number;
@@ -28,11 +27,7 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   let statusBadge = <Text color="green">● IDLE</Text>;
   if (status === 'running') {
-    statusBadge = (
-      <Text color="yellowBright">
-        <Spinner type="dots" /> RUNNING
-      </Text>
-    );
+    statusBadge = <BuzzardSpinner active={true} label="RUNNING" color="yellowBright" />;
   } else if (status === 'approval_required') {
     statusBadge = <Text color="magenta" bold>🔒 APPROVAL REQUIRED</Text>;
   } else if (status === 'error') {
