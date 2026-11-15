@@ -1,19 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Box, Text, useApp, useInput } from 'ink';
-import TextInput from 'ink-text-input';
-import Spinner from 'ink-spinner';
+import { Box, useApp, useInput } from 'ink';
 import { RuntimeClient } from './client.js';
+import { useTerminalSize } from './hooks/useTerminalSize.js';
 import { Header } from './components/Header.js';
-import { ChatFeed } from './components/ChatFeed.js';
-import { ToolCard } from './components/ToolCard.js';
+import { Transcript } from './components/Transcript.js';
+import { Sidebar } from './components/Sidebar.js';
+import { Composer } from './components/Composer.js';
 import { ApprovalDialog } from './components/ApprovalDialog.js';
-import { EvidenceView } from './components/EvidenceView.js';
-import { StatusBar } from './components/StatusBar.js';
 import {
   MessageItem,
   ToolEvent,
   ApprovalRequest,
   InitializeResult,
+  TaskItem,
 } from './types.js';
 
 interface AppProps {
@@ -22,6 +21,8 @@ interface AppProps {
 
 export const App: React.FC<AppProps> = ({ workspace }) => {
   const { exit } = useApp();
+  const { columns, rows } = useTerminalSize();
+
   const [initData, setInitData] = useState<InitializeResult | null>(null);
   const [client, setClient] = useState<RuntimeClient | null>(null);
   const [status, setStatus] = useState<'idle' | 'running' | 'approval_required' | 'cancelled' | 'error'>('idle');
@@ -31,25 +32,29 @@ export const App: React.FC<AppProps> = ({ workspace }) => {
   const [cost, setCost] = useState<number | null>(null);
 
   const [messages, setMessages] = useState<MessageItem[]>([]);
-  const [activeTools, setActiveTools] = useState<ToolEvent[]>([]);
+  const [tools, setTools] = useState<ToolEvent[]>([]);
+  const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [pendingApproval, setPendingApproval] = useState<ApprovalRequest | null>(null);
   const [evidenceReport, setEvidenceReport] = useState<string | null>(null);
 
-  const [inputVal, setInputVal] = useState('');
-  const streamingMsgRef = useRef<string>('');
+  const [scrollOffset, setScrollOffset] = useState<number>(0);
+  const [autoScroll, setAutoScroll] = useState<boolean>(true);
+
+  const streamingRef = useRef<string>('');
 
   useEffect(() => {
     const runtime = new RuntimeClient(workspace);
 
     runtime.setEvents({
       onDelta: (text) => {
-        streamingMsgRef.current += text;
+        streamingRef.current += text;
+        setAutoScroll(true);
         setMessages((prev) => {
           const last = prev[prev.length - 1];
           if (last && last.sender === 'assistant' && last.isStreaming) {
             return [
               ...prev.slice(0, -1),
-              { ...last, text: streamingMsgRef.current },
+              { ...last, text: streamingRef.current },
             ];
           }
           return [
@@ -57,7 +62,7 @@ export const App: React.FC<AppProps> = ({ workspace }) => {
             {
               id: Date.now().toString(),
               sender: 'assistant',
-              text: streamingMsgRef.current,
+              text: streamingRef.current,
               timestamp: new Date().toLocaleTimeString(),
               isStreaming: true,
             },
@@ -67,30 +72,34 @@ export const App: React.FC<AppProps> = ({ workspace }) => {
 
       onToolStart: (tool) => {
         setStatus('running');
-        setStatusText(`Executing ${tool.tool}...`);
-        setActiveTools((prev) => [...prev, tool]);
+        setStatusText(`Running ${tool.tool}...`);
+        setAutoScroll(true);
+        setTools((prev) => [...prev, tool]);
       },
 
       onToolEnd: (tool) => {
-        setActiveTools((prev) =>
+        setAutoScroll(true);
+        setTools((prev) =>
           prev.map((t) => (t.tool === tool.tool && t.status === 'running' ? tool : t))
         );
       },
 
       onApprovalRequest: (req) => {
         setStatus('approval_required');
-        setStatusText(`Waiting for approval on ${req.tool}`);
+        setStatusText(`Approval needed: ${req.tool}`);
         setPendingApproval(req);
       },
 
       onEvidenceReport: (report) => {
         setEvidenceReport(report);
+        setAutoScroll(true);
       },
 
       onRunFinished: (res) => {
         setStatus(res.status === 'completed' ? 'idle' : res.status === 'cancelled' ? 'cancelled' : 'error');
-        setStatusText(res.status === 'completed' ? 'Ready' : `Finished (${res.status})`);
-        streamingMsgRef.current = '';
+        setStatusText(res.status === 'completed' ? 'Ready' : `Task finished (${res.status})`);
+        streamingRef.current = '';
+        setAutoScroll(true);
 
         if (res.metrics) {
           if (res.metrics.inputTokens || res.metrics.outputTokens) {
@@ -101,19 +110,21 @@ export const App: React.FC<AppProps> = ({ workspace }) => {
           }
         }
 
-        // Finalize streaming flag
         setMessages((prev) =>
           prev.map((m) => (m.isStreaming ? { ...m, isStreaming: false } : m))
         );
+
+        // Refresh task list
+        runtime.listTasks().then((r) => setTasks(r.tasks)).catch(() => {});
       },
 
       onError: (err) => {
         setStatus('error');
-        setStatusText(`Error: ${err.message}`);
+        setStatusText(`Engine Error: ${err.message}`);
       },
 
       onExit: () => {
-        setStatusText('Engine process disconnected');
+        setStatusText('Engine disconnected');
       },
     });
 
@@ -123,19 +134,20 @@ export const App: React.FC<AppProps> = ({ workspace }) => {
         setInitData(info);
         setClient(runtime);
         setStatus('idle');
-        setStatusText('Engine ready');
+        setStatusText('Ready');
         setMessages([
           {
             id: 'init',
             sender: 'system',
-            text: `Connected to ${info.serverInfo.name} ${info.serverInfo.version} (${info.provider}/${info.model})`,
+            text: `Connected to Buzzard Engine 1.0 (${info.provider}/${info.model})`,
             timestamp: new Date().toLocaleTimeString(),
           },
         ]);
+        runtime.listTasks().then((r) => setTasks(r.tasks)).catch(() => {});
       })
       .catch((err) => {
         setStatus('error');
-        setStatusText(`Failed to connect engine: ${err.message}`);
+        setStatusText(`Connection failed: ${err.message}`);
       });
 
     return () => {
@@ -144,6 +156,7 @@ export const App: React.FC<AppProps> = ({ workspace }) => {
   }, [workspace]);
 
   useInput((input, key) => {
+    // Ctrl+C handling
     if (key.ctrl && input === 'c') {
       if (status === 'running' && client) {
         client.cancelRun().catch(() => {});
@@ -156,6 +169,7 @@ export const App: React.FC<AppProps> = ({ workspace }) => {
       return;
     }
 
+    // Tab key toggles Plan Mode
     if (key.tab && !pendingApproval && client) {
       const nextMode = !planMode;
       setPlanMode(nextMode);
@@ -169,13 +183,12 @@ export const App: React.FC<AppProps> = ({ workspace }) => {
     const reqId = pendingApproval.requestId;
     setPendingApproval(null);
     setStatus('running');
-    setStatusText(`Approval responded: ${decision}`);
+    setStatusText(`Approved: ${decision}`);
     await client.respondApproval(reqId, decision).catch(() => {});
   };
 
   const handleCommandSubmit = async (val: string) => {
     const trimmed = val.trim();
-    setInputVal('');
     if (!trimmed || !client) return;
 
     if (trimmed.startsWith('/')) {
@@ -196,16 +209,17 @@ export const App: React.FC<AppProps> = ({ workspace }) => {
 
       if (cmd === '/clear') {
         setMessages([]);
-        setActiveTools([]);
+        setTools([]);
         setEvidenceReport(null);
         return;
       }
 
       if (cmd === '/tasks') {
-        const { tasks } = await client.listTasks();
-        const text = tasks.length === 0
+        const { tasks: currentTasks } = await client.listTasks();
+        setTasks(currentTasks);
+        const text = currentTasks.length === 0
           ? 'No unfinished tasks in this workspace.'
-          : 'Saved unfinished tasks:\n' + tasks.map((t) => `  • [${t.taskId.slice(0, 8)}] turn ${t.turn}: ${t.goal}`).join('\n');
+          : 'Saved unfinished tasks:\n' + currentTasks.map((t) => `  • [${t.taskId.slice(0, 8)}] turn ${t.turn}: ${t.goal}`).join('\n');
         setMessages((prev) => [
           ...prev,
           { id: Date.now().toString(), sender: 'system', text, timestamp: new Date().toLocaleTimeString() },
@@ -245,14 +259,14 @@ export const App: React.FC<AppProps> = ({ workspace }) => {
       if (cmd === '/help') {
         const helpText = [
           'Buzzard TUI Commands:',
-          '  /plan [on|off]  - Toggle plan mode',
+          '  /plan [on|off]  - Toggle plan mode (read-only)',
           '  /tasks          - List unfinished durable tasks',
-          '  /resume <id>    - Resume saved task',
+          '  /resume <id>    - Resume a saved task',
           '  /undo           - Revert last file edit',
-          '  /clear          - Clear screen',
-          '  /exit           - Exit TUI',
+          '  /clear          - Clear transcript',
+          '  /exit           - Quit Buzzard TUI',
           'Shortcuts:',
-          '  [Tab] Toggle Plan Mode  •  [Ctrl+C] Cancel Task / Exit',
+          '  [Tab] Toggle Plan Mode  •  [PgUp/PgDn] Scroll Transcript  •  [Ctrl+C] Cancel/Quit',
         ].join('\n');
         setMessages((prev) => [
           ...prev,
@@ -268,17 +282,18 @@ export const App: React.FC<AppProps> = ({ workspace }) => {
       { id: Date.now().toString(), sender: 'user', text: trimmed, timestamp: new Date().toLocaleTimeString() },
     ]);
 
-    setActiveTools([]);
+    setTools([]);
     setEvidenceReport(null);
-    streamingMsgRef.current = '';
+    streamingRef.current = '';
     setStatus('running');
     setStatusText('Thinking...');
+    setAutoScroll(true);
 
     try {
       await client.startRun(trimmed, planMode);
     } catch (err: any) {
       setStatus('error');
-      setStatusText(`Run failed: ${err.message}`);
+      setStatusText(`Task error: ${err.message}`);
       setMessages((prev) => [
         ...prev,
         { id: Date.now().toString(), sender: 'system', text: `Error: ${err.message}`, timestamp: new Date().toLocaleTimeString() },
@@ -286,9 +301,29 @@ export const App: React.FC<AppProps> = ({ workspace }) => {
     }
   };
 
+  const handlePageUp = () => {
+    setAutoScroll(false);
+    setScrollOffset((prev) => Math.max(0, prev - 5));
+  };
+
+  const handlePageDown = () => {
+    setScrollOffset((prev) => prev + 5);
+  };
+
+  // Responsive Layout Calculations
+  const isWide = columns >= 110;
+  const sidebarWidth = isWide ? 34 : 0;
+  const chatWidth = isWide ? columns - sidebarWidth - 1 : columns;
+
+  const headerHeight = 3;
+  const bottomHeight = pendingApproval ? 5 : 4;
+  const middleHeight = Math.max(6, rows - headerHeight - bottomHeight);
+
   return (
-    <Box flexDirection="column" padding={1}>
+    <Box flexDirection="column" width={columns} height={rows} overflow="hidden">
+      {/* Pinned Top Bar */}
       <Header
+        width={columns}
         model={initData?.model || 'loading...'}
         provider={initData?.provider || 'buzzard'}
         workspace={workspace}
@@ -298,39 +333,47 @@ export const App: React.FC<AppProps> = ({ workspace }) => {
         status={status}
       />
 
-      <ChatFeed
-        messages={messages}
-        tools={activeTools}
-        evidenceReport={evidenceReport || undefined}
-      />
+      {/* Middle Viewport (Chat + Docked Sidebar when wide) */}
+      <Box flexDirection="row" width={columns} height={middleHeight} overflow="hidden">
+        <Transcript
+          width={chatWidth}
+          height={middleHeight}
+          messages={messages}
+          tools={tools}
+          evidenceReport={evidenceReport}
+          scrollOffset={scrollOffset}
+          autoScroll={autoScroll}
+        />
 
-      {pendingApproval && (
+        {isWide && (
+          <Sidebar
+            width={sidebarWidth}
+            height={middleHeight}
+            tasks={tasks}
+            tools={tools}
+            planMode={planMode}
+          />
+        )}
+      </Box>
+
+      {/* Pinned Bottom Area */}
+      {pendingApproval ? (
         <ApprovalDialog
+          width={columns}
           request={pendingApproval}
           onRespond={handleApprovalRespond}
         />
+      ) : (
+        <Composer
+          width={columns}
+          status={status}
+          statusText={statusText}
+          planMode={planMode}
+          onSubmit={handleCommandSubmit}
+          onPageUp={handlePageUp}
+          onPageDown={handlePageDown}
+        />
       )}
-
-      {status === 'running' && !pendingApproval && (
-        <Box marginY={0}>
-          <Text color="cyan"><Spinner type="dots" /> </Text>
-          <Text dimColor> {statusText}</Text>
-        </Box>
-      )}
-
-      {!pendingApproval && (
-        <Box marginTop={1} flexDirection="row">
-          <Text color="green" bold>❯ </Text>
-          <TextInput
-            value={inputVal}
-            onChange={setInputVal}
-            onSubmit={handleCommandSubmit}
-            placeholder={status === 'running' ? 'Task running... (type /help or prompt)' : 'Ask Buzzard anything... (/help for commands)'}
-          />
-        </Box>
-      )}
-
-      <StatusBar planMode={planMode} status={statusText} />
     </Box>
   );
 };

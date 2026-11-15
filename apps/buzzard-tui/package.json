@@ -15,6 +15,7 @@
   "dependencies": {
     "chalk": "^5.3.0",
     "cli-truncate": "^4.0.0",
+    "fullscreen-ink": "^0.1.0",
     "gradient-string": "^2.0.2",
     "ink": "^4.4.1",
     "ink-select-input": "^5.0.0",

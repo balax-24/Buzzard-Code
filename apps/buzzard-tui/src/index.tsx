@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import React from 'react';
-import { render } from 'ink';
 import * as path from 'node:path';
+import { runFullScreenApp } from './terminal/screen.js';
 import { App } from './App.js';
 
 let workspace = process.cwd();
@@ -15,7 +15,5 @@ for (let i = 0; i < args.length; i++) {
   }
 }
 
-// Clear terminal for a fresh experience
-console.clear();
-
-render(<App workspace={workspace} />);
+// Launch application in terminal alternate screen buffer
+runFullScreenApp(<App workspace={workspace} />);
