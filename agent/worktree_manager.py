@@ -57,9 +57,9 @@ class WorktreeManager:
                     shutil.rmtree(target_path, ignore_errors=True)
 
                 # Clean up any stale worktree registrations or existing branch
-                subprocess.run(["git", "worktree", "unlock", uid], cwd=str(self.workspace_root), capture_output=True, timeout=5)
-                subprocess.run(["git", "worktree", "prune"], cwd=str(self.workspace_root), capture_output=True, timeout=5)
-                subprocess.run(["git", "branch", "-D", branch_name], cwd=str(self.workspace_root), capture_output=True, timeout=5)
+                subprocess.run(["git", "worktree", "unlock", uid], cwd=str(self.workspace_root), capture_output=True, timeout=5, stdin=subprocess.DEVNULL)
+                subprocess.run(["git", "worktree", "prune"], cwd=str(self.workspace_root), capture_output=True, timeout=5, stdin=subprocess.DEVNULL)
+                subprocess.run(["git", "branch", "-D", branch_name], cwd=str(self.workspace_root), capture_output=True, timeout=5, stdin=subprocess.DEVNULL)
 
                 # git worktree add -b <branch> <path> HEAD
                 cmd = ["git", "worktree", "add", "-b", branch_name, str(target_path), "HEAD"]
@@ -68,7 +68,8 @@ class WorktreeManager:
                     cwd=str(self.workspace_root),
                     capture_output=True,
                     text=True,
-                    timeout=60,
+                    timeout=30,
+                    stdin=subprocess.DEVNULL,
                 )
                 if res.returncode == 0 and target_path.exists():
                     wt = AgentWorktree(
@@ -87,11 +88,15 @@ class WorktreeManager:
         # Fallback: lightweight copy excluding heavy directories
         target_path.mkdir(parents=True, exist_ok=True)
         heavy_prefixes = (".git", ".venv", ".buzzard", ".pytest_cache", ".ruff_cache", ".vite")
-        heavy_names = {"node_modules", "dist", "build", "assessments", "artifacts", "training_runs", "__pycache__"}
+        heavy_names = {
+            "node_modules", "dist", "build", "assessments", "artifacts", 
+            "training_runs", "__pycache__", "apps", "benchmarks", 
+            "experiments", "data", "lab", "docs"
+        }
         ignore_pat = shutil.ignore_patterns(
             ".git*", ".venv*", "node_modules", "dist", "build", ".buzzard*",
             "assessments*", "artifacts*", "training_runs*", "__pycache__", "*.pyc",
-            ".pytest_cache", ".ruff_cache", ".vite"
+            ".pytest_cache", ".ruff_cache", ".vite", "apps*", "benchmarks*", "experiments*"
         )
 
         for item in self.workspace_root.iterdir():
@@ -171,24 +176,28 @@ class WorktreeManager:
                     cwd=str(self.workspace_root),
                     capture_output=True,
                     timeout=5,
+                    stdin=subprocess.DEVNULL,
                 )
                 subprocess.run(
                     ["git", "worktree", "remove", "--force", str(wt.worktree_path)],
                     cwd=str(self.workspace_root),
                     capture_output=True,
                     timeout=20,
+                    stdin=subprocess.DEVNULL,
                 )
                 subprocess.run(
                     ["git", "worktree", "prune"],
                     cwd=str(self.workspace_root),
                     capture_output=True,
                     timeout=5,
+                    stdin=subprocess.DEVNULL,
                 )
                 subprocess.run(
                     ["git", "branch", "-D", wt.branch_name],
                     cwd=str(self.workspace_root),
                     capture_output=True,
                     timeout=10,
+                    stdin=subprocess.DEVNULL,
                 )
             except Exception as e:
                 logger.warning("Error cleaning git worktree %s: %s", agent_id, e)

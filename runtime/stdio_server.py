@@ -510,12 +510,14 @@ class StdioRuntimeServer:
 
     def _engineering_synthesize_poc(self, params: Dict[str, Any]) -> Dict[str, Any]:
         issue = params.get("issue", "")
-        target = params.get("targetFile")
+        target = params.get("targetFile") or params.get("target_file")
         art = self.engineer.synthesize_poc(issue, target)
-        return art.to_dict()
+        d = art.to_dict()
+        d["artifactId"] = d.get("artifact_id")
+        return d
 
     def _engineering_execute_poc(self, params: Dict[str, Any]) -> Dict[str, Any]:
-        artifact_id = params.get("artifactId", "")
+        artifact_id = params.get("artifactId") or params.get("artifact_id", "")
         exec_res = self.engineer.execute_poc(artifact_id)
         return {
             "artifactId": exec_res.artifact_id,
@@ -534,9 +536,10 @@ class StdioRuntimeServer:
         return {"symbol": symbol, "direction": direction, "results": res}
 
     def _engineering_bounty_race(self, params: Dict[str, Any]) -> Dict[str, Any]:
-        target = params.get("targetFile", "")
+        target = params.get("targetFile") or params.get("target_file", "")
         funcs = params.get("functions")
-        report = self.engineer.run_bounty_challenge(target, funcs)
+        max_rounds = params.get("maxRounds") or params.get("max_rounds", 1)
+        report = self.engineer.run_bounty_challenge(target, funcs, max_rounds=max_rounds)
         return report.to_dict()
 
     def _checkpoint_create(self, params: Dict[str, Any]) -> Dict[str, Any]:

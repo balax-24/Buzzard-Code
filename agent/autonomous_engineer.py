@@ -132,6 +132,7 @@ class AutonomousEngineer:
         if self._cpg is None:
             from intelligence.code_property_graph import CodePropertyGraph
             self._cpg = CodePropertyGraph(self.workspace_root)
+            self._cpg.index_workspace()
         return self._cpg
 
     @property
@@ -275,9 +276,9 @@ class AutonomousEngineer:
         """Queries Code Property Graph for call hierarchies and data flow."""
         return self.cpg.get_call_hierarchy(symbol_name, direction, max_depth)
 
-    def run_bounty_challenge(self, target_file: str, functions: Optional[List[str]] = None) -> Any:
+    def run_bounty_challenge(self, target_file: str, functions: Optional[List[str]] = None, max_rounds: int = 1) -> Any:
         """Spawns adversarial Red-Team twin agent to fuzz and stress-test patches."""
-        return self.bounty.run_bounty_challenge(target_file, functions or [])
+        return self.bounty.run_bounty_challenge(target_file, functions or [], max_rounds=max_rounds)
 
     def create_checkpoint(self, step_id: int, description: str, files: Optional[List[str]] = None) -> Any:
         """Creates time-travel micro-checkpoint of file snapshots and state."""
