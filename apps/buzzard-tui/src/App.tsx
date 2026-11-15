@@ -19,9 +19,10 @@ import {
 
 interface AppProps {
   workspace: string;
+  brand?: string;
 }
 
-export const App: React.FC<AppProps> = ({ workspace }) => {
+export const App: React.FC<AppProps> = ({ workspace, brand = 'BUZZARD CODE' }) => {
   const { exit } = useApp();
   const { columns, rows } = useTerminalSize();
 
@@ -441,6 +442,7 @@ export const App: React.FC<AppProps> = ({ workspace }) => {
       {/* Pinned Top Bar */}
       <Header
         width={columns}
+        brand={brand}
         model={initData?.model || 'loading...'}
         provider={initData?.provider || 'buzzard'}
         workspace={workspace}

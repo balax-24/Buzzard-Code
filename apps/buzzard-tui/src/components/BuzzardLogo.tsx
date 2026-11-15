@@ -1,75 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Box, Text } from 'ink';
 import gradient from 'gradient-string';
 
-// High-impact brand gradients
-export const cyanGradient = gradient(['#00F2FE', '#4FACFE', '#0072FF']);
-export const buzzardGradient = gradient(['#00F2FE', '#4FACFE', '#7B2CBF', '#0072FF']);
-export const electricGradient = gradient(['#FFE000', '#799F0C', '#00F2FE']);
+// Official Brand Gradients for Buzzard Code & Buzzard Go
+export const buzzardGradient = gradient(['#00F2FE', '#4FACFE', '#0072FF']);
+export const raptorGradient = gradient(['#00F2FE', '#38EF7D']);
+export const electricGradient = gradient(['#FFE000', '#00F2FE']);
 
-// Animated Falcon Morphing Frames for Buzzard Brand
-const FALCON_FRAMES = [
-  '⟨⠋ 🦅 ⠙⟩',
-  '⟨⠙ ⚡ ⠚⟩',
-  '⟨⠹ ◈ ⠒⟩',
-  '⟨⠸ 🦅 ⠂⟩',
-  '⟨⠼ ⚡ ⠄⟩',
-  '⟨⠴ ◈ ⠤⟩',
-  '⟨⠦ 🦅 ⠠⟩',
-  '⟨⠧ ⚡ ⠐⟩',
-];
+// Fixed-width Official Brand Mark
+export const BRAND_GLYPH = '◤⚡◢';
 
-const WING_FRAMES = [
-  '\\ v /',
-  '( \\ / )',
-  '// ⚡ \\\\',
-  '⟨ 🦅 ⟩',
-  '\\\\ ⚡ //',
-  '( •_• )',
-];
-
-interface BuzzardSpinnerProps {
-  mode?: 'falcon' | 'wings' | 'spark';
-  active?: boolean;
-}
-
-export const BuzzardSpinner: React.FC<BuzzardSpinnerProps> = ({
-  mode = 'falcon',
-  active = true,
-}) => {
-  const [frameIndex, setFrameIndex] = useState(0);
-
-  useEffect(() => {
-    if (!active) return;
-    const interval = setInterval(() => {
-      setFrameIndex((prev) => (prev + 1) % (mode === 'wings' ? WING_FRAMES.length : FALCON_FRAMES.length));
-    }, 110);
-    return () => clearInterval(interval);
-  }, [active, mode]);
-
-  if (!active) {
-    return <Text color="cyanBright">⟨🦅⟩</Text>;
-  }
-
-  const glyph = mode === 'wings' ? WING_FRAMES[frameIndex] : FALCON_FRAMES[frameIndex];
-  return <Text color="cyanBright" bold>{glyph}</Text>;
-};
-
-interface BuzzardLogoProps {
+interface BuzzardWordmarkProps {
   variant?: 'code' | 'go';
-  withSpinner?: boolean;
 }
 
-export const BuzzardLogo: React.FC<BuzzardLogoProps> = ({
-  variant = 'code',
-  withSpinner = true,
-}) => {
-  const brandName = variant === 'go' ? 'BUZZARD GO' : 'BUZZARD CODE';
-
+export const BuzzardWordmark: React.FC<BuzzardWordmarkProps> = ({ variant = 'code' }) => {
+  const title = variant === 'go' ? 'BUZZARD GO' : 'BUZZARD CODE';
   return (
     <Box gap={1} alignItems="center">
-      {withSpinner && <BuzzardSpinner mode="falcon" active={true} />}
-      <Text bold>{buzzardGradient(brandName)}</Text>
+      <Text color="yellowBright" bold>{BRAND_GLYPH}</Text>
+      <Text bold>{buzzardGradient(title)}</Text>
     </Box>
   );
 };
@@ -89,105 +39,112 @@ export const BuzzardWelcome: React.FC<BuzzardWelcomeProps> = ({
   workspace,
   planMode,
 }) => {
-  const isCompact = width < 90;
-  const innerWidth = Math.max(20, width - 4);
-
-  const banner = [
-    ' ____  _   _ _____ _____    _    ____  ____       ____ ___  ____  _____ ',
-    '| __ )| | | |__  /__  /    / \\  |  _ \\|  _ \\     / ___/ _ \\|  _ \\| ____|',
-    '|  _ \\| | | | / /  / /    / _ \\ | |_) | | | |   | |  | | | | | | |  _|  ',
-    '| |_) | |_| |/ /_ / /_   / ___ \\|  _ <| |_| |   | |__| |_| | |_| | |___ ',
-    '|____/ \\___//____/____| /_/   \\_\\_| \\_\\____/     \\____\\___/|____/|_____|',
-  ];
-
-  const compactBanner = [
-    '⚡ BUZZARD CODE  (BUZZARD GO ENGINE v2.1)',
-    '   Autonomous Full-Stack Security & Software Agent',
-  ];
+  const innerWidth = Math.max(30, width - 4);
+  const isCompact = width < 80;
 
   return (
     <Box flexDirection="column" paddingX={1} marginY={0}>
-      {/* Brand Hero Display */}
-      <Box flexDirection="column" marginBottom={1}>
-        {isCompact ? (
-          compactBanner.map((line, idx) => (
-            <Text key={idx} bold color="cyanBright">
-              {line}
-            </Text>
-          ))
-        ) : (
-          banner.map((line, idx) => (
-            <Text key={idx} bold>
-              {buzzardGradient(line)}
-            </Text>
-          ))
-        )}
-      </Box>
-
-      {/* Welcome Card & Metadata */}
+      {/* Official Buzzard Brand Logo Card */}
       <Box
         flexDirection="column"
         borderStyle="round"
         borderColor="cyanBright"
-        paddingX={1}
+        paddingX={2}
+        paddingY={0}
         marginBottom={1}
         width={innerWidth}
       >
-        <Box justifyContent="space-between" width={innerWidth - 4}>
+        {!isCompact ? (
+          <Box flexDirection="row" alignItems="center" gap={3} marginY={0}>
+            {/* Geometric ASCII Raptor Emblem */}
+            <Box flexDirection="column">
+              <Text color="cyanBright" bold>{'      /\\   '}<Text color="yellowBright">⚡</Text>{'   /\\  '}</Text>
+              <Text color="cyanBright" bold>{'     /  \\  /\\  /  \\ '}</Text>
+              <Text color="cyanBright" bold>{'    <    \\//\\/    >'}</Text>
+              <Text color="cyanBright" bold>{'     \\___/ \\/ \\___/ '}</Text>
+            </Box>
+
+            {/* Brand Typography & Credentials */}
+            <Box flexDirection="column">
+              <Box gap={1}>
+                <Text bold>{buzzardGradient('BUZZARD CODE')}</Text>
+                <Text color="yellowBright" bold>v2.1</Text>
+                <Text dimColor>│</Text>
+                <Text color="greenBright" bold>BUZZARD GO</Text>
+              </Box>
+              <Text color="whiteBright">Autonomous Security & Software Engineering Agent</Text>
+              <Text dimColor color="gray">The model proposes, authoritative code decides.</Text>
+            </Box>
+          </Box>
+        ) : (
+          <Box flexDirection="column">
+            <Box gap={1}>
+              <Text color="yellowBright" bold>{BRAND_GLYPH}</Text>
+              <Text bold>{buzzardGradient('BUZZARD CODE / BUZZARD GO')}</Text>
+              <Text dimColor>v2.1</Text>
+            </Box>
+            <Text dimColor>Autonomous Security & Software Engineering Agent</Text>
+          </Box>
+        )}
+
+        <Text dimColor color="gray">{'─'.repeat(Math.max(10, innerWidth - 6))}</Text>
+
+        {/* Runtime Environment Context */}
+        <Box justifyContent="space-between" width={innerWidth - 6}>
           <Box gap={1}>
-            <BuzzardSpinner mode="falcon" active={true} />
-            <Text bold color="whiteBright">Welcome to Buzzard Code</Text>
-            <Text dimColor>v2.1</Text>
+            <Text dimColor>Model:</Text>
+            <Text color="cyanBright" bold>{model}</Text>
+            <Text dimColor>({provider})</Text>
           </Box>
           <Box gap={1}>
-            <Text dimColor>Engine: </Text>
-            <Text color="cyanBright" bold>Buzzard Go</Text>
+            <Text dimColor>Safety Mode:</Text>
+            <Text color={planMode ? 'yellowBright' : 'greenBright'} bold>
+              {planMode ? 'PLAN MODE (Read-Only)' : 'ACT MODE (Authoritative Execution)'}
+            </Text>
           </Box>
         </Box>
 
-        <Text dimColor color="gray">{'─'.repeat(innerWidth - 4)}</Text>
-
-        <Box justifyContent="space-between" width={innerWidth - 4}>
-          <Text dimColor>Active Model: <Text color="yellowBright" bold>{model}</Text> ({provider})</Text>
-          <Text dimColor>Mode: <Text color={planMode ? 'yellowBright' : 'greenBright'} bold>{planMode ? 'PLAN (Read-Only)' : 'ACT (Full Toolchain)'}</Text></Text>
-        </Box>
-
-        <Box width={innerWidth - 4}>
-          <Text dimColor>Workspace: <Text color="whiteBright">{workspace}</Text></Text>
+        <Box width={innerWidth - 6}>
+          <Text dimColor>Workspace: </Text>
+          <Text color="whiteBright">{workspace}</Text>
         </Box>
       </Box>
 
-      {/* Quick Start Guide */}
+      {/* Quick Navigation & Keyboard Shortcuts */}
       <Box flexDirection="column" marginBottom={1}>
-        <Text bold color="yellowBright">Quick Commands & Shortcuts:</Text>
-        <Box gap={1} marginTop={0}>
+        <Text bold color="yellowBright">Fast Commands & Shortcuts:</Text>
+        <Box gap={1}>
           <Text color="cyanBright" bold>[Tab]</Text>
           <Text color="white">Toggle Plan Mode (safe read-only inspection)</Text>
-        </Box>
-        <Box gap={1}>
+          <Text dimColor>│</Text>
           <Text color="cyanBright" bold>/diff</Text>
-          <Text color="white">Open interactive unified git diff inspector</Text>
+          <Text color="white">Live Git Diff</Text>
         </Box>
         <Box gap={1}>
           <Text color="cyanBright" bold>/tasks</Text>
-          <Text color="white">List durable unfinished tasks across sessions</Text>
-        </Box>
-        <Box gap={1}>
+          <Text color="white">Durable task manager</Text>
+          <Text dimColor>│</Text>
           <Text color="cyanBright" bold>/undo</Text>
-          <Text color="white">Instantly rollback the last applied file edit</Text>
+          <Text color="white">Rollback last edit</Text>
+          <Text dimColor>│</Text>
+          <Text color="cyanBright" bold>/doctor</Text>
+          <Text color="white">System health diagnostics</Text>
         </Box>
         <Box gap={1}>
           <Text color="cyanBright" bold>/help</Text>
-          <Text color="white">Show complete command and shortcut reference</Text>
+          <Text color="white">Show all commands</Text>
+          <Text dimColor>│</Text>
+          <Text color="cyanBright" bold>[Ctrl+C]</Text>
+          <Text color="white">Cancel running task / exit</Text>
         </Box>
       </Box>
 
-      {/* Suggested Starters */}
+      {/* Starter Prompts */}
       <Box flexDirection="column">
-        <Text dimColor color="gray">Suggested tasks to try:</Text>
-        <Text dimColor>  • "Review recent git diff and check for bugs"</Text>
-        <Text dimColor>  • "Run full pytest suite and analyze test failures"</Text>
-        <Text dimColor>  • "Explain the architecture of this project"</Text>
+        <Text dimColor color="gray">Suggested prompts:</Text>
+        <Text dimColor>  • "Review git changes with /diff and fix security issues"</Text>
+        <Text dimColor>  • "Run full pytest suite and analyze failures"</Text>
+        <Text dimColor>  • "Explain the architecture and data flow of this repo"</Text>
       </Box>
     </Box>
   );

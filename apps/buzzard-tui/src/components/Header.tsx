@@ -1,10 +1,11 @@
 import React from 'react';
 import { Box, Text } from 'ink';
-import gradient from 'gradient-string';
-import { BuzzardSpinner } from './BuzzardLogo.js';
+import Spinner from 'ink-spinner';
+import { BRAND_GLYPH, buzzardGradient } from './BuzzardLogo.js';
 
 interface HeaderProps {
   width: number;
+  brand?: string;
   model: string;
   provider: string;
   workspace: string;
@@ -14,10 +15,9 @@ interface HeaderProps {
   status: 'idle' | 'running' | 'approval_required' | 'cancelled' | 'error';
 }
 
-const buzzardGradient = gradient(['#00F2FE', '#4FACFE', '#0072FF']);
-
 export const Header: React.FC<HeaderProps> = ({
   width,
+  brand = 'BUZZARD CODE',
   model,
   provider,
   workspace,
@@ -28,7 +28,11 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   let statusBadge = <Text color="green">● IDLE</Text>;
   if (status === 'running') {
-    statusBadge = <Text color="yellow">⚡ RUNNING</Text>;
+    statusBadge = (
+      <Text color="yellowBright">
+        <Spinner type="dots" /> RUNNING
+      </Text>
+    );
   } else if (status === 'approval_required') {
     statusBadge = <Text color="magenta" bold>🔒 APPROVAL REQUIRED</Text>;
   } else if (status === 'error') {
@@ -55,8 +59,8 @@ export const Header: React.FC<HeaderProps> = ({
     <Box flexDirection="column" width={width} height={3}>
       <Box justifyContent="space-between" width={width}>
         <Box gap={1} alignItems="center">
-          <BuzzardSpinner mode={status === 'running' ? 'wings' : 'falcon'} active={true} />
-          <Text bold>{buzzardGradient('BUZZARD CODE')} </Text>
+          <Text color="yellowBright" bold>{BRAND_GLYPH}</Text>
+          <Text bold>{buzzardGradient(brand)} </Text>
           <Text dimColor>│ </Text>
           <Text color="cyanBright">{model}</Text>
           <Text dimColor> ({provider})</Text>
