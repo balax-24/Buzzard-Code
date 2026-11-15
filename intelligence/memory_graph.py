@@ -56,23 +56,29 @@ class EngineeringMemoryGraph:
         py_files = []
         js_ts_files = []
 
-        ignore_dirs = {".git", ".venv", "node_modules", "dist", "build", "__pycache__", ".pytest_cache"}
+        ignore_dirs = {
+            ".git", ".github", ".venv", ".venv-linux", ".venv-train", ".pytest_cache", ".ruff_cache", ".vite",
+            "node_modules", "dist", "build", "__pycache__", ".buzzard",
+            "assessments", "artifacts", "assets", "training_runs", "data", "miscellaneous"
+        }
 
-        for p in self.workspace_root.rglob("*"):
+        import os
+        for root, dirs, files in os.walk(str(self.workspace_root)):
+            dirs[:] = [d for d in dirs if d not in ignore_dirs and not d.startswith(".")]
+            for f in files:
+                if count >= max_files:
+                    break
+                p = Path(root) / f
+                if p.suffix in (".py", ".ts", ".tsx", ".js", ".jsx"):
+                    rel_str = str(p.relative_to(self.workspace_root)).replace("\\", "/")
+                    if p.suffix == ".py":
+                        py_files.append((p, rel_str))
+                        count += 1
+                    else:
+                        js_ts_files.append((p, rel_str))
+                        count += 1
             if count >= max_files:
                 break
-            if not p.is_file():
-                continue
-            if any(part in ignore_dirs for part in p.parts):
-                continue
-
-            rel_str = str(p.relative_to(self.workspace_root)).replace("\\", "/")
-            if p.suffix == ".py":
-                py_files.append((p, rel_str))
-                count += 1
-            elif p.suffix in (".ts", ".tsx", ".js", ".jsx"):
-                js_ts_files.append((p, rel_str))
-                count += 1
 
         for p, rel_path in py_files:
             self._index_python_file(p, rel_path)
@@ -88,10 +94,10 @@ class EngineeringMemoryGraph:
             "total_symbols": sum(len(f.symbols) for f in self.files.values()),
         }
 
-    def sync_persistent(self, db_path: Optional[Path] = None) -> Dict[str, Any]:
+    def sync_persistent(self, db_path: Optional[Path] = None, sync_dirty: bool = False) -> Dict[str, Any]:
         """
         Fast incremental indexer utilizing persistent SQLite storage (.buzzard/memory.db).
-        Loads existing graph in milliseconds and only re-indexes modified/dirty files.
+        Loads existing graph in milliseconds and optionally re-indexes dirty files.
         """
         from intelligence.persistent_graph import PersistentMemoryGraphStore
 
@@ -100,8 +106,10 @@ class EngineeringMemoryGraph:
         if loaded:
             self.files = loaded.files
             self.symbol_index = loaded.symbol_index
-            stats = store.incremental_sync(self)
-            return {"source": "cache_incremental", **stats}
+            if sync_dirty:
+                stats = store.incremental_sync(self)
+                return {"source": "cache_incremental", **stats}
+            return {"source": "cache_instant", "total_files": len(self.files)}
         else:
             fresh_stats = self.index_workspace()
             store.save_graph(self)

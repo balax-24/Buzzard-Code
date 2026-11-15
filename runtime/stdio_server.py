@@ -75,6 +75,14 @@ class StdioRuntimeServer:
         self._run_metrics_lock = threading.Lock()
         self.session: Optional[RunSession] = None
         self.workspace: Optional[str] = None
+        self._engineer = None
+
+    @property
+    def engineer(self):
+        if self._engineer is None:
+            from agent.autonomous_engineer import AutonomousEngineer
+            self._engineer = AutonomousEngineer(Path(self.workspace))
+        return self._engineer
 
     # -- transport -----------------------------------------------------------------------
     def _send(self, message: Dict[str, Any]) -> None:
@@ -437,9 +445,7 @@ class StdioRuntimeServer:
     def _engineering_plan(self, params: Dict[str, Any]) -> Dict[str, Any]:
         goal = params.get("goal", "")
         targets = params.get("files")
-        from agent.autonomous_engineer import AutonomousEngineer
-        engineer = AutonomousEngineer(Path(self.workspace))
-        plan = engineer.plan(goal, targets)
+        plan = self.engineer.plan(goal, targets)
         return {
             "task": plan.task,
             "targetFiles": plan.target_files,
@@ -451,9 +457,7 @@ class StdioRuntimeServer:
 
     def _engineering_outline(self, params: Dict[str, Any]) -> Dict[str, Any]:
         file_path = params.get("file", "")
-        from agent.autonomous_engineer import AutonomousEngineer
-        engineer = AutonomousEngineer(Path(self.workspace))
-        outline = engineer.outline_file(file_path)
+        outline = self.engineer.outline_file(file_path)
         return {
             "filePath": outline.file_path,
             "totalLines": outline.total_lines,
@@ -465,15 +469,11 @@ class StdioRuntimeServer:
     def _engineering_unfold(self, params: Dict[str, Any]) -> Dict[str, Any]:
         file_path = params.get("file", "")
         symbol = params.get("symbol", "")
-        from agent.autonomous_engineer import AutonomousEngineer
-        engineer = AutonomousEngineer(Path(self.workspace))
-        return engineer.unfold_symbol(file_path, symbol)
+        return self.engineer.unfold_symbol(file_path, symbol)
 
     def _engineering_repl(self, params: Dict[str, Any]) -> Dict[str, Any]:
         code = params.get("code", "")
-        from agent.autonomous_engineer import AutonomousEngineer
-        engineer = AutonomousEngineer(Path(self.workspace))
-        res = engineer.eval_repl(code)
+        res = self.engineer.eval_repl(code)
         return {
             "success": res.success,
             "output": res.output,
@@ -484,9 +484,7 @@ class StdioRuntimeServer:
 
     def _engineering_probe(self, params: Dict[str, Any]) -> Dict[str, Any]:
         code = params.get("code", "")
-        from agent.autonomous_engineer import AutonomousEngineer
-        engineer = AutonomousEngineer(Path(self.workspace))
-        res = engineer.probe_code(code)
+        res = self.engineer.probe_code(code)
         return {
             "success": res.success,
             "returnValue": res.return_value,
@@ -498,9 +496,7 @@ class StdioRuntimeServer:
     def _engineering_causal(self, params: Dict[str, Any]) -> Dict[str, Any]:
         file_path = params.get("file", "")
         lines = params.get("lines", [1])
-        from agent.autonomous_engineer import AutonomousEngineer
-        engineer = AutonomousEngineer(Path(self.workspace))
-        report = engineer.causal_history(file_path, lines)
+        report = self.engineer.causal_history(file_path, lines)
         return {
             "filePath": report.file_path,
             "hasWorkarounds": report.has_historical_workarounds,
@@ -545,3 +541,7 @@ def serve_stdio(provider_factory: Optional[Callable[[Dict[str, Any]], Any]] = No
     logging.basicConfig(level=logging.WARNING, stream=sys.stderr)
     reader, writer = _claim_protocol_streams()
     StdioRuntimeServer(reader, writer, provider_factory=provider_factory).serve()
+
+
+if __name__ == "__main__":
+    serve_stdio()

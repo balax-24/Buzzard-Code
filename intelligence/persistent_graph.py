@@ -81,42 +81,36 @@ class PersistentMemoryGraphStore:
 
     def save_graph(self, graph: EngineeringMemoryGraph) -> None:
         """Saves the entire in-memory graph to SQLite."""
+        files_data = []
+        symbols_data = []
+        deps_data = []
+        tests_data = []
+
+        for rel_path, fnode in graph.files.items():
+            abs_p = self.workspace_root / rel_path
+            mtime = abs_p.stat().st_mtime if abs_p.exists() else 0.0
+            c_hash = self._hash_file(abs_p) if abs_p.exists() else ""
+            files_data.append((rel_path, fnode.language, mtime, c_hash))
+
+            for sym in fnode.symbols.values():
+                symbols_data.append(
+                    (rel_path, sym.name, sym.kind, sym.line_number, sym.docstring, json.dumps(list(sym.calls)))
+                )
+            for imp in fnode.imports:
+                deps_data.append((rel_path, imp))
+            for t in fnode.associated_tests:
+                tests_data.append((rel_path, t))
+
         with self._get_connection() as conn:
-            conn.execute("BEGIN TRANSACTION")
             conn.execute("DELETE FROM symbols")
             conn.execute("DELETE FROM dependencies")
             conn.execute("DELETE FROM test_associations")
             conn.execute("DELETE FROM files")
 
-            for rel_path, fnode in graph.files.items():
-                abs_p = self.workspace_root / rel_path
-                mtime = abs_p.stat().st_mtime if abs_p.exists() else 0.0
-                c_hash = self._hash_file(abs_p) if abs_p.exists() else ""
-
-                conn.execute(
-                    "INSERT INTO files (path, language, mtime, content_hash) VALUES (?, ?, ?, ?)",
-                    (rel_path, fnode.language, mtime, c_hash),
-                )
-
-                for sym in fnode.symbols.values():
-                    conn.execute(
-                        "INSERT INTO symbols (file_path, name, kind, line_number, docstring, calls) VALUES (?, ?, ?, ?, ?, ?)",
-                        (rel_path, sym.name, sym.kind, sym.line_number, sym.docstring, json.dumps(list(sym.calls))),
-                    )
-
-                for imp in fnode.imports:
-                    conn.execute(
-                        "INSERT OR IGNORE INTO dependencies (source_path, imported_path) VALUES (?, ?)",
-                        (rel_path, imp),
-                    )
-
-                for t in fnode.associated_tests:
-                    conn.execute(
-                        "INSERT OR IGNORE INTO test_associations (source_path, test_path) VALUES (?, ?)",
-                        (rel_path, t),
-                    )
-
-            conn.commit()
+            conn.executemany("INSERT INTO files (path, language, mtime, content_hash) VALUES (?, ?, ?, ?)", files_data)
+            conn.executemany("INSERT INTO symbols (file_path, name, kind, line_number, docstring, calls) VALUES (?, ?, ?, ?, ?, ?)", symbols_data)
+            conn.executemany("INSERT OR IGNORE INTO dependencies (source_path, imported_path) VALUES (?, ?)", deps_data)
+            conn.executemany("INSERT OR IGNORE INTO test_associations (source_path, test_path) VALUES (?, ?)", tests_data)
 
     def load_graph(self) -> Optional[EngineeringMemoryGraph]:
         """Loads the graph from SQLite if database has records."""
@@ -176,16 +170,20 @@ class PersistentMemoryGraphStore:
             db_records = {r["path"]: r for r in conn.execute("SELECT * FROM files").fetchall()}
 
         disk_files: Dict[str, Path] = {}
-        ignore_dirs = {".git", ".venv", "node_modules", "dist", "build", "__pycache__", ".pytest_cache", ".buzzard"}
+        ignore_dirs = {
+            ".git", ".github", ".venv", ".venv-linux", ".venv-train", ".pytest_cache", ".ruff_cache", ".vite",
+            "node_modules", "dist", "build", "__pycache__", ".buzzard",
+            "assessments", "artifacts", "assets", "training_runs", "data", "miscellaneous"
+        }
 
-        for p in self.workspace_root.rglob("*"):
-            if not p.is_file():
-                continue
-            if any(part in ignore_dirs for part in p.parts):
-                continue
-            if p.suffix in (".py", ".ts", ".tsx", ".js", ".jsx"):
-                rel_path = str(p.relative_to(self.workspace_root)).replace("\\", "/")
-                disk_files[rel_path] = p
+        import os
+        for root, dirs, files in os.walk(str(self.workspace_root)):
+            dirs[:] = [d for d in dirs if d not in ignore_dirs and not d.startswith(".")]
+            for f in files:
+                p = Path(root) / f
+                if p.suffix in (".py", ".ts", ".tsx", ".js", ".jsx"):
+                    rel_path = str(p.relative_to(self.workspace_root)).replace("\\", "/")
+                    disk_files[rel_path] = p
 
         # Check for deleted files
         for rel_path in list(graph.files.keys()):
@@ -197,10 +195,13 @@ class PersistentMemoryGraphStore:
         dirty_files = []
         for rel_path, abs_p in disk_files.items():
             db_rec = db_records.get(rel_path)
+            if db_rec is None:
+                dirty_files.append((abs_p, rel_path))
+                continue
             current_mtime = abs_p.stat().st_mtime
-            if db_rec is None or db_rec["mtime"] < current_mtime:
+            if abs(current_mtime - db_rec["mtime"]) > 1e-4:
                 current_hash = self._hash_file(abs_p)
-                if db_rec is None or db_rec["content_hash"] != current_hash:
+                if db_rec["content_hash"] != current_hash:
                     dirty_files.append((abs_p, rel_path))
 
         for abs_p, rel_path in dirty_files:
