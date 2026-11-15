@@ -1,6 +1,7 @@
 import React from 'react';
 import { Box, Text } from 'ink';
 import gradient from 'gradient-string';
+import { BuzzardSpinner } from './BuzzardLogo.js';
 
 interface HeaderProps {
   width: number;
@@ -42,7 +43,7 @@ export const Header: React.FC<HeaderProps> = ({
     <Text backgroundColor="green" color="black" bold> ACT MODE </Text>
   );
 
-  const maxPathLen = Math.max(15, width - 45);
+  const maxPathLen = Math.max(15, width - 50);
   const shortWorkspace = workspace.length > maxPathLen
     ? '...' + workspace.slice(-maxPathLen)
     : workspace;
@@ -53,8 +54,9 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <Box flexDirection="column" width={width} height={3}>
       <Box justifyContent="space-between" width={width}>
-        <Box>
-          <Text bold>{buzzardGradient('⚡ BUZZARD CODE')} </Text>
+        <Box gap={1} alignItems="center">
+          <BuzzardSpinner mode={status === 'running' ? 'wings' : 'falcon'} active={true} />
+          <Text bold>{buzzardGradient('BUZZARD CODE')} </Text>
           <Text dimColor>│ </Text>
           <Text color="cyanBright">{model}</Text>
           <Text dimColor> ({provider})</Text>

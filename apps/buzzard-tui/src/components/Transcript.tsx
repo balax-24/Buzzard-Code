@@ -2,6 +2,7 @@ import React from 'react';
 import { Box, Text } from 'ink';
 import Spinner from 'ink-spinner';
 import { MessageItem, ToolEvent } from '../types.js';
+import { BuzzardWelcome } from './BuzzardLogo.js';
 
 interface Line {
   id: string;
@@ -21,6 +22,10 @@ interface TranscriptProps {
   evidenceReport?: string | null;
   scrollOffset: number; // 0 means top, positive value
   autoScroll: boolean;
+  model?: string;
+  provider?: string;
+  workspace?: string;
+  planMode?: boolean;
 }
 
 export const Transcript: React.FC<TranscriptProps> = ({
@@ -31,8 +36,28 @@ export const Transcript: React.FC<TranscriptProps> = ({
   evidenceReport,
   scrollOffset,
   autoScroll,
+  model,
+  provider,
+  workspace,
+  planMode,
 }) => {
   if (height <= 0) return null;
+
+  // Show rich Welcome Hero when no user prompt has been entered yet
+  const userMessages = messages.filter((m) => m.sender === 'user');
+  if (userMessages.length === 0 && tools.length === 0 && !evidenceReport) {
+    return (
+      <Box flexDirection="column" width={width} height={height} overflow="hidden">
+        <BuzzardWelcome
+          width={width}
+          model={model || 'default'}
+          provider={provider || 'buzzard'}
+          workspace={workspace || process.cwd()}
+          planMode={!!planMode}
+        />
+      </Box>
+    );
+  }
 
   const maxLineWidth = Math.max(20, width - 2);
 

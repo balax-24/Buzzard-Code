@@ -81,7 +81,7 @@ export const Composer: React.FC<ComposerProps> = ({
       }
       return;
     }
-  });
+  }, { isActive: Boolean(process.stdin.isTTY) });
 
   const handleSubmit = (text: string) => {
     const trimmed = text.trim();
@@ -138,6 +138,7 @@ export const Composer: React.FC<ComposerProps> = ({
         <Text color="greenBright" bold>❯ </Text>
         <TextInput
           value={val}
+          focus={Boolean(process.stdin.isTTY)}
           onChange={(newVal) => {
             setVal(newVal);
             setPaletteIndex(0);

@@ -9,7 +9,9 @@ const args = process.argv.slice(2);
 for (let i = 0; i < args.length; i++) {
   if (args[i] === '--workspace' || args[i] === '-w') {
     if (args[i + 1]) {
-      workspace = path.resolve(args[i + 1]!);
+      let raw = args[i + 1]!;
+      raw = raw.replace(/^["']+|["']+$/g, '');
+      workspace = path.resolve(raw);
       i++;
     }
   }

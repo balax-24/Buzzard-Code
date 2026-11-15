@@ -32,7 +32,7 @@ export const DiffModal: React.FC<DiffModalProps> = ({
       setScrollOffset((prev) => Math.min(Math.max(0, lines.length - viewHeight), prev + 5));
       return;
     }
-  });
+  }, { isActive: Boolean(process.stdin.isTTY) });
 
   const visibleLines = lines.slice(scrollOffset, scrollOffset + viewHeight);
   const maxLineLen = Math.max(20, width - 6);

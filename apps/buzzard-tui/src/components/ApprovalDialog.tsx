@@ -17,7 +17,7 @@ export const ApprovalDialog: React.FC<ApprovalDialogProps> = ({ width, request, 
     } else if (input === 'd' || input === 'D' || key.escape) {
       onRespond('deny');
     }
-  });
+  }, { isActive: Boolean(process.stdin.isTTY) });
 
   const isHigh = request.riskClass === 'high';
   const riskColor = isHigh ? 'redBright' : 'yellowBright';

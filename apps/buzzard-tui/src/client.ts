@@ -65,6 +65,7 @@ export class RuntimeClient {
             ...process.env,
             PYTHONUNBUFFERED: '1',
             PYTHONIOENCODING: 'utf-8',
+            PYTHONPATH: cwd + (process.env.PYTHONPATH ? path.delimiter + process.env.PYTHONPATH : ''),
           },
         });
       } catch (err) {
