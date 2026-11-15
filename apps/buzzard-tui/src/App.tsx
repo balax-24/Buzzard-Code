@@ -236,6 +236,68 @@ export const App: React.FC<AppProps> = ({ workspace, brand = 'BUZZARD CODE' }) =
         return;
       }
 
+      // /impact: simulate blast radius and dependent callers
+      if (cmd === '/impact') {
+        const targets = arg ? arg.split(/\s+/) : (gitSummary?.changes.map((c) => c.path) || []);
+        if (targets.length === 0) {
+          setMessages((prev) => [
+            ...prev,
+            { id: Date.now().toString(), sender: 'system', text: 'Usage: /impact <files...> or run with uncommitted git changes.', timestamp: new Date().toLocaleTimeString() },
+          ]);
+          return;
+        }
+        try {
+          const impact = await client.getChangeImpact(targets);
+          const lines = [
+            `⚡ CHANGE IMPACT SIMULATION — Risk: [${(impact.risk_level || 'LOW').toUpperCase()}]`,
+            `  • Target Files: ${impact.target_files?.length || 0}`,
+            ...(impact.target_files || []).slice(0, 3).map((f: string) => `    - ${f}`),
+            `  • Downstream Dependent Files: ${impact.affected_files?.length || 0}`,
+            ...(impact.affected_files || []).slice(0, 5).map((f: string) => `    - ${f}`),
+            `  • Priority Tests: ${impact.priority_tests?.length || 0}`,
+            ...(impact.priority_tests || []).slice(0, 4).map((t: string) => `    ✔ ${t}`),
+          ];
+          if (impact.risk_reasons?.length > 0) {
+            lines.push('  • Risk Factors:');
+            impact.risk_reasons.forEach((r: string) => lines.push(`    ! ${r}`));
+          }
+          setMessages((prev) => [
+            ...prev,
+            { id: Date.now().toString(), sender: 'system', text: lines.join('\n'), timestamp: new Date().toLocaleTimeString() },
+          ]);
+        } catch (e: any) {
+          setMessages((prev) => [
+            ...prev,
+            { id: Date.now().toString(), sender: 'system', text: `Impact simulation failed: ${e.message}`, timestamp: new Date().toLocaleTimeString() },
+          ]);
+        }
+        return;
+      }
+
+      // /tests: targeted test selection using AST memory graph
+      if (cmd === '/tests') {
+        const targets = arg ? arg.split(/\s+/) : (gitSummary?.changes.map((c) => c.path) || []);
+        try {
+          const sel = await client.getTestSelection(targets);
+          const lines = [
+            `⚡ TARGETED TEST SELECTION (Runner: ${sel.runner || 'unknown'}):`,
+            `  • Recommended Command: ${sel.targeted_command || sel.full_command || 'pytest'}`,
+            `  • Targeted Test Files: ${sel.targeted_test_files?.length || 0}`,
+            ...(sel.targeted_test_files || []).slice(0, 6).map((t: string) => `    ✔ ${t}`),
+          ];
+          setMessages((prev) => [
+            ...prev,
+            { id: Date.now().toString(), sender: 'system', text: lines.join('\n'), timestamp: new Date().toLocaleTimeString() },
+          ]);
+        } catch (e: any) {
+          setMessages((prev) => [
+            ...prev,
+            { id: Date.now().toString(), sender: 'system', text: `Test selection failed: ${e.message}`, timestamp: new Date().toLocaleTimeString() },
+          ]);
+        }
+        return;
+      }
+
       // /cost: show telemetry
       if (cmd === '/cost') {
         const costStr = cost !== null ? `$${cost.toFixed(4)}` : 'N/A';

@@ -11,6 +11,8 @@ export interface CommandItem {
 export const SLASH_COMMANDS: CommandItem[] = [
   { cmd: '/diff', description: 'Show uncommitted file diffs (Claude Code /diff pane)', category: 'inspection' },
   { cmd: '/plan', args: '[on|off]', description: 'Toggle read-only plan mode (blocks edits/commands)', category: 'workflow' },
+  { cmd: '/impact', args: '<files...>', description: 'Simulate blast radius, dependent callers, and risk tier', category: 'inspection' },
+  { cmd: '/tests', args: '[files...]', description: 'Discover priority targeted tests using AST memory graph', category: 'inspection' },
   { cmd: '/tasks', description: 'List unfinished durable tasks for this workspace', category: 'workflow' },
   { cmd: '/resume', args: '<taskId>', description: 'Resume an interrupted durable task from disk', category: 'workflow' },
   { cmd: '/undo', description: 'Revert the last applied file edit', category: 'workflow' },

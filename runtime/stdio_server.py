@@ -149,6 +149,9 @@ class StdioRuntimeServer:
             "memory/clear": self._memory_clear,
             "memory/setEnabled": self._memory_set_enabled,
             "edit/undo": self._edit_undo,
+            "engineering/impact": self._engineering_impact,
+            "engineering/testSelection": self._engineering_test_selection,
+            "engineering/plan": self._engineering_plan,
             "shutdown": self._shutdown,
         }
         handler = handlers.get(method)
@@ -203,7 +206,14 @@ class StdioRuntimeServer:
                 "sandbox": runtime_config.get("sandbox"),
                 "confirmation": runtime_config.get("confirmation"),
             },
-            "capabilities": {"planMode": True, "memory": True, "undo": True, "subagents": True, "resume": True},
+            "capabilities": {
+                "planMode": True,
+                "memory": True,
+                "undo": True,
+                "subagents": True,
+                "resume": True,
+                "engineeringIntelligence": True,
+            },
         }
 
     def _run_start(self, params: Dict[str, Any]) -> Dict[str, Any]:
@@ -400,6 +410,39 @@ class StdioRuntimeServer:
         if self._run_thread is not None and self._run_thread.is_alive():
             raise RpcError(BUSY, "Undo is not available while a task is running.")
         return {"message": undo_last_edit()}
+
+    def _engineering_impact(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        files = params.get("files", [])
+        if not isinstance(files, list):
+            raise RpcError(INVALID_PARAMS, "files must be a list of file paths.")
+        from coding.impact_simulator import ChangeImpactSimulator
+        simulator = ChangeImpactSimulator(Path(self.workspace))
+        prediction = simulator.simulate(files)
+        return prediction.to_dict()
+
+    def _engineering_test_selection(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        files = params.get("files", [])
+        if not isinstance(files, list):
+            raise RpcError(INVALID_PARAMS, "files must be a list of file paths.")
+        from verification.test_selector import TestImpactSelector
+        selector = TestImpactSelector(Path(self.workspace))
+        selected = selector.select_tests_for_files(files)
+        return selected.to_dict()
+
+    def _engineering_plan(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        goal = params.get("goal", "")
+        targets = params.get("files")
+        from agent.autonomous_engineer import AutonomousEngineer
+        engineer = AutonomousEngineer(Path(self.workspace))
+        plan = engineer.plan(goal, targets)
+        return {
+            "task": plan.task,
+            "targetFiles": plan.target_files,
+            "impact": plan.impact.to_dict(),
+            "selectedTests": plan.selected_tests.to_dict(),
+            "modelRecommended": plan.model_recommended,
+            "steps": plan.steps,
+        }
 
     def _shutdown(self, params: Dict[str, Any]) -> Dict[str, Any]:
         self._closed.set()

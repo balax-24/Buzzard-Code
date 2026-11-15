@@ -231,6 +231,18 @@ export class RuntimeClient {
     return this.sendRequest('edit/undo', {});
   }
 
+  public async getChangeImpact(files: string[]): Promise<any> {
+    return this.sendRequest('engineering/impact', { files });
+  }
+
+  public async getTestSelection(files: string[]): Promise<any> {
+    return this.sendRequest('engineering/testSelection', { files });
+  }
+
+  public async getEngineeringPlan(goal: string, files?: string[]): Promise<any> {
+    return this.sendRequest('engineering/plan', { goal, files });
+  }
+
   public async stop(): Promise<void> {
     try {
       if (this.proc && !this.proc.killed) {
