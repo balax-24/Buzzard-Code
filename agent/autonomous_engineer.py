@@ -18,12 +18,13 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from intelligence.memory_graph import EngineeringMemoryGraph
-from coding.impact_simulator import ChangeImpactSimulator, ImpactPrediction
 from coding.atomic_editor import AtomicCodeEditor, EditOperation, TransactionResult
+from coding.impact_simulator import ChangeImpactSimulator, ImpactPrediction
 from coding.self_healing import AutonomousSelfHealingLoop, RepairPlan
-from verification.test_selector import TestImpactSelector, SelectedTests
+from hooks.hook_manager import HookManager
+from intelligence.memory_graph import EngineeringMemoryGraph
 from model.coding_router import CodingModelRouter
+from verification.test_selector import SelectedTests, TestImpactSelector
 
 logger = logging.getLogger(__name__)
 
@@ -72,13 +73,22 @@ class AutonomousEngineer:
     def __init__(self, workspace_root: Path):
         self.workspace_root = workspace_root.resolve()
         self.graph = EngineeringMemoryGraph(self.workspace_root)
-        self.graph.index_workspace()
+        self.graph.sync_persistent()
 
         self.impact_simulator = ChangeImpactSimulator(self.workspace_root, self.graph)
         self.test_selector = TestImpactSelector(self.workspace_root, self.graph)
         self.editor = AtomicCodeEditor(self.workspace_root)
         self.healer = AutonomousSelfHealingLoop(self.workspace_root, self.graph)
         self.router = CodingModelRouter()
+        self.hooks = HookManager(self.workspace_root)
+        self._worktree_mgr = None
+
+    @property
+    def worktrees(self):
+        if self._worktree_mgr is None:
+            from agent.worktree_manager import WorktreeManager
+            self._worktree_mgr = WorktreeManager(self.workspace_root)
+        return self._worktree_mgr
 
     def plan(self, task: str, target_files: Optional[List[str]] = None) -> WorkflowPlan:
         """
@@ -122,8 +132,19 @@ class AutonomousEngineer:
 
     def apply_edits_atomically(self, operations: List[EditOperation]) -> TransactionResult:
         """
-        Applies a set of multi-file edits with AST syntax verification and rollback.
+        Applies a set of multi-file edits with AST syntax verification, lifecycle hooks, and rollback.
         """
+        target_files = [op.file_path for op in operations]
+
+        # 1. Pre-edit hook
+        pre_hook = self.hooks.run_hook("pre-edit", target_files=target_files)
+        if pre_hook.executed and not pre_hook.passed:
+            return TransactionResult(
+                success=False,
+                error=f"Pre-edit hook failed: {pre_hook.stderr or pre_hook.error}",
+            )
+
+        # 2. Atomic edits with AST validation
         result = self.editor.apply_transaction(operations)
         if result.success:
             # Re-index modified files in memory graph
@@ -134,6 +155,10 @@ class AutonomousEngineer:
                         self.graph._index_python_file(p, f)
                     elif p.suffix in (".ts", ".tsx", ".js", ".jsx"):
                         self.graph._index_js_ts_file(p, f)
+
+            # 3. Post-edit hook
+            self.hooks.run_hook("post-edit", target_files=result.modified_files)
+
         return result
 
     def diagnose_test_failure(self, test_output: str) -> RepairPlan:

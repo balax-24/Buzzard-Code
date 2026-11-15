@@ -88,6 +88,25 @@ class EngineeringMemoryGraph:
             "total_symbols": sum(len(f.symbols) for f in self.files.values()),
         }
 
+    def sync_persistent(self, db_path: Optional[Path] = None) -> Dict[str, Any]:
+        """
+        Fast incremental indexer utilizing persistent SQLite storage (.buzzard/memory.db).
+        Loads existing graph in milliseconds and only re-indexes modified/dirty files.
+        """
+        from intelligence.persistent_graph import PersistentMemoryGraphStore
+
+        store = PersistentMemoryGraphStore(self.workspace_root, db_path=db_path)
+        loaded = store.load_graph()
+        if loaded:
+            self.files = loaded.files
+            self.symbol_index = loaded.symbol_index
+            stats = store.incremental_sync(self)
+            return {"source": "cache_incremental", **stats}
+        else:
+            fresh_stats = self.index_workspace()
+            store.save_graph(self)
+            return {"source": "fresh_indexed", **fresh_stats}
+
     def _index_python_file(self, file_path: Path, rel_path: str) -> None:
         try:
             content = file_path.read_text(encoding="utf-8", errors="replace")

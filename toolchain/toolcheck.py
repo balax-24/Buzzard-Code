@@ -176,7 +176,7 @@ class ToolcheckAuditor:
         """
         results = []
         all_passed = True
-        for package in ["agent", "benchmark", "browser", "cli", "coding", "core", "events", "importers", "intelligence", "model", "persistence", "range", "remediation", "reports", "runtime", "sandbox", "security", "state", "storage", "system", "toolchain", "tools", "training", "tui", "verification"]:
+        for package in ["agent", "benchmark", "browser", "ci", "cli", "coding", "core", "events", "hooks", "importers", "intelligence", "maintenance", "model", "persistence", "range", "remediation", "reports", "runtime", "sandbox", "security", "state", "storage", "system", "toolchain", "tools", "training", "tui", "verification"]:
             try:
                 mod = importlib.import_module(package)
                 results.append((package, True, "OK"))
