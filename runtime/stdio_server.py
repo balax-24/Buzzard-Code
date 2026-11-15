@@ -428,18 +428,14 @@ class StdioRuntimeServer:
         files = params.get("files", [])
         if not isinstance(files, list):
             raise RpcError(INVALID_PARAMS, "files must be a list of file paths.")
-        from coding.impact_simulator import ChangeImpactSimulator
-        simulator = ChangeImpactSimulator(Path(self.workspace))
-        prediction = simulator.simulate(files)
+        prediction = self.engineer.impact_simulator.simulate(files)
         return prediction.to_dict()
 
     def _engineering_test_selection(self, params: Dict[str, Any]) -> Dict[str, Any]:
         files = params.get("files", [])
         if not isinstance(files, list):
             raise RpcError(INVALID_PARAMS, "files must be a list of file paths.")
-        from verification.test_selector import TestImpactSelector
-        selector = TestImpactSelector(Path(self.workspace))
-        selected = selector.select_tests_for_files(files)
+        selected = self.engineer.test_selector.select_tests_for_files(files)
         return selected.to_dict()
 
     def _engineering_plan(self, params: Dict[str, Any]) -> Dict[str, Any]:

@@ -56,6 +56,11 @@ class WorktreeManager:
                 if target_path.exists():
                     shutil.rmtree(target_path, ignore_errors=True)
 
+                # Clean up any stale worktree registrations or existing branch
+                subprocess.run(["git", "worktree", "unlock", uid], cwd=str(self.workspace_root), capture_output=True, timeout=5)
+                subprocess.run(["git", "worktree", "prune"], cwd=str(self.workspace_root), capture_output=True, timeout=5)
+                subprocess.run(["git", "branch", "-D", branch_name], cwd=str(self.workspace_root), capture_output=True, timeout=5)
+
                 # git worktree add -b <branch> <path> HEAD
                 cmd = ["git", "worktree", "add", "-b", branch_name, str(target_path), "HEAD"]
                 res = subprocess.run(
@@ -63,7 +68,7 @@ class WorktreeManager:
                     cwd=str(self.workspace_root),
                     capture_output=True,
                     text=True,
-                    timeout=30,
+                    timeout=60,
                 )
                 if res.returncode == 0 and target_path.exists():
                     wt = AgentWorktree(
@@ -81,14 +86,20 @@ class WorktreeManager:
 
         # Fallback: lightweight copy excluding heavy directories
         target_path.mkdir(parents=True, exist_ok=True)
-        ignore_dirs = {".git", ".venv", "node_modules", "dist", "build", ".buzzard"}
+        heavy_prefixes = (".git", ".venv", ".buzzard", ".pytest_cache", ".ruff_cache", ".vite")
+        heavy_names = {"node_modules", "dist", "build", "assessments", "artifacts", "training_runs", "__pycache__"}
+        ignore_pat = shutil.ignore_patterns(
+            ".git*", ".venv*", "node_modules", "dist", "build", ".buzzard*",
+            "assessments*", "artifacts*", "training_runs*", "__pycache__", "*.pyc",
+            ".pytest_cache", ".ruff_cache", ".vite"
+        )
 
         for item in self.workspace_root.iterdir():
-            if item.name in ignore_dirs:
+            if item.name.startswith(heavy_prefixes) or item.name in heavy_names:
                 continue
             dest = target_path / item.name
             if item.is_dir():
-                shutil.copytree(item, dest, ignore=shutil.ignore_patterns(*ignore_dirs))
+                shutil.copytree(item, dest, ignore=ignore_pat, dirs_exist_ok=True)
             else:
                 shutil.copy2(item, dest)
 
@@ -156,10 +167,22 @@ class WorktreeManager:
         if wt.is_git_worktree and self._is_git_repo():
             try:
                 subprocess.run(
+                    ["git", "worktree", "unlock", agent_id],
+                    cwd=str(self.workspace_root),
+                    capture_output=True,
+                    timeout=5,
+                )
+                subprocess.run(
                     ["git", "worktree", "remove", "--force", str(wt.worktree_path)],
                     cwd=str(self.workspace_root),
                     capture_output=True,
                     timeout=20,
+                )
+                subprocess.run(
+                    ["git", "worktree", "prune"],
+                    cwd=str(self.workspace_root),
+                    capture_output=True,
+                    timeout=5,
                 )
                 subprocess.run(
                     ["git", "branch", "-D", wt.branch_name],

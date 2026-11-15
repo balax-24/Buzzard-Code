@@ -140,6 +140,19 @@ class AutonomousSelfHealingLoop:
                     )
                 )
 
+        # Fallback: standard Python traceback (File "...", line X, in Y)
+        if not diagnostics:
+            tb_pattern = re.compile(r"File [\"']([^\"']+)[\"'], line (\d+)(?:, in (\w+))?")
+            for m in tb_pattern.finditer(test_output):
+                diagnostics.append(
+                    FailureDiagnostic(
+                        test_file=m.group(1),
+                        failing_line=int(m.group(2)),
+                        test_function=m.group(3),
+                        error_message="Failure detected from execution trace",
+                    )
+                )
+
         return diagnostics
 
     def create_repair_plan(self, test_output: str) -> RepairPlan:
