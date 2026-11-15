@@ -96,6 +96,11 @@ class AutonomousEngineer:
         self._repl = None
         self._racer = None
         self._probe = None
+        self._poc = None
+        self._cpg = None
+        self._bounty = None
+        self._checkpoints = None
+        self._distiller = None
 
     @property
     def repl(self) -> WarmReplSession:
@@ -114,6 +119,41 @@ class AutonomousEngineer:
         if self._probe is None:
             self._probe = RuntimeProbe(self.workspace_root)
         return self._probe
+
+    @property
+    def poc(self):
+        if self._poc is None:
+            from verification.poc_synthesizer import ZeroShotPocSynthesizer
+            self._poc = ZeroShotPocSynthesizer(self.workspace_root)
+        return self._poc
+
+    @property
+    def cpg(self):
+        if self._cpg is None:
+            from intelligence.code_property_graph import CodePropertyGraph
+            self._cpg = CodePropertyGraph(self.workspace_root)
+        return self._cpg
+
+    @property
+    def bounty(self):
+        if self._bounty is None:
+            from agent.bounty_engine import AdversarialBountyEngine
+            self._bounty = AdversarialBountyEngine(self.workspace_root, self.worktrees)
+        return self._bounty
+
+    @property
+    def checkpoints(self):
+        if self._checkpoints is None:
+            from runtime.checkpoint_manager import SemanticCheckpointManager
+            self._checkpoints = SemanticCheckpointManager(self.workspace_root)
+        return self._checkpoints
+
+    @property
+    def distiller(self):
+        if self._distiller is None:
+            from intelligence.context_distiller import HierarchicalContextDistiller
+            self._distiller = HierarchicalContextDistiller(self.workspace_root, self.outliner)
+        return self._distiller
 
     @property
     def worktrees(self):
@@ -222,3 +262,31 @@ class AutonomousEngineer:
         Analyzes test failure output and constructs an autonomous repair plan.
         """
         return self.healer.create_repair_plan(test_output)
+
+    def synthesize_poc(self, issue_context: str, target_file: Optional[str] = None) -> Any:
+        """Synthesizes minimal reproduction proof-of-concept test artifact."""
+        return self.poc.synthesize_reproducer(issue_context, target_file)
+
+    def execute_poc(self, artifact_id: str) -> Any:
+        """Executes reproduction PoC to verify defect failure or resolution."""
+        return self.poc.execute_reproducer(artifact_id)
+
+    def query_cpg(self, symbol_name: str, direction: str = "callees", max_depth: int = 3) -> List[Dict[str, Any]]:
+        """Queries Code Property Graph for call hierarchies and data flow."""
+        return self.cpg.get_call_hierarchy(symbol_name, direction, max_depth)
+
+    def run_bounty_challenge(self, target_file: str, functions: Optional[List[str]] = None) -> Any:
+        """Spawns adversarial Red-Team twin agent to fuzz and stress-test patches."""
+        return self.bounty.run_bounty_challenge(target_file, functions or [])
+
+    def create_checkpoint(self, step_id: int, description: str, files: Optional[List[str]] = None) -> Any:
+        """Creates time-travel micro-checkpoint of file snapshots and state."""
+        return self.checkpoints.create_checkpoint(step_id, description, files)
+
+    def rewind_checkpoint(self, step_id_or_id: int | str) -> Tuple[bool, str]:
+        """Rewinds file tree and workspace state to a prior checkpoint."""
+        return self.checkpoints.rewind_to(step_id_or_id)
+
+    def distill_context(self, raw_turns: List[Dict[str, Any]], active_files: List[str]) -> Any:
+        """Compresses context by 85% into AST skeleton projections and causal facts."""
+        return self.distiller.distill_turns(raw_turns, active_files)

@@ -263,6 +263,38 @@ export class RuntimeClient {
     return this.sendRequest('engineering/causal', { file, lines });
   }
 
+  public async synthesizePoc(issue: string, targetFile?: string): Promise<any> {
+    return this.sendRequest('engineering/synthesizePoc', { issue, targetFile });
+  }
+
+  public async executePoc(artifactId: string): Promise<any> {
+    return this.sendRequest('engineering/executePoc', { artifactId });
+  }
+
+  public async queryCpg(symbol: string, direction: 'callers' | 'callees' = 'callees', depth: number = 3): Promise<any> {
+    return this.sendRequest('engineering/cpgQuery', { symbol, direction, depth });
+  }
+
+  public async bountyRace(targetFile: string, functions?: string[]): Promise<any> {
+    return this.sendRequest('engineering/bountyRace', { targetFile, functions });
+  }
+
+  public async createCheckpoint(stepId: number, description: string, files?: string[]): Promise<any> {
+    return this.sendRequest('checkpoint/create', { stepId, description, files });
+  }
+
+  public async rewindCheckpoint(target: number | string): Promise<any> {
+    return this.sendRequest('checkpoint/rewind', { target });
+  }
+
+  public async listCheckpoints(): Promise<any> {
+    return this.sendRequest('checkpoint/list', {});
+  }
+
+  public async distillContext(turns: any[], files: string[]): Promise<any> {
+    return this.sendRequest('context/distill', { turns, files });
+  }
+
   public async stop(): Promise<void> {
     try {
       if (this.proc && !this.proc.killed) {

@@ -373,6 +373,156 @@ export const App: React.FC<AppProps> = ({ workspace, brand = 'BUZZARD CODE' }) =
         return;
       }
 
+      // /repro: Zero-shot PoC synthesizer & bug reproducer
+      if (cmd === '/repro') {
+        if (!arg) {
+          setMessages((prev) => [
+            ...prev,
+            { id: Date.now().toString(), sender: 'system', text: 'Usage: /repro <issue description or stack trace>', timestamp: new Date().toLocaleTimeString() },
+          ]);
+          return;
+        }
+        try {
+          const art = await client.synthesizePoc(arg);
+          const execRes = await client.executePoc(art.artifact_id);
+          const msg = [
+            `⚡ ZERO-SHOT BUG REPRODUCER (ID: ${art.artifact_id}):`,
+            `  • PoC File: ${art.repro_file_path}`,
+            `  • Expected Error: ${art.expected_error_signature}`,
+            `  • Execution: Exit code ${execRes.exitCode} (${execRes.durationMs?.toFixed(1)}ms)`,
+            `  • Gate Status: ${execRes.isFailingExpectedly ? '✔ DEFECT PROVEN (Coding unlocked)' : '✖ Did not fail expectedly'}`,
+            `  • Diagnostic: ${execRes.diagnosticMessage}`,
+          ].join('\n');
+          setMessages((prev) => [
+            ...prev,
+            { id: Date.now().toString(), sender: 'system', text: msg, timestamp: new Date().toLocaleTimeString() },
+          ]);
+        } catch (e: any) {
+          setMessages((prev) => [
+            ...prev,
+            { id: Date.now().toString(), sender: 'system', text: `PoC Synthesis failed: ${e.message}`, timestamp: new Date().toLocaleTimeString() },
+          ]);
+        }
+        return;
+      }
+
+      // /cpg: Code Property Graph semantic query
+      if (cmd === '/cpg') {
+        if (!arg) {
+          setMessages((prev) => [
+            ...prev,
+            { id: Date.now().toString(), sender: 'system', text: 'Usage: /cpg <symbol_name> [callers|callees]', timestamp: new Date().toLocaleTimeString() },
+          ]);
+          return;
+        }
+        const [sym, dir] = arg.split(/\s+/);
+        try {
+          const res = await client.queryCpg(sym, (dir as any) || 'callees');
+          const lines = [
+            `⚡ CODE PROPERTY GRAPH: ${res.symbol} (${res.direction}):`,
+            `  • Relations Found: ${res.results?.length || 0}`,
+            ...(res.results || []).slice(0, 8).map((r: any) => `    → [${r.depth} hop] ${r.from} -> ${r.to} (${r.file}:${r.line})`),
+          ];
+          setMessages((prev) => [
+            ...prev,
+            { id: Date.now().toString(), sender: 'system', text: lines.join('\n'), timestamp: new Date().toLocaleTimeString() },
+          ]);
+        } catch (e: any) {
+          setMessages((prev) => [
+            ...prev,
+            { id: Date.now().toString(), sender: 'system', text: `CPG query failed: ${e.message}`, timestamp: new Date().toLocaleTimeString() },
+          ]);
+        }
+        return;
+      }
+
+      // /bounty: Adversarial Red-Team fuzzing challenge
+      if (cmd === '/bounty') {
+        if (!arg) {
+          setMessages((prev) => [
+            ...prev,
+            { id: Date.now().toString(), sender: 'system', text: 'Usage: /bounty <target_file>', timestamp: new Date().toLocaleTimeString() },
+          ]);
+          return;
+        }
+        try {
+          const rep = await client.bountyRace(arg);
+          const lines = [
+            `⚡ ADVERSARIAL RED-TEAM BOUNTY CHALLENGE:`,
+            `  • Target: ${rep.patch_id}`,
+            `  • Attacks Run: ${rep.attacks_attempted} (${rep.execution_time_ms?.toFixed(1)}ms)`,
+            `  • Breaches Found: ${rep.breaches_count}`,
+            `  • Status: ${rep.certified_hardened ? '✔ CERTIFIED HARDENED' : '✖ BREACH DETECTED'}`,
+            `  • Summary: ${rep.summary}`,
+          ];
+          setMessages((prev) => [
+            ...prev,
+            { id: Date.now().toString(), sender: 'system', text: lines.join('\n'), timestamp: new Date().toLocaleTimeString() },
+          ]);
+        } catch (e: any) {
+          setMessages((prev) => [
+            ...prev,
+            { id: Date.now().toString(), sender: 'system', text: `Bounty challenge failed: ${e.message}`, timestamp: new Date().toLocaleTimeString() },
+          ]);
+        }
+        return;
+      }
+
+      // /rewind: Time-travel checkpoint rollback
+      if (cmd === '/rewind') {
+        const stepTarget = arg ? parseInt(arg, 10) : 1;
+        try {
+          const res = await client.rewindCheckpoint(stepTarget);
+          setMessages((prev) => [
+            ...prev,
+            { id: Date.now().toString(), sender: 'system', text: res.message || 'Rewind executed', timestamp: new Date().toLocaleTimeString() },
+          ]);
+          refreshGit();
+        } catch (e: any) {
+          setMessages((prev) => [
+            ...prev,
+            { id: Date.now().toString(), sender: 'system', text: `Rewind failed: ${e.message}`, timestamp: new Date().toLocaleTimeString() },
+          ]);
+        }
+        return;
+      }
+
+      // /checkpoints: List execution timeline
+      if (cmd === '/checkpoints') {
+        try {
+          const res = await client.listCheckpoints();
+          const list = (res.checkpoints || []).map((c: any) => `  [Step ${c.step_id}] ${c.checkpoint_id}: ${c.description} (${c.files_count} files)`).join('\n');
+          setMessages((prev) => [
+            ...prev,
+            { id: Date.now().toString(), sender: 'system', text: `⚡ CHECKPOINT TIMELINE:\n${list || '  (No checkpoints created yet)'}`, timestamp: new Date().toLocaleTimeString() },
+          ]);
+        } catch (e: any) {
+          setMessages((prev) => [
+            ...prev,
+            { id: Date.now().toString(), sender: 'system', text: `Failed to list checkpoints: ${e.message}`, timestamp: new Date().toLocaleTimeString() },
+          ]);
+        }
+        return;
+      }
+
+      // /distill: Lossless context compression
+      if (cmd === '/distill') {
+        try {
+          const activeFiles = gitSummary?.changes.map((c) => c.path) || [];
+          const res = await client.distillContext(messages, activeFiles);
+          setMessages((prev) => [
+            ...prev,
+            { id: Date.now().toString(), sender: 'system', text: res.prompt || JSON.stringify(res, null, 2), timestamp: new Date().toLocaleTimeString() },
+          ]);
+        } catch (e: any) {
+          setMessages((prev) => [
+            ...prev,
+            { id: Date.now().toString(), sender: 'system', text: `Context distillation failed: ${e.message}`, timestamp: new Date().toLocaleTimeString() },
+          ]);
+        }
+        return;
+      }
+
       // /cost: show telemetry
       if (cmd === '/cost') {
         const costStr = cost !== null ? `$${cost.toFixed(4)}` : 'N/A';

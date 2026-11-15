@@ -165,6 +165,14 @@ class StdioRuntimeServer:
             "engineering/repl": self._engineering_repl,
             "engineering/probe": self._engineering_probe,
             "engineering/causal": self._engineering_causal,
+            "engineering/synthesizePoc": self._engineering_synthesize_poc,
+            "engineering/executePoc": self._engineering_execute_poc,
+            "engineering/cpgQuery": self._engineering_cpg_query,
+            "engineering/bountyRace": self._engineering_bounty_race,
+            "checkpoint/create": self._checkpoint_create,
+            "checkpoint/rewind": self._checkpoint_rewind,
+            "checkpoint/list": self._checkpoint_list,
+            "context/distill": self._context_distill,
             "shutdown": self._shutdown,
         }
         handler = handlers.get(method)
@@ -498,6 +506,64 @@ class StdioRuntimeServer:
             "hasWorkarounds": report.has_historical_workarounds,
             "warnings": report.warnings,
             "summary": report.format_summary(),
+        }
+
+    def _engineering_synthesize_poc(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        issue = params.get("issue", "")
+        target = params.get("targetFile")
+        art = self.engineer.synthesize_poc(issue, target)
+        return art.to_dict()
+
+    def _engineering_execute_poc(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        artifact_id = params.get("artifactId", "")
+        exec_res = self.engineer.execute_poc(artifact_id)
+        return {
+            "artifactId": exec_res.artifact_id,
+            "exitCode": exec_res.exit_code,
+            "isFailingExpectedly": exec_res.is_failing_expectedly,
+            "isResolved": exec_res.is_resolved,
+            "durationMs": exec_res.duration_ms,
+            "diagnosticMessage": exec_res.diagnostic_message,
+        }
+
+    def _engineering_cpg_query(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        symbol = params.get("symbol", "")
+        direction = params.get("direction", "callees")
+        depth = params.get("depth", 3)
+        res = self.engineer.query_cpg(symbol, direction, depth)
+        return {"symbol": symbol, "direction": direction, "results": res}
+
+    def _engineering_bounty_race(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        target = params.get("targetFile", "")
+        funcs = params.get("functions")
+        report = self.engineer.run_bounty_challenge(target, funcs)
+        return report.to_dict()
+
+    def _checkpoint_create(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        step = params.get("stepId", 1)
+        desc = params.get("description", "Checkpoint")
+        files = params.get("files")
+        node = self.engineer.create_checkpoint(step, desc, files)
+        return node.to_dict()
+
+    def _checkpoint_rewind(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        target = params.get("target", 1)
+        ok, msg = self.engineer.rewind_checkpoint(target)
+        return {"success": ok, "message": msg}
+
+    def _checkpoint_list(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        timeline = self.engineer.checkpoints.list_timeline()
+        return {"checkpoints": timeline}
+
+    def _context_distill(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        turns = params.get("turns", [])
+        files = params.get("files", [])
+        distilled = self.engineer.distill_context(turns, files)
+        return {
+            "savingsPercent": distilled.savings_percent,
+            "originalTokens": distilled.original_estimated_tokens,
+            "distilledTokens": distilled.distilled_estimated_tokens,
+            "prompt": distilled.format_as_prompt(),
         }
 
     def _shutdown(self, params: Dict[str, Any]) -> Dict[str, Any]:
