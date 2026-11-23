@@ -411,6 +411,12 @@ uv run --group dev pytest
 
 The tests include end-to-end runs that drive the real loop, tools and terminal app with a scripted model, so agent behaviour can be tested independently of model quality.
 
+## Trust score
+
+[![M8ven Score](https://m8ven.ai/badge/mcp/balax-24-buzzard-code-kdftvv?v=eed5bffaa0d5b781622441be5d6b26f2)](https://m8ven.ai/mcp/balax-24-buzzard-code-kdftvv?s=readme)
+
+> **Work in progress:** this independent trust score for the Buzzard Code MCP server is being improved (tool annotations and handler error handling are next).
+
 ## License
 
 [MIT](LICENSE)
